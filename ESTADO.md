@@ -76,7 +76,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Gamificación: no decidida; evitar presión por rachas salvo evidencia posterior.
 
 ## Secuencia maestra de construcción
-- Estado: referencia visual pendiente; Constitución del Producto aprobada y congelada; validación final pendiente.
+- Estado: B4 cerrada; Constitución del Producto aprobada y congelada; Plan Maestro pendiente; validación final pendiente.
 - Ruta obligatoria: `/` → `/onboarding` → `/paywall` → `/login` → `/app` → servicios externos.
 - Landing: pendiente — no escribir copy final hasta cerrar avatar y Constitución.
 - Onboarding: pendiente — debe entregar una intervención real antes de pedir esfuerzo pesado.
