@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es" data-kit="abc-v2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NIA — Direcciones de arte A/B/C</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Gloock&family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; --ink:#25221e; --muted:#706960; --shell:#e8e3dc; --white:#fffdf9; --hair:rgba(37,34,30,.14); }
+    * { box-sizing:border-box; }
+    body { margin:0; overflow-x:hidden; background:radial-gradient(circle at 8% 0%,#fffdf8 0 12%,transparent 34%),linear-gradient(135deg,#ece8e1,#ddd8d0); color:var(--ink); font-family:DM Sans, sans-serif; padding:34px 22px 70px; }
+    .intro { max-width:1180px; margin:0 auto 34px; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:11px; font-weight:700; color:#8c5c45; }
+    h1 { margin:10px 0 12px; font:500 clamp(34px,5vw,62px)/.98 Fraunces,serif; letter-spacing:-.04em; max-width:720px; }
+    .intro p { max-width:680px; margin:0; color:#5f5951; font-size:16px; line-height:1.55; }
+    .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+    .legend span { border:1px solid var(--hair); background:rgba(255,253,249,.62); border-radius:999px; padding:8px 12px; font-size:12px; font-weight:600; }
+    .options { max-width:1180px; margin:0 auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
+    .option { min-width:0; }
+    .meta { min-height:260px; padding:22px; border:1px solid var(--hair); border-radius:20px; background:rgba(255,253,249,.7); box-shadow:0 14px 40px rgba(55,45,35,.08); }
+    .tag { display:inline-grid; place-items:center; width:30px; height:30px; border-radius:10px; color:white; font-weight:700; margin-right:8px; }
+    .meta h2 { display:inline; font-size:20px; letter-spacing:-.02em; }
+    .meta p { margin:14px 0 0; color:#5d574f; font-size:13px; line-height:1.5; }
+    dl { margin:18px 0 0; display:grid; gap:10px; }
+    dt { font-size:10px; text-transform:uppercase; letter-spacing:.13em; color:#8d8177; font-weight:700; }
+    dl > div, dd { min-width:0; }
+    dd { margin:2px 0 0; font-size:13px; line-height:1.42; overflow-wrap:anywhere; }
+    .phone { margin-top:16px; border-radius:34px; padding:12px; background:#1f1d1a; box-shadow:0 24px 45px rgba(36,29,23,.2); }
+    .screen { min-height:760px; overflow:hidden; position:relative; }
+    .status { display:flex; justify-content:space-between; font-size:10px; opacity:.58; padding:8px 10px 20px; }
+    .topline { display:flex; justify-content:space-between; align-items:center; padding:0 18px; font-size:12px; }
+    .avatar { width:28px; height:28px; display:grid; place-items:center; border-radius:50%; font-size:11px; font-weight:700; }
+    .home { padding:28px 22px 20px; }
+    .home .kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.62; }
+    .home h3 { margin:10px 0 12px; font-size:31px; line-height:1.03; letter-spacing:-.045em; }
+    .home .sub { font-size:13px; line-height:1.45; max-width:260px; opacity:.7; }
+    .intent { margin-top:28px; padding:20px; position:relative; }
+    .intent small { font-size:10px; letter-spacing:.12em; text-transform:uppercase; opacity:.55; }
+    .intent blockquote { margin:15px 0 22px; font-size:25px; line-height:1.12; letter-spacing:-.035em; }
+    .intent .micro { display:flex; align-items:center; gap:8px; font-size:11px; opacity:.68; }
+    .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .signal { margin-top:22px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    button { border:0; font:inherit; cursor:default; }
+    .signal button { min-height:44px; padding:10px; font-size:11px; font-weight:700; }
+    .bottom { position:absolute; left:20px; right:20px; bottom:18px; display:flex; justify-content:space-around; padding-top:14px; font-size:10px; }
+    .bottom span { display:grid; gap:5px; place-items:center; opacity:.58; }
+    .nav-mark { width:16px; height:12px; display:block; border:1.5px solid currentColor; border-radius:4px; opacity:.72; }
+    .bottom span:nth-child(2) .nav-mark { border-radius:50%; }
+    .bottom span:nth-child(3) .nav-mark { border-radius:2px; transform:rotate(45deg); width:12px; height:12px; }
+    .bottom .active { opacity:1; font-weight:700; }
+    .home .proof { margin-top:22px; display:grid; gap:8px; }
+    .proof div { min-width:0; padding:12px 14px; font-size:12px; display:flex; justify-content:space-between; gap:12px; overflow-wrap:anywhere; }
+    .proof span, .proof strong { min-width:0; overflow-wrap:anywhere; }
+    .hero-mini { margin-top:16px; padding:20px; min-height:165px; display:flex; flex-direction:column; justify-content:space-between; }
+    .hero-mini strong { font-size:20px; line-height:1.08; letter-spacing:-.03em; }
+    .hero-mini span { font-size:11px; font-weight:700; }
+
+    /* A — editorial cálida: marcador, nota íntima, copper sobrio. */
+    .a .screen { background:#f5efe5; color:#2b2722; font-family:Instrument Sans,sans-serif; }
+    .a .tag { background:#a95739; }
+    .a .avatar { background:#ead5c7; color:#813c2b; }
+    .a .home h3, .a .intent blockquote, .a .hero-mini strong { font-family:Fraunces,serif; font-weight:500; }
+    .a .home h3 { max-width:250px; }
+    .a .home h3 em { font-style:normal; background:linear-gradient(transparent 64%,#d9a181 64%); }
+    .a .intent { background:#fffdf8; border:1px solid rgba(87,57,40,.12); box-shadow:0 10px 24px rgba(90,60,40,.08); }
+    .a .intent:before { content:""; position:absolute; top:0; left:20px; right:20px; height:1px; background:#b66b4e; opacity:.65; }
+    .a .signal button:first-child { color:#fffaf4; background:#a95739; border-radius:5px; }
+    .a .signal button:last-child { color:#714432; background:#f0ded2; border-radius:5px; }
+    .a .bottom { border-top:1px solid rgba(43,39,34,.14); }
+    .a .active { color:#a95739; }
+    .a .proof div { background:#eae0d3; border-left:2px solid #a95739; }
+    .a .hero-mini { background:#a95739; color:#fff8ef; border-radius:5px; }
+    .a .hero-mini strong { font-size:25px; }
+    .a .hero-mini span { border-bottom:1px solid rgba(255,255,255,.5); padding-bottom:7px; }
+
+    /* B — estudio de señal: carbon cálido, copper concentrado, rail vertical. */
+    .b .screen { background:#20221f; color:#f3eee4; font-family:Figtree,sans-serif; }
+    .b .tag { background:#c97851; }
+    .b .avatar { background:#3b4039; color:#f2c8ad; }
+    .b .home { padding-top:30px; }
+    .b .home h3, .b .intent blockquote, .b .hero-mini strong { font-family:Newsreader,serif; font-weight:400; }
+    .b .home h3 { font-size:34px; max-width:240px; }
+    .b .home h3 em { color:#e29a73; font-style:normal; }
+    .b .intent { background:#2b2e2a; border-left:3px solid #c97851; box-shadow:0 18px 32px rgba(0,0,0,.18); }
+    .b .intent blockquote { font-size:27px; }
+    .b .signal button:first-child { color:#211f1b; background:#e2a27c; border-radius:999px; }
+    .b .signal button:last-child { color:#f2d3c1; background:#373b35; border:1px solid #566057; border-radius:999px; }
+    .b .bottom { border-top:1px solid rgba(243,238,228,.18); }
+    .b .active { color:#e2a27c; }
+    .b .proof div { background:#2a2d29; border-left:3px solid #718b73; }
+    .b .hero-mini { background:#c97851; color:#211e1a; border-radius:18px 4px 18px 4px; }
+    .b .hero-mini strong { font-size:26px; }
+    .b .hero-mini span { display:flex; justify-content:space-between; }
+    .b .hero-mini span:after { content:"→"; font-size:18px; }
+
+    /* C — galería humana: arcilla clara, bloques tipo catálogo, contraste escultórico. */
+    .c .screen { background:#ebe6dc; color:#26312d; font-family:DM Sans,sans-serif; }
+    .c .tag { background:#718477; }
+    .c .avatar { background:#d2d9ce; color:#3f5548; }
+    .c .home h3, .c .intent blockquote, .c .hero-mini strong { font-family:Gloock,serif; font-weight:400; }
+    .c .home { padding-top:24px; }
+    .c .home h3 { font-size:29px; }
+    .c .home h3 em { font-style:normal; color:#a25036; }
+    .c .intent { background:#c46d4d; color:#fff7ef; border-radius:28px 28px 5px 5px; padding-top:24px; box-shadow:0 14px 0 #d5c4b1; }
+    .c .intent blockquote { font-size:24px; }
+    .c .signal button:first-child { color:#fff7ef; background:#26312d; border-radius:13px; }
+    .c .signal button:last-child { color:#26312d; background:#d4ddd1; border-radius:13px; }
+    .c .bottom { border-top:1px solid rgba(38,49,45,.16); }
+    .c .active { color:#a25036; }
+    .c .proof { grid-template-columns:1fr 1fr; }
+    .c .proof div { background:#f6f1e8; border-radius:14px; display:block; }
+    .c .hero-mini { background:#26312d; color:#f4eee4; border-radius:22px; }
+    .c .hero-mini strong { font-size:22px; }
+
+    @media (max-width: 980px) { .options { grid-template-columns:1fr; max-width:560px; } .meta, .phone { width:100%; } .meta { min-height:0; } }
+  </style>
+</head>
+<body>
+  <header class="intro">
+    <div class="eyebrow">NIA Identity · exploración de dirección</div>
+    <h1>La precisión también puede sentirse bella.</h1>
+    <p>Tres rutas para una experiencia íntima, editorial y contemporánea. La misma misión aparece en cada teléfono: volver a una intención sin pedir una conversación.</p>
+    <div class="legend"><span>marfil + carbón + copper</span><span>serif con personalidad</span><span>una intención por pantalla</span><span>sin look de IA</span></div>
+  </header>
+
+  <main class="options">
+    <section class="option a">
+      <div class="meta">
+        <span class="tag">A</span><h2>Editorial de fuego bajo</h2>
+        <p>La ruta más cercana a una nota personal bien editada: cálida, pausada y con una señal copper que aparece solo cuando importa.</p>
+        <dl>
+          <div><dt>Personalidad</dt><dd>Íntima · lúcida · serena con intención</dd></div>
+          <div><dt>Paleta</dt><dd>Marfil #F5EFE5 · carbón #2B2722 · copper #A95739</dd></div>
+          <div><dt>Tipografía</dt><dd>Fraunces para intervención · Instrument Sans para control</dd></div>
+          <div><dt>Diferencia</dt><dd>Subrayado marcador y reglas editoriales, no decoración</dd></div>
+          <div><dt>Fortaleza / riesgo</dt><dd>Muy memorable y humana / puede parecer demasiado “revista” si pierde tensión</dd></div>
+        </dl>
+      </div>
+      <div class="phone"><div class="screen"><div class="status"><span>9:41</span><span>status</span></div><div class="topline"><strong>NIA</strong><span class="avatar">L</span></div><div class="home"><div class="kicker">Punto NIA · hoy</div><h3>Vuelve a la <em>persona</em> que quieres ser.</h3><p class="sub">Una pausa breve para recordar cómo quieres entrar a lo que sigue.</p><div class="intent"><small>Tu intención actual</small><blockquote>No necesito sonar perfecta para decir lo que pienso.</blockquote><div class="micro"><span class="dot"></span> una señal cambia lo siguiente</div><div class="signal"><button>Así sí</button><button>Más real</button></div></div><div class="proof"><div><span>Última señal</span><strong>más real</strong></div><div><span>Lo que NIA ajusta</span><strong>menos absoluto</strong></div></div></div><div class="bottom"><span class="active"><i class="nav-mark"></i><b>Hoy</b></span><span><i class="nav-mark"></i><b>Memoria</b></span><span><i class="nav-mark"></i><b>Cuenta</b></span></div></div></div>
+      <div class="meta"><dl><div><dt>Sensación de Home</dt><dd>Una página de lectura breve con una intervención protagonista y una memoria visible, sin panel.</dd></div><div><dt>Hipótesis de conversión</dt><dd>Convierte porque Laura reconoce su mundo de frases guardadas, pero siente que aquí una frase vuelve con propósito.</dd></div></dl><div class="hero-mini"><strong>Lo que hoy te ayuda cambia lo que recibes mañana.</strong><span>Probar Punto NIA →</span></div></div>
+    </section>
+
+    <section class="option b">
+      <div class="meta">
+        <span class="tag">B</span><h2>Señal en penumbra</h2>
+        <p>Una dirección más cinematográfica y adulta: el fondo oscuro funciona como silencio, el copper como una señal precisa y nunca como glow.</p>
+        <dl>
+          <div><dt>Personalidad</dt><dd>Profunda · segura · contemporánea</dd></div>
+          <div><dt>Paleta</dt><dd>Carbón cálido #20221F · hueso #F3EEE4 · copper #C97851</dd></div>
+          <div><dt>Tipografía</dt><dd>Newsreader para intervención · Figtree para control</dd></div>
+          <div><dt>Diferencia</dt><dd>Rail vertical de señal y cápsulas táctiles, no cards apiladas</dd></div>
+          <div><dt>Fortaleza / riesgo</dt><dd>Premium y muy propia / puede sentirse demasiado nocturna si no se equilibra</dd></div>
+        </dl>
+      </div>
+      <div class="phone"><div class="screen"><div class="status"><span>9:41</span><span>status</span></div><div class="topline"><strong>NIA / 01</strong><span class="avatar">L</span></div><div class="home"><div class="kicker">Punto NIA · ritual</div><h3>Haz espacio para <em>tu propia voz.</em></h3><p class="sub">No tienes que resolverlo todo para elegir cómo quieres aparecer.</p><div class="intent"><small>Señal de hoy</small><blockquote>Hoy puedo ser clara sin volverme dura.</blockquote><div class="micro"><span class="dot"></span> NIA ajustó el tono a tu última señal</div><div class="signal"><button>Así sí</button><button>Otro enfoque</button></div></div><div class="proof"><div><span>Memoria activa</span><strong>lenguaje realista</strong></div><div><span>Próxima entrega</span><strong>mañana · 08:30</strong></div></div></div><div class="bottom"><span class="active"><i class="nav-mark"></i><b>Ritual</b></span><span><i class="nav-mark"></i><b>Ahora</b></span><span><i class="nav-mark"></i><b>Memoria</b></span></div></div></div>
+      <div class="meta"><dl><div><dt>Sensación de Home</dt><dd>Una superficie de foco: una señal, una decisión, una próxima entrega. La app se siente presente, no ruidosa.</dd></div><div><dt>Hipótesis de conversión</dt><dd>Convierte porque transforma “me siento entendida” en una promesa de continuidad sobria, sin parecer terapia ni entretenimiento.</dd></div></dl><div class="hero-mini"><strong>Lo que NIA aprende de ti no te pesa. Te devuelve a ti.</strong><span>Conocer Punto NIA →</span></div></div>
+    </section>
+
+    <section class="option c">
+      <div class="meta">
+        <span class="tag">C</span><h2>Galería de intención</h2>
+        <p>Una interpretación más luminosa y táctil: arcilla, hueso y verde apagado construyen un objeto de diseño personal, no un dashboard.</p>
+        <dl>
+          <div><dt>Personalidad</dt><dd>Humana · coleccionable · firme sin dureza</dd></div>
+          <div><dt>Paleta</dt><dd>Hueso #EBE6DC · tinta verde #26312D · arcilla #C46D4D</dd></div>
+          <div><dt>Tipografía</dt><dd>Gloock para intervención · DM Sans para control</dd></div>
+          <div><dt>Diferencia</dt><dd>Bloques escultóricos y módulos de evidencia, no tarjetas SaaS</dd></div>
+          <div><dt>Fortaleza / riesgo</dt><dd>Más cálida y accesible / exige controlar la arcilla para no volverse lifestyle</dd></div>
+        </dl>
+      </div>
+      <div class="phone"><div class="screen"><div class="status"><span>9:41</span><span>status</span></div><div class="topline"><strong>NIA</strong><span class="avatar">L</span></div><div class="home"><div class="kicker">Tu intención · en curso</div><h3>Hoy elijo actuar desde <em>mí.</em></h3><p class="sub">Una intervención breve. Una señal pequeña. El resto sigue siendo tuyo.</p><div class="intent"><small>Punto NIA</small><blockquote>No tengo que justificar cada límite para que sea válido.</blockquote><div class="micro"><span class="dot"></span> la acción aparece solo cuando suma</div><div class="signal"><button>Así sí</button><button>Más real</button></div></div><div class="proof"><div><span>Hecho hoy</span><strong>1 señal</strong></div><div><span>Aprendido</span><strong>más directo</strong></div></div></div><div class="bottom"><span class="active"><i class="nav-mark"></i><b>Intención</b></span><span><i class="nav-mark"></i><b>Ahora</b></span><span><i class="nav-mark"></i><b>Evidencia</b></span></div></div></div>
+      <div class="meta"><dl><div><dt>Sensación de Home</dt><dd>Un objeto editorial con una intención central y dos pruebas pequeñas de continuidad; respira y se puede tocar.</dd></div><div><dt>Hipótesis de conversión</dt><dd>Convierte porque hace visible el cambio acumulado sin convertirlo en racha, puntuación ni tarea.</dd></div></dl><div class="hero-mini"><strong>No necesitas otra rutina. Necesitas que algo recuerde lo que estás intentando reforzar.</strong><span>Empezar con una intención →</span></div></div>
+    </section>
+  </main>
+</body>
+</html>

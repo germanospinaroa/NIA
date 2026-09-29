@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-⏸️ CHECKPOINT — Última acción completada: Constitución aprobada y congelada como contrato vigente / Siguiente acción exacta: resolver la referencia visual antes de diseñar.
+⏸️ CHECKPOINT — Última acción completada: comparativa visual A/B/C preparada y capturada a 375 px / Siguiente acción exacta: recibir elección o ajuste de dirección de arte.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -90,6 +90,15 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Idioma inicial previsto: español para LATAM, sujeto a confirmación del mercado objetivo.
 - IA: el valor diferencial no puede depender solo de generación; debe apoyarse en historial estructurado, feedback, continuidad y evidencia acumulada.
 
+## Dirección de arte — comparativa pendiente de elección
+- Territorio fijado por el usuario: premium, editorial, íntima, contemporánea, serena pero no pasiva, femenina adulta, sofisticada, humana y tecnológica sin look de IA.
+- Prohibiciones: wellness pastel genérico, rosa/lila dominante, símbolos espirituales, degradé morado/azul de IA, SaaS, dashboards, ilustración infantil, look de hábitos y exceso decorativo.
+- Opción A — “Editorial de fuego bajo”: marfil #F5EFE5, carbón #2B2722, copper #A95739; Fraunces + Instrument Sans; marcador editorial y nota protagonista.
+- Opción B — “Señal en penumbra”: carbón cálido #20221F, hueso #F3EEE4, copper #C97851; Newsreader + Figtree; rail vertical y cápsulas táctiles.
+- Opción C — “Galería de intención”: hueso #EBE6DC, tinta verde #26312D, arcilla #C46D4D; Gloock + DM Sans; bloques escultóricos y evidencia acumulada.
+- Comparativa: `direcciones-abc.html` con `data-kit="abc-v2"`; captura: `output/playwright/direcciones-abc.png`.
+- Estado: opciones preparadas; ninguna dirección está elegida ni congelada todavía.
+
 ## Sesiones completadas ✅
 - Sesión 1 — Sistema instalado, git inicial creado y documentos base de NIA incorporados; verificado 2026-09-29.
 
@@ -97,7 +106,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Sesión 1 — Cierre de contexto y paso hacia la Constitución del Producto.
 
 ## Próximas sesiones 📋
-- Próximo paso: completar la primera victoria y las funciones núcleo/lo que NIA nunca hará.
+- Próximo paso: elegir, combinar o ajustar una dirección A/B/C; después preparar el tour de la app con la opción elegida.
 - Después: cerrar avatar y validación final, definir modelo de negocio completo, app modelo, arquitectura y plan maestro.
 
 ## Conflictos revisados con el Sistema Operativo
