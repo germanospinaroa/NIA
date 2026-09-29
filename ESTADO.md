@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-⏸️ CHECKPOINT — Última acción completada: Plan Maestro presentado para revisión / Siguiente acción exacta: esperar aprobación o correcciones antes de construir.
+✅ CHECKPOINT — Última acción completada: B5 — Plan Maestro aprobado y congelado con ajustes / Siguiente acción exacta: cerrar el gate de validación comercial y completar fichas preconstrucción, sin construir todavía.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -29,7 +29,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Lenguaje clave: “Sé cómo quiero reaccionar, pero cuando llega el momento vuelvo a dudar de mí”; “No quiero otra rutina”; “Quiero que me conozca un poco, pero no demasiado”; “Quiero terminar haciendo algo diferente, no solo sentir bonito”.
 - Ángulo comercial: “Actúa más como la persona que quieres ser, justo en los momentos en que normalmente vuelves a dudar de ti.”
 - Claims prohibidos: no prometer ingresos, salud, tratamiento psicológico ni aceptación externa.
-- FICHA-AVATAR.md: no creada todavía; el contenido de “NIA - Cliente2.pdf” ya fue leído y queda incorporado aquí como base.
+- FICHA-AVATAR.md: creada y aprobada el 2026-09-29 con base en “NIA - Cliente2.pdf” y el contexto confirmado por el usuario.
 
 ## Propuesta de valor y posicionamiento
 - Versión elegida: “Ayudo a mujeres profesionales que sobrepiensan en momentos importantes a actuar con más seguridad, sin journaling, frases genéricas ni largas conversaciones con una IA.”
@@ -68,6 +68,15 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Oferta de primeros usuarios propuesta: US$29,99 el primer año; no ofrecer lifetime todavía.
 - Prueba: no usar “7 días gratis con cobro automático anual” por el riesgo de resentimiento observado en la categoría.
 - Validación pendiente: probar demanda real y disposición a pagar antes de construir todo el producto.
+- Gate obligatorio: validar que las personas pagarían específicamente por la continuidad adaptativa, es decir, que lo ocurrido hoy modifique perceptiblemente lo que NIA hace después. Se prioriza concierge manual; también son válidos fake-door/preorden o entrevistas JTBD con disposición real a pagar.
+- WhatsApp manual puede usarse solo para validar el concierge. Evolution no se integra antes de Servicios Externos.
+- Hotmart queda aprobado como proveedor de pagos y suscripciones para LATAM. No reabrir la selección salvo impedimento técnico real documentado. Debe cubrir checkout, confirmación, renovación, cancelación, webhook verificado, idempotencia y sincronización segura del acceso.
+- Hotmart solo gestiona cobro/estado de acceso; no contiene lógica de NIA. Ninguna credencial o secreto va al navegador.
+- Punto NIA on demand queda incluido en el plan pago, pero no se congelan límites, créditos ni fair-use hasta conocer costo real por intervención, frecuencia, margen y comportamiento.
+
+## Instrumentación mínima obligatoria
+- Eventos canónicos: `arrival`, `onboarding_started`, `onboarding_completed`, `first_intervention`, `first_micro_signal`, `second_adapted_intervention`, `adaptation_recognized`, `on_demand_started`, `context_selected`, `microaction_shown`, `microaction_completed`, `paywall_viewed`, `checkout_started`, `payment_started`, `subscription_activated`, `return_D1`, `return_D7`, `cancellation`.
+- La taxonomía debe permitir medir conversión, retorno, efecto de percibir adaptación, efecto de microacciones, valor de Punto NIA on demand y pérdida por etapa, sin instrumentar eventos sin utilidad decisional.
 
 ## Retención
 - Loop: gatillo = intervención diaria acordada o necesidad imprevista → acción = leer y responder con un toque → recompensa = volver a la intención con un mensaje creíble → inversión = microseñal y contexto seleccionado que mejoran la próxima intervención.
@@ -76,7 +85,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Gamificación: no decidida; evitar presión por rachas salvo evidencia posterior.
 
 ## Secuencia maestra de construcción
-- Estado: B5 presentada; Constitución del Producto aprobada y congelada; validación final pendiente.
+- Estado: B5 aprobada y congelada; Constitución del Producto aprobada y congelada; validación comercial específica de NIA pendiente.
 - Ruta obligatoria: `/` → `/onboarding` → `/paywall` → `/login` → `/app` → servicios externos.
 - Landing: pendiente — no escribir copy final hasta cerrar avatar y Constitución.
 - Onboarding: pendiente — debe entregar una intervención real antes de pedir esfuerzo pesado.
@@ -101,13 +110,15 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 
 ## Sesiones completadas ✅
 - Sesión 1 — Sistema instalado, git inicial creado y documentos base de NIA incorporados; verificado 2026-09-29.
+- B4 — Dirección visual cerrada con `FICHA-ARTE.md` y `Visual NIA.png`; verificado 2026-09-29.
+- B5 — Plan Maestro aprobado y congelado con Hotmart, gate comercial, límites abiertos e instrumentación mínima; verificado 2026-09-29.
 
 ## Sesión en progreso 🔧
-- Sesión 1 — Cierre de contexto y paso hacia la Constitución del Producto.
+- Sesión 1 — Preparación del gate comercial y cierre de fichas de mercado/modelo antes de construcción.
 
 ## Próximas sesiones 📋
-- Próximo paso: revisar/aprobar el Plan Maestro; no construir hasta esa aprobación.
-- Después: completar FICHA-AVATAR.md, FICHA-MERCADO.md y FICHA-MODELO.md antes de escribir copy o fijar precio definitivo.
+- Próximo paso exacto: ejecutar el gate de validación comercial, priorizando concierge manual con WhatsApp si se dispone de participantes reales.
+- Después: completar `FICHA-MERCADO.md`, `FICHA-MODELO.md`, economía unitaria y arquitectura funcional/eventos antes de construir la página de ventas.
 
 ## Conflictos revisados con el Sistema Operativo
 - No hay conflicto de producto: el modelo híbrido mantiene la experiencia breve, el feedback mínimo, el valor antes del registro y la prohibición de coaching conversacional.
@@ -120,7 +131,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - No declarar NIA lista para vender hasta pasar los gates de seguridad, integridad y rigor de entrega.
 
 ## Pendientes del usuario
-- [ ] Aprobar o corregir el Plan Maestro antes de iniciar la construcción por etapas.
+- [ ] Facilitar acceso a 3–5 mujeres que encajen con Laura para ejecutar la validación concierge cuando comience esa etapa. Si se elige fake-door/preorden, deberá aprobarse cualquier gasto de tráfico antes de hacerlo.
 
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
