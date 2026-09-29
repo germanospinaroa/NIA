@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-✅ CHECKPOINT — Última acción completada: B5 — Plan Maestro aprobado y congelado con ajustes / Siguiente acción exacta: cerrar el gate de validación comercial y completar fichas preconstrucción, sin construir todavía.
+✅ CHECKPOINT — Última acción completada: estrategia de validación corregida y documentación de mercado/modelo actualizada / Siguiente acción exacta: cerrar documentación preconstrucción y comenzar página de ventas.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -66,17 +66,21 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Justificación: permite sentir el mecanismo antes de pedir dinero y prueba si la adaptación genera valor real frente a una versión estática.
 - Precio inicial propuesto: US$6,99 mensual y US$39,99 anual.
 - Oferta de primeros usuarios propuesta: US$29,99 el primer año; no ofrecer lifetime todavía.
-- Prueba: no usar “7 días gratis con cobro automático anual” por el riesgo de resentimiento observado en la categoría.
+- Prueba: 7 días gratis con cobro automático del plan elegido, siempre con transparencia explícita antes del checkout y cancelación clara.
 - Validación pendiente: probar demanda real y disposición a pagar antes de construir todo el producto.
-- Gate obligatorio: validar que las personas pagarían específicamente por la continuidad adaptativa, es decir, que lo ocurrido hoy modifique perceptiblemente lo que NIA hace después. Se prioriza concierge manual; también son válidos fake-door/preorden o entrevistas JTBD con disposición real a pagar.
-- WhatsApp manual puede usarse solo para validar el concierge. Evolution no se integra antes de Servicios Externos.
+- Gate previo eliminado por decisión del usuario: concierge, entrevistas WTP y fake-door no bloquean la construcción ni son requisito de validación.
+- Nuevo modelo de validación: lanzamiento real con 7 días de trial gratuito, acceso completo al mecanismo y cobro posterior del plan elegido. La señal inicial mínima de aprendizaje son 3–5 primeros pagos reales post-trial; no se inventan benchmarks porcentuales.
+- La validación debe cruzar adaptación percibida/uso → continuidad → pago, además de retorno D1/D3/D7, cancelación, primer pago y renovación cuando haya tiempo suficiente.
 - Hotmart queda aprobado como proveedor de pagos y suscripciones para LATAM. No reabrir la selección salvo impedimento técnico real documentado. Debe cubrir checkout, confirmación, renovación, cancelación, webhook verificado, idempotencia y sincronización segura del acceso.
 - Hotmart solo gestiona cobro/estado de acceso; no contiene lógica de NIA. Ninguna credencial o secreto va al navegador.
 - Punto NIA on demand queda incluido en el plan pago, pero no se congelan límites, créditos ni fair-use hasta conocer costo real por intervención, frecuencia, margen y comportamiento.
+- Trial: 7 días; no es demo limitada. Debe incluir intención persistente, intervenciones, feedback, memoria, adaptación, Punto NIA, microacciones cuando apliquen y primeras evidencias.
+- Hotmart: trial gratuito configurado en la suscripción; plan elegido antes del checkout; transparencia obligatoria sobre 7 días gratis, precio, moneda, primer cobro, periodicidad, renovación automática y cancelación.
+- Garantía operativa provisional: 15 días sobre la transacción inicial, para que sea mayor que el trial de 7 días; reconfirmar en la configuración real de Hotmart antes de publicar.
 
 ## Instrumentación mínima obligatoria
-- Eventos canónicos: `arrival`, `onboarding_started`, `onboarding_completed`, `first_intervention`, `first_micro_signal`, `second_adapted_intervention`, `adaptation_recognized`, `on_demand_started`, `context_selected`, `microaction_shown`, `microaction_completed`, `paywall_viewed`, `checkout_started`, `payment_started`, `subscription_activated`, `return_D1`, `return_D7`, `cancellation`.
-- La taxonomía debe permitir medir conversión, retorno, efecto de percibir adaptación, efecto de microacciones, valor de Punto NIA on demand y pérdida por etapa, sin instrumentar eventos sin utilidad decisional.
+- Eventos canónicos: `landing_viewed`, `cta_started`, `onboarding_started`, `onboarding_completed`, `first_intervention_received`, `feedback_given`, `adapted_intervention_received`, `nia_now_started`, `microaction_completed`, `plan_selected`, `checkout_started`, `trial_started`, `returned_d1`, `returned_d3`, `returned_d7`, `trial_cancelled`, `trial_completed`, `first_payment_succeeded`, `first_payment_failed`, `subscription_cancelled`.
+- La taxonomía debe reconstruir el trial completo y medir adaptación percibida/uso → continuidad → pago, sin instrumentar eventos sin utilidad decisional.
 
 ## Retención
 - Loop: gatillo = intervención diaria acordada o necesidad imprevista → acción = leer y responder con un toque → recompensa = volver a la intención con un mensaje creíble → inversión = microseñal y contexto seleccionado que mejoran la próxima intervención.
@@ -85,7 +89,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Gamificación: no decidida; evitar presión por rachas salvo evidencia posterior.
 
 ## Secuencia maestra de construcción
-- Estado: B5 aprobada y congelada; Constitución del Producto aprobada y congelada; validación comercial específica de NIA pendiente.
+- Estado: B5 aprobada y congelada; Constitución del Producto aprobada y congelada; validación comercial se realizará después del lanzamiento real.
 - Ruta obligatoria: `/` → `/onboarding` → `/paywall` → `/login` → `/app` → servicios externos.
 - Landing: pendiente — no escribir copy final hasta cerrar avatar y Constitución.
 - Onboarding: pendiente — debe entregar una intervención real antes de pedir esfuerzo pesado.
@@ -114,11 +118,11 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - B5 — Plan Maestro aprobado y congelado con Hotmart, gate comercial, límites abiertos e instrumentación mínima; verificado 2026-09-29.
 
 ## Sesión en progreso 🔧
-- Sesión 1 — Preparación del gate comercial y cierre de fichas de mercado/modelo antes de construcción.
+- Sesión 1 — Cierre documental preconstrucción y preparación de la página de ventas.
 
 ## Próximas sesiones 📋
-- Próximo paso exacto: ejecutar el gate de validación comercial, priorizando concierge manual con WhatsApp si se dispone de participantes reales.
-- Después: completar `FICHA-MERCADO.md`, `FICHA-MODELO.md`, economía unitaria y arquitectura funcional/eventos antes de construir la página de ventas.
+- Próximo paso exacto: cerrar la documentación de mercado/modelo y comenzar la Etapa 1 — página de ventas.
+- Gate de lanzamiento: página de ventas capaz de explicar NIA, iniciar el recorrido, mostrar la diferencia adaptativa, registrar eventos y pasar revisión visual/copy sin integrar Hotmart todavía.
 
 ## Conflictos revisados con el Sistema Operativo
 - No hay conflicto de producto: el modelo híbrido mantiene la experiencia breve, el feedback mínimo, el valor antes del registro y la prohibición de coaching conversacional.
@@ -131,7 +135,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - No declarar NIA lista para vender hasta pasar los gates de seguridad, integridad y rigor de entrega.
 
 ## Pendientes del usuario
-- [ ] Facilitar acceso a 3–5 mujeres que encajen con Laura para ejecutar la validación concierge cuando comience esa etapa. Si se elige fake-door/preorden, deberá aprobarse cualquier gasto de tráfico antes de hacerlo.
+- Ninguno para comenzar la documentación y la página de ventas. Cualquier gasto de tráfico, cuenta o credencial se pedirá cuando corresponda.
 
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.

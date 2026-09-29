@@ -3,14 +3,14 @@
 Estado: APROBADO Y CONGELADO — 2026-09-29 · No se ha construido ninguna etapa de producto.
 Contratos: Constitución de Producto congelada · `FICHA-ARTE.md` aprobada · Punto NIA · interacción híbrida · App/Web hogar · WhatsApp presencia futura · Hotmart proveedor de pagos.
 
-Regla de avance: la validación comercial real sigue siendo obligatoria antes de invertir en la construcción completa. Se permite WhatsApp manual para un concierge; eso no adelanta ni sustituye la integración técnica de Evolution.
+Regla de avance: el gate comercial previo no bloquea la construcción. NIA se construirá como MVP real, se lanzará con tráfico real y se validará mediante uso durante 7 días y conversión posterior a suscripción.
 
 ## 1. Secuencia completa de construcción
 
 ### Etapa 0 — Plan, validación y diseño de negocio
-Cerrar avatar, mercado, modelo de app, economía unitaria, precio candidato, eventos y arquitectura. Completar el gate de demanda: entrevistas con disposición a pagar, fake-door/preorden o concierge. La validación actual de 81/100 confirma oportunidad, pero no confirma todavía que el precio o la diferencia adaptativa generen pagos.
+Cerrar avatar, mercado, modelo de app, economía unitaria, precio candidato, eventos y arquitectura. La validación comercial previa queda sustituida por un gate de lanzamiento: construir un MVP completo, cobrable e instrumentado para enviar tráfico real.
 
-El próximo trabajo es cerrar este gate antes de construir el producto completo. La prueba debe comprobar específicamente que la continuidad adaptativa —que lo ocurrido hoy cambie perceptiblemente lo que NIA hace después— tiene valor de pago.
+La validación posterior comprobará si la usuaria vive durante 7 días la continuidad adaptativa —que lo ocurrido hoy cambie perceptiblemente lo que NIA hace después— y permite que comience el cobro.
 
 ### Etapa 1 — Página de ventas
 Vender el resultado: actuar más como la persona que Laura quiere ser. Mostrar Punto NIA en acción, no “IA” ni una biblioteca de frases. Instrumentar llegada, CTA y atribución. No publicar copy final hasta completar y aprobar `FICHA-AVATAR.md`.
@@ -32,23 +32,20 @@ Solo después de aprobar las cinco etapas anteriores: base de datos real y RLS, 
 
 ## 2. Modelo de negocio
 
-### Oferta candidata
+### Oferta inicial de lanzamiento
 - Suscripción mensual propuesta: US$6,99.
 - Suscripción anual propuesta: US$39,99/año, mostrada también como precio mensual transparente.
 - Oferta inicial propuesta: US$29,99 el primer año; sin lifetime.
-- Estos importes son candidatos, no congelados: falta `FICHA-MERCADO.md`, economía unitaria real y una señal de disposición a pagar.
+- Estos importes siguen siendo hipótesis comerciales: mensual US$6,99 y anual US$39,99. La variante de lanzamiento de US$29,99 el primer año queda documentada, pero no se activa automáticamente.
 
-### Gratis
-- Definir una intención.
-- Recibir la primera intervención.
-- Dar microseñales de un toque.
-- Vivir tres experiencias adaptativas sin tarjeta.
-- Percibir que una intervención posterior cambia según la señal anterior.
-
-El gratis debe demostrar el mecanismo, no regalar una biblioteca ilimitada ni una rutina completa.
+### Prueba gratuita
+- 7 días de acceso al producto real, no una demo mutilada.
+- Definir una intención persistente, recibir intervenciones, dar microseñales, experimentar adaptación, usar Punto NIA on demand, completar microacciones cuando correspondan y acumular primeras evidencias.
+- La usuaria selecciona el plan y completa Hotmart antes de iniciar el trial.
+- Al terminar los 7 días comienza el cobro del plan elegido y la recurrencia.
 
 ### Pantalla de planes
-Aparece después de la tercera experiencia adaptativa o cuando la usuaria intenta continuar con el aprendizaje. El mensaje debe vender continuidad: “NIA seguirá aprendiendo qué te ayuda”. No aparece como castigo ni antes de la primera victoria.
+La ubicación exacta dentro del recorrido se definirá según el onboarding aprobado, pero debe aparecer antes de Hotmart y antes de iniciar el trial. Debe informar con claridad: 7 días gratis, plan, importe, moneda, fecha aproximada del primer cobro, periodicidad, renovación automática y cancelación.
 
 ### Pago desbloquea
 - Ritual proactivo diario en el momento elegido.
@@ -171,14 +168,14 @@ Cada puerta exige tsc, build, arranque limpio, flujo principal, casos borde, cap
 
 Los eventos son estables, accionables y no deben crecer por instrumentar sin una pregunta de negocio. El contrato inicial es:
 
-`arrival`, `onboarding_started`, `onboarding_completed`, `first_intervention`, `first_micro_signal`, `second_adapted_intervention`, `adaptation_recognized`, `on_demand_started`, `context_selected`, `microaction_shown`, `microaction_completed`, `paywall_viewed`, `checkout_started`, `payment_started`, `subscription_activated`, `return_D1`, `return_D7`, `cancellation`.
+`landing_viewed`, `cta_started`, `onboarding_started`, `onboarding_completed`, `first_intervention_received`, `feedback_given`, `adapted_intervention_received`, `nia_now_started`, `microaction_completed`, `plan_selected`, `checkout_started`, `trial_started`, `returned_d1`, `returned_d3`, `returned_d7`, `trial_cancelled`, `trial_completed`, `first_payment_succeeded`, `first_payment_failed`, `subscription_cancelled`.
 
-La instrumentación debe permitir responder: si percibir adaptación mejora la conversión; si completar microacciones mejora el retorno; si Punto NIA on demand produce retorno; y dónde se pierden las usuarias. Cada evento tendrá contexto mínimo —usuario anónimo o autenticado, sesión, etapa, intención no sensible, canal y timestamp— sin guardar el contenido íntimo de la persona.
+La instrumentación debe permitir responder: si percibir adaptación mejora la continuidad y el pago; si Punto NIA on demand produce retorno; y dónde se pierden las usuarias. `adaptation_recognized` y `paywall_viewed` podrán añadirse solo si responden a una decisión concreta y se define cómo se observa sin forzar una encuesta. Cada evento tendrá contexto mínimo —usuario anónimo o autenticado, sesión, etapa, intención no sensible, canal y timestamp— sin guardar el contenido íntimo de la persona.
 
 ## 9. Riesgos y decisiones críticas
 
-- **Demanda:** la categoría está validada, pero NIA aún no tiene gate de pago propio. Riesgo: gustar y no cobrar. Mitigación: fake-door, entrevistas WTP o concierge antes de tráfico pagado.
-- **Diferencia adaptativa:** la validación debe aislar si la usuaria paga por continuidad y adaptación, no solo por recibir una intervención agradable.
+- **Lanzamiento:** la categoría está validada, pero la señal específica de NIA se medirá con trial real. No se declarará validación fuerte hasta obtener al menos 3–5 primeros pagos post-trial.
+- **Diferencia adaptativa:** el análisis debe cruzar adaptación percibida/uso → continuidad → pago, sin declarar resultados con muestras insuficientes.
 - **Precio:** US$6,99/US$39,99 es candidato heredado del contexto, no precio final. Falta mercado específico, costo de IA y margen.
 - **Límites de uso:** no fijar límites artificiales de Punto NIA antes de conocer costo, frecuencia y margen; tampoco prometer “ilimitado” sin esos datos.
 - **Adaptación invisible:** si el día siguiente no cambia de forma perceptible, NIA parece otra app de frases. El test de regresión debe demostrar adaptación con la misma intención y señales distintas.
@@ -190,7 +187,7 @@ La instrumentación debe permitir responder: si percibir adaptación mejora la c
 
 ## 10. WhatsApp / Evolution
 
-Queda definido desde ahora como canal futuro de presencia e interacción breve: intervención proactiva, feedback de un toque y activación rápida de Punto NIA. No se integra todavía. El núcleo debe funcionar primero desde App/Web, con una interfaz de delivery intercambiable para que Evolution no sea dependencia del dominio ni de la memoria.
+Queda definido como canal de presencia e interacción breve: intervención proactiva, feedback de un toque y activación rápida de Punto NIA. No se integra antes de su etapa en Servicios Externos. No habrá concierge manual obligatorio por WhatsApp; cuando corresponda, Evolution se integrará como adaptador del producto real. El núcleo debe funcionar primero desde App/Web y no depender del proveedor.
 
 ## 11. Criterio de finalización del MVP vendible
 
@@ -204,9 +201,10 @@ Una usuaria nueva debe poder:
 6. Recibir después una intervención que cambió perceptiblemente según esa señal.
 7. Usar “Necesito NIA ahora” y elegir un contexto sin abrir conversación.
 8. Completar una microacción solo si aplica y conservar evidencia narrativa.
-9. Ver la pantalla de planes después de haber vivido el mecanismo.
-10. Pagar, crear/iniciar sesión y conservar intención, memoria y evidencia.
-11. Usar App/Web como hogar con controles de privacidad y borrar su memoria.
-12. Recibir el servicio de forma estable y segura en el canal implementado, con pagos verificados, datos aislados por usuario, claves privadas fuera del navegador, política de privacidad y auditoría de seguridad aprobada.
+9. Ver la pantalla de planes con la transparencia completa del trial.
+10. Seleccionar un plan, completar Hotmart, iniciar el trial y conservar intención, memoria y evidencia.
+11. Llegar al primer cobro y mantener el acceso sincronizado solo mediante eventos verificados.
+12. Usar App/Web como hogar con controles de privacidad y borrar su memoria.
+13. Recibir el servicio de forma estable y segura en el canal implementado, con pagos verificados, datos aislados por usuario, claves privadas fuera del navegador, política de privacidad y auditoría de seguridad aprobada.
 
 Si solo existen pantallas bonitas, una demo estática, un chat o una app interna sin cobro y memoria segura, no es el MVP vendible de NIA.
