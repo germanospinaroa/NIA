@@ -1,0 +1,75 @@
+CERTIFICACIÓN PRE-LANZAMIENTO — ¿está lista para vender? (go-live check)
+📌 CUÁNDO USARLO: antes de cobrarle al primer cliente — el chequeo final que dice APTO o NO APTO.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+========================================================================
+
+Antes de cobrarle a un solo usuario, certifica que esta app está lista para producción y venta.
+Revísala a fondo y dame un veredicto final APTO / NO APTO — acompañado SIEMPRE del CERTIFICADO /100
+del punto 11 — con la lista de bloqueantes. Para cada punto marca ✅ ok / ⚠️ arreglar / ❌ bloqueante:
+
+ANTES DE EMPEZAR, si no está claro, pregúntame en simple:
+1. ¿La app ya está desplegada o todavía está local?
+2. ¿Ya existe Hotmart/checkout real o solo estamos preparando la venta?
+3. ¿Quieres que corrija bloqueantes que encuentre, o solo quieres el veredicto?
+Si algo puede costar dinero, tocar clientes reales o enviar emails, avísame con ⚠️ antes de actuar.
+
+  0. INTEGRIDAD BINARIA (61 — corre antes del puntaje): ejecuta Gates 1-10 y crea/verifica los cinco
+     artefactos en docs/release. Cualquier backdoor, pago no certificado, consentimiento inválido,
+     RPC manipulable, claim sin capacidad, economía negativa/multimoneda falsa o commit distinto
+     a producción = NO APTO sin importar el /100. Infraestructura que no pudiste abrir = NO VERIFICADA.
+
+  1. SEGURIDAD (27 + 09): auditoría OWASP 2025, fail-open, secretos fuera del repo, RLS + prueba de
+     IDOR (acceso cruzado entre usuarios), headers + CSP real, webhook de pago con firma verificada.
+  2. DATOS (25): índices (FKs incluidas), RLS de alto rendimiento, migraciones seguras, backups.
+  3. ESCALA (13): ¿aguanta 300-500 usuarios? pooling (puerto 6543), paginación, caché, jobs async,
+     y qué tier toca (recuerda: el Supabase Free se rompe primero — pausa a los 7 días + egress 5GB).
+  4. IA, si aplica (30 + 31): claves en el servidor, async para imagen/audio, resiliencia
+     (reintentos/timeout/degradación), guardrails (moderación/anti-inyección), observabilidad
+     (tabla ai_calls), alertas de gasto, y golden set de evals.
+  5. PAGO (18 + 61): catálogo exacto validado, dedupe técnico + ledger económico, access_until,
+     trial/past_due/cancel/refund/chargeback separados y PAYMENT-CERTIFICATION real completa.
+  6. LEGAL (47): privacidad, términos, borrado de cuenta, aviso de procesamiento por IA — y que el footer de la landing enlace a páginas EXISTENTES.
+  7. ECONOMÍA: margen por plan/cohorte/canal y escenarios mediana/p95/heavy user; dinero por moneda,
+     tarifas reales/conciliadas y ECONOMICS-CERTIFICATION. Supuestos siempre rotulados.
+  8. OPERACIÓN (31): Sentry activo, mini-runbook de incidentes, status page, canal de soporte
+     visible, y rollback probado.
+  9. PRODUCTO ENRIQUECIDO (32): cada pantalla clave MIRADA renderizada a 375px — nav al fondo sin
+     vacío muerto, fondo con profundidad, pantalla llena de valor, CTA vivo, gate doble de rúbricas:
+     ≥36/40 usabilidad Y ≥16/20 craft, puntuadas por el subagente revisor-visual. Una
+     app básica / plana / vacía NO es APTA aunque funcione.
+ 10. RIGOR DE ENTREGA (48 — la puerta final, lo que evita que YO tenga que corregir):
+     - AUTO-QA END-TO-END: maneja la app como usuario real, toca CADA botón, recorre CADA flujo
+       (primera victoria, acción frecuente, llegar al límite del plan, pago, recuperación de error),
+       verifica los 6 estados (vacío/carga/éxito/error/deshabilitado/offline) y el PRIMER ARRANQUE vacío.
+     - PRE-MORTEM: "si esto fracasa/me avergüenza/me cuesta dinero en 1 semana, ¿por qué?" → corrige los top.
+     - INVARIANTES: dinero (gating en servidor, webhook idempotente, refund/chargeback correctos),
+       datos (no se pierden, export), seguridad (IDOR probado).
+     - CIRCUIT-BREAKER de costo de IA: tope global + por-usuario + kill-switch + alerta (no factura sorpresa).
+     - CALIDAD DEL OUTPUT de IA: el resultado es genuinamente bueno/completo/en-marca, no slop.
+     - MANUAL-DEL-DUEÑO.md generado (cuentas, claves, deploy, tareas comunes, runbook) en lenguaje simple.
+     - PERFORMANCE: budget del 38 en verde (LCP/CLS móviles).
+     - TEST DE ESTRENO (48): recorrido completo ENCARNANDO al avatar (FICHA-AVATAR.md) —
+       landing → onboarding → paywall → primera sesión — narración en 1ª persona + 3 fugas corregidas.
+     - PENDIENTES de ESTADO.md cerrados (carrusel de la landing con screenshots reales, no placeholders).
+ 11. CERTIFICADO /100 (48 — el número que YO entiendo): consolida TODO el veredicto en el
+     certificado de 6 pilares — VENTA /20 (landing: estructura canónica del 19 + copy /20 del
+     revisor + render /40+/20) · FUNNEL /20 (gates del 02B/50 + render + puente del trial D1-D7
+     del 02C diseñado) · PRODUCTO /20 (promedio del revisor en pantallas core + momentos del 56 +
+     6 estados) · CONFIANZA /15 (seguridad 27 + legal 47 + pago E2E) · VELOCIDAD /10 (budget del
+     38 en verde) · RETENCIÓN /15 (loop 24 + analítica 36 + dunning 58). Regla honesta: cada
+     sub-ítem es binario o el puntaje real del revisor escalado; lo que NO se midió puntúa 0 y se
+     dice. Bandas: ≥90 clase mundial · 80-89 lista para vender (mejorar los pilares <80% en el
+     primer mes) · <80 NO APTO con la lista exacta de qué falta.
+
+Corrige los ❌ y ⚠️ que puedas sin romper nada (verificando con tsc + build + dev), y dame la lista
+de lo que requiere mi decisión o mi acción (pagar dominio, dar una clave, etc.). No declares APTO
+sin haberlo verificado con evidencia real (incluido el auto-QA manejando la app, no solo que compile).
+El veredicto final APTO / NO APTO va SIEMPRE acompañado del CERTIFICADO /100 con su desglose por
+pilar (VENTA __/20 · FUNNEL __/20 · PRODUCTO __/20 · CONFIANZA __/15 · VELOCIDAD __/10 ·
+RETENCIÓN __/15), presentado en simple, una línea por pilar. Cierra actualizando ESTADO.md con el
+veredicto, el certificado /100 completo, los bloqueantes abiertos y la evidencia (screenshots
+y veredictos del revisor del punto 9 incluidos).
+
+Antes del veredicto ejecuta también lint, tests, build, Playwright, audit de seguridad, evals del
+dominio y clean-room bootstrap. Confirma que `RELEASE-MANIFEST.json`, producción y evidencia usan
+el mismo git SHA. El certificado /100 es secundario: un bloqueante de 61 mantiene NO APTO.

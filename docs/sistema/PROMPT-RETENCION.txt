@@ -1,0 +1,55 @@
+RETENCIÓN Y GAMIFICACIÓN — haz que la gente VUELVA (como Duolingo)
+📌 CUÁNDO USARLO: cuando la gente usa la app una vez y no vuelve — quieres que se vuelva un hábito.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+==================================================================
+
+Diseña e implementa el sistema de retención de esta app para que el usuario vuelva mes a mes.
+Primero dame un plan corto (qué mecánicas y por qué encajan con ESTE nicho) y espera mi OK; luego
+ejecuta por capas, verificando.
+
+ANTES DE PROPONER MECÁNICAS (DECIDE-INFORMA-AVANZA — no me preguntes lo que el SO ya resuelve):
+la ACCIÓN principal a repetir y la FRECUENCIA de uso las DEDUCES de ESTADO.md y de la promesa
+(orden de diseño del 02C); las MECÁNICAS las decide la tabla "por tipo de app" del 24. Decide,
+anótalo en ESTADO.md e infórmamelo en 1 línea simple. Pregúntame SOLO lo que no puedes saber —
+ej. "¿qué se sentiría fuera de lugar para tu marca: rachas, puntos, comunidad?" (con opciones
+concretas, nunca pregunta abierta).
+No metas gamificación por meterla. La retención debe ayudar al usuario a lograr lo que vino a lograr.
+
+LEE PRIMERO: 24-GAMIFICACION (loop Hooked, NÚMERO MÁGICO de activación + forma de la curva de
+retención, rachas, XP, recompensa variable, ligas, re-enganche, instrumentación, anti-patrones),
+11-DISENO-EMOCIONAL (el tono de las celebraciones), 56-MOMENTOS-EMOCIONALES (las pantallas de
+celebración, hito de racha, racha rota, level-up, win-back y share cards), 15-PATRONES-UX (empty states, next best action),
+02B-ONBOARDING-Y-PAYWALL (onboarding gamificado → paywall), 58-RETENCION-DE-INGRESOS (referidos
++ renovación anual) y 21-BACKOFFICE/36-ANALITICA (métricas y eventos de retención).
+
+DEFINE PRIMERO (anótalo en ESTADO.md):
+ • El LOOP central — gatillo → acción → recompensa variable → inversión — y qué mecánicas aplican a SU
+   patrón de uso (NO metas todas: usa la tabla "por tipo de app" del archivo 24).
+ • El NÚMERO MÁGICO: la acción × cantidad × ventana que predice retención (hipótesis si aún no hay
+   datos, ej. "3 generaciones en los primeros 3 días"). TODA la gamificación se calibra para empujar
+   al usuario a cruzarlo. Antes de invertir en más mecánicas, verifica que la curva de retención
+   APLANE en meseta >0 (si decae a cero, el problema es el producto, no la falta de rachas — archivo 24).
+
+IMPLEMENTA lo que aplique (lógica SIEMPRE en el servidor con RLS — nunca editable desde el cliente):
+ • RLS: cliente solo SELECT de XP/gemas/logros. Mutación por RPC que recibe action_id, verifica
+   acción+owner+idempotencia y calcula recompensas server-side; jamás confía valores del cliente.
+ • Onboarding con primera victoria en <60s + anillo de setup ("3/5 pasos") + racha pre-cargada en 1.
+ • Racha con streak-freeze y reparación <48h; copy en clave de pérdida; hitos 7/30/100/365.
+ • XP con meta diaria seleccionable (10/20/30/50) y niveles geométricos, SI el uso es diario.
+ • Hitos de volumen, récords personales (vs uno mismo) y badges con goal-gradient ("te faltan X").
+ • Re-enganche: notificaciones D1/D3/D7 + win-back (email Resend / pg_cron), TOPE ≤1-2/día, accionables.
+ • REFERIDOS (member-get-member, archivo 58): pedirlo en el momento de máxima felicidad (un hito real),
+   recompensa de doble lado atada al valor de la app — SOLO si la curva ya aplanó (no antes).
+ • Instrumentación: escribe los eventos canónicos (streak_extended, xp_awarded, milestone_reached…)
+   en el event_log que lee el backoffice (contrato único de 24 + 21).
+
+PROHIBIDO (anti-patrones del 24): spam de culpa, pay-to-not-lose como única reparación, falsa escasez,
+métricas de vanidad, comparación social que humilla. Test ético en cada mecánica: ¿ayuda al usuario a
+lograr lo que vino a lograr, o solo lo pega a la pantalla?
+
+REGLAS: verifica lint + tsc + tests + build + dev al cerrar CADA capa · toda pantalla nueva o tocada (celebración,
+racha, level-up) se cierra con screenshot REAL a 375px + veredicto del revisor-visual (Regla 7 de
+CLAUDE.md) · la lógica de progreso SIEMPRE en el servidor
+con RLS · mejora lo que existe (no reescribas sin avisar) · cero features nuevas (van a ESTADO.md) ·
+causa raíz, no parches · nunca declares que algo "retiene mejor" sin probarlo en el flujo real ·
+reporta las mecánicas activas y deja el loop documentado en ESTADO.md.

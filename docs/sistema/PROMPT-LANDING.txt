@@ -1,0 +1,81 @@
+PÁGINA DE VENTAS PREMIUM — landing de alta conversión (no una landing básica)
+📌 CUÁNDO USARLO: cuando necesitas crear (o mejorar) la página que convierte visitas en compradores.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+==============================================================================
+
+Crea (o eleva) la pagina de ventas de esta app para que comunique y convierta. La estructura del 19
+es el default para una landing nueva, no una obligacion de agregar bloques sin evidencia. Primero
+dame el ángulo de copy derivado de la ficha de avatar, espera mi OK, y luego constrúyela completa (código real, no mockup).
+
+GATE DE AVATAR (antes de todo): si NO existe FICHA-AVATAR.md completa y aprobada (plantilla:
+docs/sistema/PLANTILLA-FICHA-AVATAR.md), créala PRIMERO conmigo según
+docs/sistema/57-AVATAR-Y-CONSCIENCIA.md. TODO el copy se DERIVA de sus dolores/deseos/objeciones
+y del nivel de consciencia del mercado — cada pieza debe poder trazarse a un campo de la ficha.
+ESTRUCTURA: una landing nueva parte de la ESTRUCTURA CANONICA de 10 secciones del 19 (hero 4U's ->
+problema en preguntas → agitación → mecanismo → carrusel de la app → oferta anual+mensual con
+trial -> garantia -> FAQ desde objeciones -> CTA final emocional -> footer legal). En rescate,
+el diagnostico de `60` puede compactar o reordenar con una hipotesis y una metrica explicitas.
+
+ANTES DE PROPONER COPY O DISEÑO, si no está claro en ESTADO.md, pregúntame en simple:
+1. ¿A quién le vendemos y qué dolor quiere resolver?
+2. ¿Cuál es la promesa principal de la app en una frase?
+3. ¿Hay precio, garantía o testimonios reales? Si no hay, no inventes.
+(El destino del botón NO se me pregunta: lo decide el modelo de monetización de ESTADO.md/02C —
+decídelo tú, anótalo e infórmamelo en una línea.)
+Con mis respuestas, escribe primero el argumento de venta. Nada de frases genéricas ni visuales decorativos:
+cada sección debe ayudar a que una persona entienda, confíe y avance.
+
+LEE PRIMERO: 60-OPERACION-DE-CONVERSION (primer viewport, destino del CTA y medicion),
+19-PAGINA-DE-VENTAS (estructura canonica y copy de respuesta directa),
+52-COPY-VISUALES-CONVERSION (argumento de venta, visual que vende, marca y CTA),
+16-DIRECCION-DE-ARTE + 29-REFERENCIA-VISUAL (misma identidad visual que la app, no genérica),
+55-DISENO-DE-LANDING (blueprints a 375px: hero, carrusel, pricing, footer), 22-LIBRERIAS-Y-CRAFT
+(animaciones de entrada premium), 02C-PRICING-Y-MODELO-DE-NEGOCIO (la promesa y el pricing) y
+20-ASSETS-VISUALES (hero, OG, visuales).
+
+CONSTRUYE las 10 secciones canónicas del 19 EN SU ORDEN EXACTO, con las reglas de copy del 52:
+1) hero (headline 4U's de Mark Ford + subtitular que potencia + visual o placeholder con sugerencia
++ CTA; franja de prueba social día-1 debajo del CTA) · 2) problema en 3-5 preguntas desde los
+dolores de la ficha · 3) agitación con el costo de la inacción cuantificado · 4) solución con el
+mecanismo bautizado · 5) carrusel automático de la app (placeholders si aún no existe; screenshots
+reales al cerrarla — pendiente en ESTADO.md) · 6) oferta anual+mensual con trial (anual como $/mes)
+· 7) garantía con nombre · 8) FAQ desde las objeciones de la ficha · 9) CTA final emocional con
+future pacing + PS · 10) footer legal con páginas existentes (47).
+Copy en el idioma del usuario, específico y sin relleno, TODO trazable a FICHA-AVATAR.md.
+
+ANTES DE PROPONER EL DISEÑO, escribe el argumento de conversión:
+dolor específico → mecanismo → resultado → prueba/demo → oferta → reversibilidad → acción.
+El hero expresa una sola idea. Headline 8-10 palabras max (<8 ideal) y subtitulo <=2 lineas son
+limites del 52: si excedes por claridad, anotalo en el reporte de cierre (no es licencia
+general). Usa palabras clave resaltadas
+y visual real que muestre antes→después, desbloqueo, progreso o prueba. Si no hay garantía real,
+no escribas "garantía visible"; déjalo como pendiente interno.
+
+CTA SEGÚN EL MODELO (archivo 19 → "ADAPTACIÓN AL FLUJO HOTMART"): antes de escribir un solo CTA,
+verifica en ESTADO.md qué modelo de monetización definí (02C). Si Modelo 1 (hard paywall): el CTA
+lleva al checkout de Hotmart. Si Modelo 2 (onboarding-first, el default B2C): el CTA lleva a
+`/onboarding` anonimo ("Crear mi plan gratis") por defecto. Solo lleva al REGISTRO si el Modelo 2B
+requiere persistencia previa al pago. El checkout aparece tras el onboarding; la landing vende el
+inicio del resultado y el paywall vende el PAGO. Si no esta definido, pregunta antes.
+
+PRUEBA SOCIAL: si aún no hay 3 testimonios REALES, usa la jerarquía día-1 del 19 (demo/GIF del
+producto real + garantía Hotmart + resultado del fundador con fecha) y OMITE la sección de
+testimonios — nunca placeholders ni inventados. Sin claims de ingresos/salud (políticas de ads, 47).
+
+MESSAGE-MATCH (archivo 19): el headline del hero debe ECOAR la promesa exacta del anuncio/email que
+trae al visitante (los creativos del archivo 34). Si corres varios ángulos, idealmente cada uno
+aterriza en un hero que recoge SU promesa — no un hero genérico para todos. Es la fuga de conversión
+más barata de tapar.
+
+REGLAS: una sola promesa central (la de ESTADO.md); CTAs consistentes con el estado del funnel;
+sticky en dos tiempos (antes de ver oferta -> scroll; despues -> accion comercial); en 390x844 y
+1440x900 deben verse marca, titular, subtitulo, CTA y una pista del producto real;
+performance (Core Web Vitals — ver 28 si es Next.js); responsive mobile-first; CERO patrones engañosos
+(urgencia falsa, costos ocultos, confirmshaming). Mismo nivel anti-slop que la app. Ninguna sección
+solo-texto: aplica el SISTEMA DE ÍCONOS Y DETALLES del 55 (íconos SVG premium con contenedor,
+hairlines degradadas en los elementos clave, checkmarks custom) — emojis prohibidos como íconos
+salvo que yo los pida. CIERRE: screenshot
+REAL a 375px → SUBAGENTE `revisor-visual` (gate ≥36/40 y ≥16/20 + fidelidad si hay referencia) + rúbrica
+de copy /20 del 52 (≥16, también por el revisor con contexto limpio); si tu entorno no tiene subagentes,
+puntúa tú SOBRE LO QUE VES y decláralo. Verifica tsc + build + dev al cerrar cada capa; mejora lo que exista (no
+reescribas sin avisar); causa raíz, no parches; no la declares "lista" sin levantarla y mirarla; actualiza ESTADO.md.

@@ -1,0 +1,85 @@
+PRECIOS — cambio de precio post-fundadores (grandfathering + actualización coordinada)
+📌 CUÁNDO USARLO: cuando toca subir o cambiar el precio sin romper la promesa a los fundadores.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+======================================================================================
+
+Eres el responsable de pricing de esta app. Vamos a cambiar el precio (típicamente: subirlo al
+cerrar la etapa de fundadores). Un cambio de precio mal ejecutado rompe DOS cosas: la promesa a
+los fundadores ("precio bloqueado de por vida", archivo 35) y la coherencia entre las superficies
+donde el precio aparece (Hotmart cobra una cosa, la landing dice otra → reembolsos y desconfianza).
+Primero preséntame el plan completo y espera mi OK; nada se cambia en vivo hasta la fase 3.
+
+ANTES DE CALCULAR, deduce TÚ lo que ya es visible (no me lo preguntes): el precio actual sale de
+ESTADO.md/la landing/Hotmart; DÓNDE aparece el precio lo encuentras con grep en el código y la
+landing; si hay data suficiente para medir conversión lo ves en el backoffice. El precio NUEVO lo
+PROPONES tú con el modelo del 40 (yo lo ajusto si quiero). Pregúntame en simple SOLO si no está
+en ESTADO.md:
+1. ¿A alguien se le prometió precio de fundador o precio de por vida?
+2. ¿Hay una razón del negocio para el cambio que yo sepa y tú no (costos, competencia, una meta)?
+Nunca cambies el precio en una sola superficie. Precio nuevo implica Hotmart + landing + paywall +
+emails/afiliados coordinados.
+
+LEE PRIMERO: 40-UNIT-ECONOMICS (el modelo unitario que valida el precio nuevo — margen, LTV:CAC),
+02-VALIDACION y 02C-PRICING-Y-MODELO-DE-NEGOCIO (WTP y estrategia de pricing/paywall), 35-LANZAMIENTO
+(la promesa de fundadores), 58-RETENCION-DE-INGRESOS (la renovación anual), 37-FEATURE-FLAGS-Y-EXPERIMENTOS
+(si hay volumen para testear en vez de adivinar), 19-PAGINA-DE-VENTAS (dónde vive el precio en la
+landing) y ESTADO.md (qué se prometió a los fundadores: quiénes y a qué precio).
+Lee también 61: actualiza CLAIMS-LEDGER y ECONOMICS-CERTIFICATION; usa tarifas/precios oficiales
+con fecha, monedas separadas y escenarios mediana/p95/heavy user.
+
+FASES (espera mi OK entre fase y fase):
+
+FASE 1 — EL NÚMERO NUEVO, VALIDADO (no un pálpito):
+  • Recalcula el modelo unitario del 40 con el precio propuesto (procesamiento Hotmart + comisión
+    de afiliado 30-40% + COGS de IA): margen, LTV proyectado, CAC máximo tolerable. El precio
+    nuevo debe MEJORAR la economía, no solo "ser más caro".
+  • Si hay VOLUMEN suficiente (regla del 37: tráfico para significancia en semanas, no meses):
+    propone un test A/B de precio con feature flag en el paywall/landing ANTES de cambiarlo para
+    todos — se testea la página que muestra el precio; el cobro real lo hace la oferta de Hotmart
+    correspondiente. Si NO hay volumen: decisión directa anclada al WTP medido (02) + comparables.
+  → Preséntame precio nuevo + números + (si aplica) diseño del test. Espera mi OK.
+
+FASE 2 — GRANDFATHERING (la promesa de fundadores se CUMPLE):
+  • Identifica EXACTAMENTE quiénes son los protegidos: la cohorte fundadores/early según ESTADO.md
+    y los registros de Hotmart (fecha de compra ≤ cierre de fundadores).
+  • Operacionalízalo en el modelo Hotmart: los suscriptores existentes CONSERVAN su plan/oferta
+    actual (verificar en el panel que el cambio de precio del producto/oferta NO toque las
+    suscripciones vigentes — si el panel actual se comporta distinto, la alternativa es crear una
+    OFERTA nueva con el precio nuevo para compradores nuevos y dejar la oferta vieja cerrada a
+    nuevas ventas pero viva para los actuales). ⚠️ Esto se VERIFICA en el panel real, no se asume.
+  • Marca la cohorte en la base (`profiles.founder = true` o equivalente) para que la app, los
+    emails y el soporte sepan a quién NUNCA se le menciona un precio nuevo como si fuera suyo.
+  • Caso borde documentado: fundador que cancela y vuelve después — ¿conserva el precio viejo?
+    (decisión mía; default honesto: lo conserva si vuelve dentro de la ventana de win-back).
+
+FASE 3 — ACTUALIZACIÓN COORDINADA (todo el mismo día, en este orden):
+  1. HOTMART: precio/oferta nueva en el panel (guiándome clic a clic — la IA no toca el panel).
+     Si cambian los PLANES: configurar el cambio de plan nativo de Hotmart y verificar que el
+     webhook mapea SWITCH_PLAN (18) — sin eso, los upgrades dejan el plan desactualizado en silencio.
+  2. LANDING (19): precio, anclas y FAQ de precio actualizados.
+  3. PAYWALL in-app (02B/02C): la pantalla de planes muestra el precio nuevo (y a los fundadores, el
+     suyo — jamás mostrarle al fundador un precio que no es el que paga).
+  4. KIT DE AFILIADOS (34): materiales con el precio nuevo + aviso a los afiliados (su comisión
+     cambia en valor absoluto — díselos ANTES de que lo descubran).
+  5. FAQ/soporte (59): plantilla actualizada para "¿por qué veo otro precio?".
+  → Verificación cruzada final: una compra de prueba paga el precio NUEVO; un fundador (o cuenta
+    de prueba marcada) sigue viendo/pagando el SUYO; ninguna superficie muestra el precio viejo
+    a públicos nuevos. tsc + build + dev si hubo código.
+
+FASE 4 — COMUNICACIÓN A LA BASE (transparencia que retiene):
+  • A FUNDADORES: email/WhatsApp que CELEBRA su beneficio ("el precio sube a X para los nuevos —
+    el tuyo queda en Y para siempre, como prometimos"). Es el email de retención más barato que
+    existe: les recuerda que irse = perder el precio viejo.
+  • A NUEVOS/LISTA: aviso honesto ANTES del cambio si sirve de urgencia real ("hasta el [fecha]
+    entra al precio actual") — urgencia verdadera, no teatro.
+  • Sin disculpas excesivas ni justificaciones larguísimas: el precio nuevo se sostiene en valor.
+
+CRITERIOS DE ÉXITO: el modelo unitario del precio nuevo está calculado y pasa el gate del 40 ·
+la cohorte protegida está identificada y marcada en la base · las 5 superficies muestran el precio
+correcto según quién mira · la compra de prueba cobró el precio nuevo y el fundador conserva el
+suyo · los afiliados fueron avisados antes del cambio público · los emails de comunicación están
+listos/enviados.
+
+CIERRE: actualiza ESTADO.md con: precio nuevo y desde cuándo, cohorte grandfathered (criterio y
+tamaño), resultado del test si lo hubo, y la fecha para revisar el efecto en conversión y churn
+(en la próxima operación mensual).

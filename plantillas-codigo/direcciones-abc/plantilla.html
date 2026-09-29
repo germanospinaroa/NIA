@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="es" data-kit="abc-v2">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direcciones de arte A/B/C — [NombreApp ← reemplazar]</title>
+
+<!-- ============================================================================
+  KIT-ABC-V2 — PLANTILLA DEL PROTOCOLO A/B/C (54, Regla Dura #0 + gate del CLAUDE.md)
+  ⚠️ EL MARCADOR data-kit="abc-v2" DEL <html> NO SE BORRA: el hook pre-stop lo
+  verifica. Una comparativa sin ese marcador se trata como escrita desde cero
+  (prohibido). Este archivo se COPIA y se TEMATIZA — nunca se reescribe a mano.
+  Comparativa AUTOCONTENIDA: 3 layouts ESTRUCTURALMENTE DISTINTOS de la MISMA
+  pantalla clave, cada uno con su dirección de arte completa. El usuario la ABRE
+  y VE — prohibido presentar direcciones solo con texto.
+
+  CÓMO USARLA:
+  1. Reemplazar los tokens de .op-a / .op-b / .op-c (marcados "← reemplazar") con
+     las 3 direcciones derivadas (16 PASO 0.2bis + banco del 54). La paleta del
+     líder/banco se toma TAL CUAL — la divergencia va en composición y dispositivo.
+  2. Reemplazar los DATOS SEMILLA por datos del dominio REAL del avatar (nunca
+     lorem ipsum, nunca pantallas a medias — el mockup ES la promesa de calidad).
+  3. Llenar la "Hipótesis de conversión" de cada opción (1 línea).
+  4. EMBEBER LAS FUENTES (obligatorio antes de mostrar — ver bloque de abajo).
+  5. Verificar el TEST DE DIVERGENCIA (54): en escala de grises deben verse 3
+     diseños distintos; si solo cambia el acento, NO son 3 opciones — rehacer.
+
+  ── CÓMO EMBEBER LAS FUENTES (elegir UNA vía según el vehículo) ──────────────
+  FALLBACK-TRAMPA: cada familia se declara `font-family: "X", monospace` — si la
+  fuente no carga, el monospace GRITA y el fallo no pasa desapercibido. NO quitar
+  el monospace "para que se vea mejor": es el detector.
+
+  VÍA A — data-URI (artifacts / CSP estricta que bloquea hosts externos):
+  descargar el .woff2 (solo los pesos usados), convertir a base64 y pegar:
+
+    @font-face {
+      font-family: 'NombreFamilia';
+      font-style: normal;
+      font-weight: 400 700;            /* variable font: rango */
+      font-display: swap;
+      src: url(data:font/woff2;base64,AAAA...) format('woff2');
+    }
+
+  (un @font-face por familia; los subsets latin bastan; vigilar el peso total —
+  el vehículo de artifacts admite hasta 16MB por página)
+
+  VÍA B — Google Fonts (solo si el vehículo permite red — p. ej. /dev/direcciones
+  servido por el dev server del proyecto): descomentar y ajustar familias:
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=Mulish:wght@400..700&family=Geologica:wght@400..700&family=Wix+Madefor+Text:wght@400..700&family=EB+Garamond:wght@400..700&family=Inter+Tight:wght@400..700&display=swap" rel="stylesheet">
+
+  VERIFICACIÓN: el ESPÉCIMEN de cada opción muestra el nombre de la familia EN su
+  propia fuente. Si ahí se ve letra de máquina (monospace), la fuente NO está
+  embebida — no mostrar la comparativa así.
+============================================================================= -->
+
+<style>
+  /* ── Shell neutro de la comparativa (no compite con las opciones) ── */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    /* fondo con PROFUNDIDAD (54): banda con mesh sutil, nunca un fill plano */
+    background:
+      radial-gradient(1100px 520px at 12% -6%, #f7f7f9, transparent 62%),
+      radial-gradient(900px 460px at 92% 4%, #e2e2e9, transparent 58%),
+      linear-gradient(180deg, #ededf0, #e4e4e9);
+    color: #1c1c1f;
+    font-family: 'Segoe UI', system-ui, sans-serif; /* shell utilitario — las OPCIONES llevan sus fuentes */
+    padding: 32px 20px 64px;
+  }
+  .cabecera { max-width: 1180px; margin: 0 auto 12px; }
+  .cabecera h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  .cabecera p.sub { margin-top: 6px; font-size: 14px; color: #55555c; max-width: 70ch; }
+
+  /* Las 4 SALIDAS del usuario (protocolo del 54): elegir · combinar · otras 3 · ajustar */
+  .salidas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .salidas span {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #c9c9cf; border-radius: 999px;
+    padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: #3a3a40;
+    background: #f7f7f8;
+  }
+  .salidas b { color: #1c1c1f; }
+  .aviso-fuentes {
+    max-width: 1180px; margin: 10px auto 28px; font-size: 12.5px; color: #6a6a72;
+  }
+
+  .opciones { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px;
+              grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+
+  .opcion { display: flex; flex-direction: column; gap: 18px; }
+
+  /* ── Panel meta por opción ── */
+  .meta { background: #f7f7f8; border: 1px solid #d9d9de; border-radius: 14px; padding: 18px; }
+  .meta .letra {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px; font-weight: 800; font-size: 15px;
+    color: #f7f7f8; background: #1c1c1f; margin-right: 8px;
+  }
+  .meta h2 { display: flex; align-items: center; font-size: 17px; font-weight: 700; }
+  .meta .direccion { margin-top: 4px; font-size: 13px; color: #55555c; }
+  .hipotesis { margin-top: 10px; font-size: 13px; line-height: 1.5; color: #3a3a40; }
+  .hipotesis .slot {
+    background: #fff3c7; border-radius: 4px; padding: 1px 4px; font-style: italic;
+  }
+  .meta ul.tokens { margin-top: 10px; list-style: none; font-size: 12px; color: #6a6a72;
+                    font-family: ui-monospace, monospace; line-height: 1.7; }
+
+  /* Espécimen tipográfico: el NOMBRE de la familia EN su fuente + fallback-trampa */
+  .especimen { margin-top: 12px; border-top: 1px solid #d9d9de; padding-top: 12px; }
+  .especimen .esp-display { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  .especimen .esp-body { margin-top: 4px; font-size: 13.5px; color: #3a3a40; }
+
+  /* ── Chasis de teléfono REAL ── */
+  .telefono {
+    width: 310px; margin: 0 auto;
+    aspect-ratio: 9 / 19.5;
+    border: 10px solid #101014;
+    border-radius: 46px;
+    box-shadow: 0 24px 60px rgb(20 18 24 / 0.28);
+    overflow: hidden;
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+  .statusbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 22px 6px; font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .statusbar .der { display: flex; align-items: center; gap: 5px; }
+  .statusbar svg { display: block; }
+  .home-indicator {
+    position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
+    width: 116px; height: 5px; border-radius: 999px; opacity: 0.85;
+  }
+  .pantalla { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Utilidades compartidas de los mockups */
+  .chip-icono {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; flex-shrink: 0;
+  }
+  .cta {
+    display: flex; align-items: center; justify-content: center;
+    height: 48px; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Tab bar del teléfono (mockup LLENO = nav visible — 54 Regla #3) ── */
+  .tabbar {
+    display: flex; align-items: stretch; justify-content: space-around;
+    margin: 12px -18px 0; padding: 8px 8px 16px;
+    border-top: 1px solid color-mix(in oklab, var(--text-2) 18%, transparent);
+    background: color-mix(in oklab, var(--surface) 88%, transparent);
+  }
+  .op-c .tabbar { margin-inline: -20px; }
+  .tabbar a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 9.5px; font-weight: 600; color: var(--text-2); text-decoration: none;
+  }
+  .tabbar .tab-chip {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 26px; border-radius: 9px;
+  }
+  .tabbar a.activa { color: var(--accent); }
+  .tabbar a.activa .tab-chip { background: color-mix(in oklab, var(--accent) 14%, transparent); }
+
+  /* ── Muestra de paleta (54: 4-6 círculos con los colores reales) ── */
+  .paleta { display: flex; gap: 8px; margin-top: 10px; }
+  .paleta span {
+    width: 26px; height: 26px; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.10), 0 1px 3px rgb(0 0 0 / 0.12);
+  }
+
+  /* ── HERO DE LANDING por opción (54: la dirección se elige mirando TAMBIÉN la
+       pantalla que vende — y aquí vive el MOMENTO DE COLOR VALIENTE) ── */
+  .rotulo-frame {
+    text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #85858e; margin-top: 2px;
+  }
+  .hero-landing {
+    width: 310px; margin: 6px auto 0; border-radius: 18px; overflow: hidden;
+    border: 1px solid rgb(0 0 0 / 0.10);
+    box-shadow: 0 16px 40px rgb(20 18 24 / 0.16);
+    background: var(--bg); color: var(--text-1);
+    font-family: var(--font-body); padding: 22px 18px 18px;
+  }
+  .hero-landing .hl-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .hero-landing h4 {
+    font-family: var(--font-display); font-size: 24px; font-weight: 700;
+    line-height: 1.14; letter-spacing: -0.01em; margin-top: 10px;
+  }
+  .hero-landing h4 em { font-style: normal; color: var(--accent); } /* la palabra que VENDE, en acento */
+  .hero-landing .hl-sub { margin-top: 8px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+  .hero-landing .hl-sub b { color: var(--text-1); font-weight: 600; }
+  .hero-landing .hl-cta {
+    margin-top: 14px; display: flex; align-items: center; justify-content: center;
+    height: 46px; border-radius: var(--radius-btn); font-size: 14.5px; font-weight: 700;
+    color: var(--bg);
+    /* botón VALIENTE: degradé tonal + luz interior + sombra TINTADA del propio acento (29) */
+    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 86%, white), var(--accent));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35),
+                0 10px 24px -6px color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  .hero-landing .hl-prueba { margin-top: 10px; font-size: 11.5px; color: var(--text-2); text-align: center; }
+
+  /* ==========================================================================
+     OPCIÓN A — tokens (← reemplazar TODO este bloque con la dirección A real)
+     Placeholder demo: "Editorial cálida" (54 dir. 1)
+     ========================================================================== */
+  .op-a {
+    --bg: #f6f1e8;             /* ← A: fondo            */
+    --surface: #fcf9f2;        /* ← A: superficie        */
+    --text-1: #2c2721;         /* ← A: texto primario    */
+    --text-2: #6e6557;         /* ← A: texto secundario  */
+    --accent: #7a3e2e;         /* ← A: acento            */
+    --radius-card: 18px;       /* ← A: radius cards      */
+    --radius-btn: 12px;        /* ← A: radius botones    */
+    --font-display: 'Newsreader', monospace;  /* ← A: display (fallback-trampa) */
+    --font-body: 'Mulish', monospace;         /* ← A: body    (fallback-trampa) */
+    --shadow-tinta: 62 50 36;  /* ← A: RGB del tinte de sombra */
+  }
+  .op-a .especimen .esp-display { font-family: var(--font-display); }
+  .op-a .especimen .esp-body { font-family: var(--font-body); }
+
+  .op-a .telefono { background: var(--bg); }
+  .op-a .pantalla { font-family: var(--font-body); color: var(--text-1); padding: 0 18px; }
+  .op-a .statusbar { color: var(--text-1); }
+  .op-a .home-indicator { background: var(--text-1); }
+
+  /* LAYOUT A: héroe-dato + cards apiladas */
+  .op-a .saludo { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .op-a h3.titulo-a {
+    font-family: var(--font-display); font-size: 25px; font-weight: 700;
+    line-height: 1.12; letter-spacing: -0.01em; margin-top: 2px;
+  }
+  .op-a .heroe {
+    margin-top: 14px; border-radius: var(--radius-card);
+    /* material premium: hairline degradada padding-box/border-box */
+    border: 1.5px solid transparent;
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--accent) 45%, transparent), transparent 60%) border-box;
+    /* material premium: sombra tintada, no negra */
+    box-shadow: 0 10px 26px -10px rgb(var(--shadow-tinta) / 0.22);
+    padding: 16px;
+  }
+  .op-a .heroe .label { font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+  .op-a .heroe .dato {
+    font-family: var(--font-display); font-size: 42px; font-weight: 700;
+    line-height: 1.05; font-variant-numeric: tabular-nums;
+  }
+  .op-a .heroe .dato small { font-size: 15px; font-weight: 600; color: var(--text-2); }
+  .op-a .heroe .insight { margin-top: 4px; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .op-a .card {
+    margin-top: 10px; background: var(--surface); border-radius: var(--radius-card);
+    border: 1px solid color-mix(in oklab, var(--text-2) 22%, transparent);
+    padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .op-a .chip-icono {
+    border-radius: var(--radius-btn);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+  .op-a .card h4 { font-size: 14px; font-weight: 700; }
+  .op-a .card p { margin-top: 2px; font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
+  .op-a .cta {
+    margin-top: auto; margin-bottom: 0; border-radius: var(--radius-btn);
+    background: var(--accent); color: var(--bg);
+    box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+
+  /* ==========================================================================
+     OPCIÓN B — tokens (← reemplazar TODO este bloque con la dirección B real)
+     Placeholder demo: "Fintech de bolsillo" (54 dir. 3 — modo oscuro DERIVADO)
+     ========================================================================== */
+  .op-b {
+    --bg: #101216;             /* ← B: fondo            */
+    --surface: #171a21;        /* ← B: superficie        */
+    --text-1: #e7e9ee;         /* ← B: texto primario    */
+    --text-2: #9ca1ad;         /* ← B: texto secundario  */
+    --accent: #46b583;         /* ← B: acento            */
+    --radius-card: 14px;       /* ← B: radius cards      */
+    --radius-btn: 10px;        /* ← B: radius botones    */
+    --font-display: 'Geologica', monospace;        /* ← B: display (fallback-trampa) */
+    --font-body: 'Wix Madefor Text', monospace;    /* ← B: body    (fallback-trampa) */
+    --shadow-tinta: 5 6 10;    /* ← B: RGB del tinte de sombra */
+  }
+  .op-b .especimen .esp-display { font-family: var(--font-display); }
+  .op-b .especimen .esp-body { font-family: var(--font-body); }
+
+  .op-b .telefono { background: var(--bg); }
+  .op-b .pantalla { font-family: var(--font-body); color: var(--text-1); padding: 0 18px; }
+  .op-b .statusbar { color: var(--text-1); }
+  .op-b .home-indicator { background: var(--text-1); }
+
+  /* LAYOUT B: héroe centrado con anillo + grid 2x2 */
+  .op-b .encabezado-b { margin-top: 12px; text-align: center; }
+  .op-b .encabezado-b .periodo { font-size: 11.5px; font-weight: 600; color: var(--text-2);
+                                 font-variant-numeric: tabular-nums; }
+  .op-b h3.titulo-b {
+    font-family: var(--font-display); font-size: 21px; font-weight: 700;
+    letter-spacing: -0.02em; margin-top: 2px;
+  }
+  .op-b .anillo-wrap { margin: 14px auto 0; position: relative; width: 132px; height: 132px; }
+  .op-b .anillo-wrap .centro {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .op-b .anillo-wrap .pct {
+    font-family: var(--font-display); font-size: 30px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .op-b .anillo-wrap .pct-label { font-size: 10.5px; color: var(--text-2); font-weight: 600; }
+  .op-b .grid2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .op-b .tile {
+    background: var(--surface); border-radius: var(--radius-card);
+    border: 1px solid rgb(255 255 255 / 0.07);
+    padding: 12px;
+  }
+  .op-b .tile.destacada {
+    /* material premium: hairline degradada en LA tile clave (solo una) */
+    border: 1.5px solid transparent;
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--accent) 50%, transparent), transparent 60%) border-box;
+  }
+  .op-b .tile .t-label { display: flex; align-items: center; gap: 6px;
+                         font-size: 10.5px; font-weight: 600; color: var(--text-2); }
+  .op-b .tile .t-dato {
+    margin-top: 6px; font-family: var(--font-display); font-size: 21px; font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  }
+  .op-b .tile .t-dato small { font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .op-b .cta {
+    margin-top: auto; margin-bottom: 0; border-radius: var(--radius-btn);
+    background: var(--accent); color: var(--bg);
+    box-shadow: 0 8px 24px color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+
+  /* ==========================================================================
+     OPCIÓN C — tokens (← reemplazar TODO este bloque con la dirección C real)
+     Placeholder demo: "Papel y tinta" (54 dir. 9)
+     ========================================================================== */
+  .op-c {
+    --bg: #f5f4f0;             /* ← C: fondo            */
+    --surface: #fcfbf8;        /* ← C: superficie        */
+    --text-1: #1e1d1a;         /* ← C: texto primario    */
+    --text-2: #67645c;         /* ← C: texto secundario  */
+    --accent: #8c2f23;         /* ← C: acento            */
+    --radius-card: 10px;       /* ← C: radius cards      */
+    --radius-btn: 8px;         /* ← C: radius botones    */
+    --font-display: 'EB Garamond', monospace;  /* ← C: display (fallback-trampa) */
+    --font-body: 'Inter Tight', monospace;     /* ← C: body    (fallback-trampa) */
+    --shadow-tinta: 40 38 32;  /* ← C: RGB del tinte de sombra */
+  }
+  .op-c .especimen .esp-display { font-family: var(--font-display); }
+  .op-c .especimen .esp-body { font-family: var(--font-body); }
+
+  .op-c .telefono { background: var(--bg); }
+  .op-c .pantalla { font-family: var(--font-body); color: var(--text-1); padding: 0 20px; }
+  .op-c .statusbar { color: var(--text-1); }
+  .op-c .home-indicator { background: var(--text-1); }
+
+  /* LAYOUT C: lista editorial con timeline */
+  .op-c .masthead { margin-top: 10px; border-bottom: 2px solid var(--text-1);
+                    padding-bottom: 8px; position: relative; }
+  .op-c .masthead::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -5px;
+    border-bottom: 1px solid var(--text-1); /* doble regla editorial */
+  }
+  .op-c .masthead .edicion { font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em;
+                             text-transform: uppercase; color: var(--text-2); }
+  .op-c h3.titulo-c {
+    font-family: var(--font-display); font-size: 26px; font-weight: 700;
+    line-height: 1.1; margin-top: 2px;
+  }
+  .op-c .timeline { margin-top: 16px; display: flex; flex-direction: column; }
+  .op-c .evento { display: grid; grid-template-columns: 44px 14px 1fr; gap: 0 8px;
+                  padding-bottom: 16px; position: relative; }
+  .op-c .evento .hora { font-size: 12px; font-weight: 600; color: var(--text-2);
+                        font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .op-c .evento .nodo { position: relative; display: flex; justify-content: center; }
+  .op-c .evento .nodo::before {
+    content: ''; position: absolute; top: 14px; bottom: -4px; width: 1.5px;
+    background: color-mix(in oklab, var(--text-2) 35%, transparent);
+  }
+  .op-c .evento:last-child .nodo::before { display: none; }
+  .op-c .evento .punto {
+    width: 10px; height: 10px; border-radius: 999px; margin-top: 3px;
+    border: 2px solid color-mix(in oklab, var(--text-2) 55%, transparent);
+    background: var(--bg); z-index: 1;
+  }
+  .op-c .evento.activo .punto { border-color: var(--accent); background: var(--accent); }
+  .op-c .evento h4 { font-size: 14px; font-weight: 700; line-height: 1.3; }
+  .op-c .evento.activo h4 { color: var(--accent); }
+  .op-c .evento p { margin-top: 2px; font-size: 12px; color: var(--text-2); line-height: 1.45; }
+  .op-c .cierre-nota {
+    margin-top: 4px; border: 1px solid transparent; border-radius: var(--radius-card);
+    /* material premium: hairline degradada en la nota-firma */
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--accent) 40%, transparent), transparent 60%) border-box;
+    box-shadow: 0 8px 20px -10px rgb(var(--shadow-tinta) / 0.25);
+    padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .op-c .chip-icono {
+    width: 36px; height: 36px; border-radius: var(--radius-btn);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+  }
+  .op-c .cierre-nota p { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+  .op-c .cierre-nota p b { color: var(--text-1); }
+  .op-c .cta {
+    margin-top: auto; margin-bottom: 0; border-radius: var(--radius-btn);
+    background: var(--accent); color: var(--bg);
+    box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 28%, transparent);
+    font-family: var(--font-body);
+  }
+
+  .pie {
+    max-width: 1180px; margin: 40px auto 0; font-size: 12.5px; color: #6a6a72;
+    border-top: 1px solid #d0d0d6; padding-top: 14px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<header class="cabecera">
+  <h1>Dirección de arte — 3 opciones para [NombreApp ← reemplazar]</h1>
+  <p class="sub">
+    Tu app resuelta en tres estilos de verdad distintos. Ninguno es un borrador:
+    cualquiera de las tres puede ser la app final.
+  </p>
+  <!-- Las 4 salidas del usuario — SIEMPRE visibles (protocolo del 54) -->
+  <div class="salidas" role="list">
+    <span role="listitem"><b>1 · Elegir</b> A, B o C</span>
+    <span role="listitem"><b>2 · Combinar</b> («la B pero con la tipografía de la A»)</span>
+    <span role="listitem"><b>3 · Pedir otras 3</b> direcciones nuevas</span>
+    <span role="listitem"><b>4 · Ajustar un detalle</b> («la A con el acento más profundo»)</span>
+  </div>
+</header>
+<p class="aviso-fuentes">
+  Verificación de fuentes: el nombre de cada familia (abajo, en cada panel) se muestra EN su propia
+  fuente. Si se ve letra de máquina de escribir, esa fuente no está embebida — no evaluar la opción así.
+</p>
+
+<div class="opciones">
+
+  <!-- ═══════════════════════ OPCIÓN A — héroe-dato con cards apiladas ═══════════════════════ -->
+  <section class="opcion op-a" aria-label="Opción A">
+    <div class="meta">
+      <h2><span class="letra">A</span> [Nombre de la dirección A ← reemplazar]</h2>
+      <p class="direccion">Cálida y cercana — tu número del día en grande, con tarjetas apiladas debajo. [← reescribir en lenguaje del usuario, sin jerga de diseño (GLOSARIO 1F)]</p>
+      <p class="hipotesis"><strong>Hipótesis de conversión:</strong>
+        <span class="slot">[← 1 línea: por qué ESTA dirección empuja mejor al avatar hacia el CTA]</span>
+      </p>
+      <ul class="tokens">
+        <li>--bg #F6F1E8 · --accent #7A3E2E ← reemplazar</li>
+        <li>radius 18/12 · sombra tintada 62·50·36 ← reemplazar</li>
+      </ul>
+      <!-- Muestra de paleta: los MISMOS hex de los tokens de arriba (← reemplazar) -->
+      <div class="paleta" aria-hidden="true">
+        <span style="background:#f6f1e8"></span><span style="background:#fcf9f2"></span>
+        <span style="background:#2c2721"></span><span style="background:#6e6557"></span>
+        <span style="background:#7a3e2e"></span>
+      </div>
+      <div class="especimen">
+        <p class="esp-display">Newsreader — AaBbÑñ 0123</p>
+        <p class="esp-body">Mulish — El veloz murciélago hindú comía feliz cardillo y kiwi.</p>
+      </div>
+    </div>
+
+    <div class="telefono">
+      <!-- Barra de estado real -->
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="der">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
+            <rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/>
+            <rect x="9" y="3" width="3" height="8" rx="0.8"/><rect x="13.5" y="0.5" width="3" height="10.5" rx="0.8"/>
+          </svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M3.8 6.6a6.2 6.2 0 0 1 8.4 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/>
+          </svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.4"/>
+            <rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/>
+            <rect x="22.5" y="3.8" width="2" height="4.4" rx="1" fill="currentColor" opacity="0.4"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="pantalla">
+        <p class="saludo">Martes 6 de agosto</p>
+        <h3 class="titulo-a">Buenos días, Elena</h3>
+
+        <!-- HÉROE-DATO: hairline degradada + sombra tintada -->
+        <div class="heroe">
+          <p class="label">Racha de foco</p>
+          <p class="dato">12 <small>días</small></p>
+          <p class="insight">↑ 3 días más que en julio</p>
+        </div>
+
+        <!-- Módulo 2: plan de hoy -->
+        <div class="card">
+          <span class="chip-icono" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a3e2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </span>
+          <div>
+            <h4>Plan de hoy · 3 prioridades</h4>
+            <p>Propuesta cliente · Cierre de mes · Llamada 16:00</p>
+          </div>
+        </div>
+
+        <!-- Módulo 3: patrón semanal -->
+        <div class="card">
+          <span class="chip-icono" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a3e2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>
+            </svg>
+          </span>
+          <div>
+            <h4>Tu semana rinde más de 8 a 11</h4>
+            <p>14 h de foco esta semana · el jueves fue tu mejor día</p>
+          </div>
+        </div>
+
+        <div class="cta">Ver mi plan de hoy</div>
+
+        <!-- Tab bar: el mockup lleno SIEMPRE muestra la nav (54 Regla #3) -->
+        <nav class="tabbar" aria-label="Navegación">
+          <a class="activa" href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Hoy</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>Progreso</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/></svg></span>Semana</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span>Perfil</a>
+        </nav>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- HERO DE LANDING con la dirección A aplicada (misma paleta/fuentes ← reemplazar copy) -->
+    <p class="rotulo-frame">Así se vería la página que vende tu app</p>
+    <div class="hero-landing">
+      <span class="hl-badge">Método Primer Acto</span>
+      <h4>Tu día rinde <em>el doble</em> sin trabajar más horas</h4>
+      <p class="hl-sub"><b>Tres prioridades, un plan.</b> La IA ordena tu mañana según tu energía real — no tu lista infinita.</p>
+      <div class="hl-cta">Quiero mi plan de mañana</div>
+      <p class="hl-prueba">Garantía de 7 días · cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ OPCIÓN B — héroe centrado con anillo y grid 2x2 ═══════════════════ -->
+  <section class="opcion op-b" aria-label="Opción B">
+    <div class="meta">
+      <h2><span class="letra">B</span> [Nombre de la dirección B ← reemplazar]</h2>
+      <p class="direccion">Sobria y enfocada — modo oscuro con un anillo de progreso al centro y cuatro datos clave. [← reescribir en lenguaje del usuario, sin jerga de diseño (GLOSARIO 1F)]</p>
+      <p class="hipotesis"><strong>Hipótesis de conversión:</strong>
+        <span class="slot">[← 1 línea: por qué ESTA dirección empuja mejor al avatar hacia el CTA]</span>
+      </p>
+      <ul class="tokens">
+        <li>--bg #101216 · --accent #46B583 ← reemplazar</li>
+        <li>radius 14/10 · sombra tintada 5·6·10 ← reemplazar</li>
+      </ul>
+      <!-- Muestra de paleta: los MISMOS hex de los tokens de arriba (← reemplazar) -->
+      <div class="paleta" aria-hidden="true">
+        <span style="background:#101216"></span><span style="background:#171a21"></span>
+        <span style="background:#e7e9ee"></span><span style="background:#9ca1ad"></span>
+        <span style="background:#46b583"></span>
+      </div>
+      <div class="especimen">
+        <p class="esp-display">Geologica — AaBbÑñ 0123</p>
+        <p class="esp-body">Wix Madefor Text — El veloz murciélago hindú comía feliz cardillo y kiwi.</p>
+      </div>
+    </div>
+
+    <div class="telefono">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="der">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
+            <rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/>
+            <rect x="9" y="3" width="3" height="8" rx="0.8"/><rect x="13.5" y="0.5" width="3" height="10.5" rx="0.8"/>
+          </svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M3.8 6.6a6.2 6.2 0 0 1 8.4 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/>
+          </svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.4"/>
+            <rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/>
+            <rect x="22.5" y="3.8" width="2" height="4.4" rx="1" fill="currentColor" opacity="0.4"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="pantalla">
+        <div class="encabezado-b">
+          <p class="periodo">Ago 4 – 10, 2026</p>
+          <h3 class="titulo-b">Tu semana, bajo control</h3>
+        </div>
+
+        <!-- HÉROE: anillo de progreso central (68%) -->
+        <div class="anillo-wrap">
+          <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label="Semana al 68 por ciento">
+            <circle cx="66" cy="66" r="57" fill="none" stroke-width="11"
+                    stroke="rgba(70,181,131,0.14)"/>
+            <circle cx="66" cy="66" r="57" fill="none" stroke-width="11"
+                    stroke="#46b583" stroke-linecap="round"
+                    stroke-dasharray="358.1" stroke-dashoffset="114.6"
+                    transform="rotate(-90 66 66)"/>
+          </svg>
+          <div class="centro">
+            <span class="pct">68%</span>
+            <span class="pct-label">de tu semana</span>
+          </div>
+        </div>
+
+        <!-- Módulo 2: grid 2x2 de señales de valor -->
+        <div class="grid2x2">
+          <div class="tile destacada">
+            <p class="t-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#46b583" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              Prioridades
+            </p>
+            <p class="t-dato">9<small>/12</small></p>
+          </div>
+          <div class="tile">
+            <p class="t-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Horas de foco
+            </p>
+            <p class="t-dato">14<small> h</small></p>
+          </div>
+          <div class="tile">
+            <p class="t-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2v6h-6"/><path d="M3 12a9 9 0 0 1 14-6.7L17 8"/><path d="M7 22v-6h6"/><path d="M21 12a9 9 0 0 1-14 6.7L7 16"/></svg>
+              Replanes
+            </p>
+            <p class="t-dato">3</p>
+          </div>
+          <div class="tile">
+            <p class="t-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.6 6.9L22 9.3l-5.4 4.6 1.8 7.1L12 17l-6.4 4 1.8-7.1L2 9.3l7.4-.4Z"/></svg>
+              Racha
+            </p>
+            <p class="t-dato">12<small> días</small></p>
+          </div>
+        </div>
+
+        <div class="cta">Planificar mi jueves</div>
+
+        <!-- Tab bar: el mockup lleno SIEMPRE muestra la nav (54 Regla #3) -->
+        <nav class="tabbar" aria-label="Navegación">
+          <a class="activa" href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Hoy</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>Progreso</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/></svg></span>Semana</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span>Perfil</a>
+        </nav>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- HERO DE LANDING con la dirección B aplicada (misma paleta/fuentes ← reemplazar copy) -->
+    <p class="rotulo-frame">Así se vería la página que vende tu app</p>
+    <div class="hero-landing">
+      <span class="hl-badge">Sistema Semana Clara</span>
+      <h4>Controla tu semana <em>en 9 minutos</em> cada domingo</h4>
+      <p class="hl-sub"><b>Un anillo, doce prioridades.</b> Ves de un vistazo qué avanza, qué se cae y qué replanear.</p>
+      <div class="hl-cta">Armar mi primera semana</div>
+      <p class="hl-prueba">Garantía de 7 días · cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ OPCIÓN C — lista editorial con timeline ═══════════════════════ -->
+  <section class="opcion op-c" aria-label="Opción C">
+    <div class="meta">
+      <h2><span class="letra">C</span> [Nombre de la dirección C ← reemplazar]</h2>
+      <p class="direccion">Elegante, como una edición impresa — tu día contado en una línea de tiempo. [← reescribir en lenguaje del usuario, sin jerga de diseño (GLOSARIO 1F)]</p>
+      <p class="hipotesis"><strong>Hipótesis de conversión:</strong>
+        <span class="slot">[← 1 línea: por qué ESTA dirección empuja mejor al avatar hacia el CTA]</span>
+      </p>
+      <ul class="tokens">
+        <li>--bg #F5F4F0 · --accent #8C2F23 ← reemplazar</li>
+        <li>radius 10/8 · sombra tintada 40·38·32 ← reemplazar</li>
+      </ul>
+      <!-- Muestra de paleta: los MISMOS hex de los tokens de arriba (← reemplazar) -->
+      <div class="paleta" aria-hidden="true">
+        <span style="background:#f5f4f0"></span><span style="background:#fcfbf8"></span>
+        <span style="background:#1e1d1a"></span><span style="background:#67645c"></span>
+        <span style="background:#8c2f23"></span>
+      </div>
+      <div class="especimen">
+        <p class="esp-display">EB Garamond — AaBbÑñ 0123</p>
+        <p class="esp-body">Inter Tight — El veloz murciélago hindú comía feliz cardillo y kiwi.</p>
+      </div>
+    </div>
+
+    <div class="telefono">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="der">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
+            <rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/>
+            <rect x="9" y="3" width="3" height="8" rx="0.8"/><rect x="13.5" y="0.5" width="3" height="10.5" rx="0.8"/>
+          </svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M3.8 6.6a6.2 6.2 0 0 1 8.4 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/>
+          </svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.4"/>
+            <rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/>
+            <rect x="22.5" y="3.8" width="2" height="4.4" rx="1" fill="currentColor" opacity="0.4"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="pantalla">
+        <!-- Masthead editorial con doble regla -->
+        <div class="masthead">
+          <p class="edicion">Edición del martes · 6 ago 2026</p>
+          <h3 class="titulo-c">Tu día, en tres actos</h3>
+        </div>
+
+        <!-- HÉROE: timeline del día -->
+        <div class="timeline">
+          <div class="evento activo">
+            <span class="hora">8:00</span>
+            <span class="nodo"><span class="punto"></span></span>
+            <div>
+              <h4>Propuesta para cliente nuevo</h4>
+              <p>Tu bloque más fresco: 90 minutos sin interrupciones.</p>
+            </div>
+          </div>
+          <div class="evento">
+            <span class="hora">11:30</span>
+            <span class="nodo"><span class="punto"></span></span>
+            <div>
+              <h4>Cierre de facturación de julio</h4>
+              <p>45 minutos · lo pospusiste 2 veces esta semana.</p>
+            </div>
+          </div>
+          <div class="evento">
+            <span class="hora">16:00</span>
+            <span class="nodo"><span class="punto"></span></span>
+            <div>
+              <h4>Llamada con Andrés · seguimiento</h4>
+              <p>15 minutos · con la propuesta ya enviada.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Módulo 2: nota-firma con hairline -->
+        <div class="cierre-nota">
+          <span class="chip-icono" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8c2f23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            </svg>
+          </span>
+          <p><b>Todo lo demás puede esperar.</b> Guardaste 11 tareas para otro día — sin culpa.</p>
+        </div>
+
+        <div class="cta">Empezar mi primer acto</div>
+
+        <!-- Tab bar: el mockup lleno SIEMPRE muestra la nav (54 Regla #3) -->
+        <nav class="tabbar" aria-label="Navegación">
+          <a class="activa" href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Hoy</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>Progreso</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/></svg></span>Semana</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span>Perfil</a>
+        </nav>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- HERO DE LANDING con la dirección C aplicada (misma paleta/fuentes ← reemplazar copy) -->
+    <p class="rotulo-frame">Así se vería la página que vende tu app</p>
+    <div class="hero-landing">
+      <span class="hl-badge">El Día en Tres Actos</span>
+      <h4>Deja de perseguir tu lista: <em>dirígela</em></h4>
+      <p class="hl-sub"><b>Tres actos, cero culpa.</b> Cada mañana recibes tu día editado como una edición impresa: lo esencial, y nada más.</p>
+      <div class="hl-cta">Recibir mi primera edición</div>
+      <p class="hl-prueba">Garantía de 7 días · cancela cuando quieras</p>
+    </div>
+  </section>
+
+</div>
+
+<footer class="pie">
+  Gates antes de mostrar esta página (54): TEST DE DIVERGENCIA — en escala de grises se ven 3
+  diseños distintos (si solo cambia el acento, no son 3 opciones: rehacer) · fuentes verificadas
+  clase por clase en el espécimen (el fallback monospace delata la que no cargó) · mockups LLENOS
+  con datos del dominio real Y tab bar visible, cero emojis (todo ícono es SVG inline), materiales
+  premium presentes (hairline, chip, sombra tintada) · cada opción con su HERO DE LANDING aplicado
+  (palabra que vende en acento + botón valiente) y su muestra de paleta · el marcador
+  data-kit="abc-v2" del &lt;html&gt; intacto (Regla Dura #0 — el hook lo verifica). La opción
+  elegida y las descartadas se anotan en FICHA-ARTE.md (sección "Trazabilidad") y ESTADO.md.
+</footer>
+
+</body>
+</html>

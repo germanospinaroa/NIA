@@ -1,0 +1,59 @@
+VELOCIDAD — que la app VUELE en el celular real de tu cliente (Android gama media, 3G/4G)
+(Pegar con la app abierta + el sistema en docs/sistema/)
+===============================================================================================
+
+Haz que esta app sea RÁPIDA donde importa: el celular real del cliente LATAM (Android gama media,
+red 3G/4G irregular), no tu laptop con fibra. REGLA CLAVE: primero se MIDE con números reales,
+luego se planea, y solo tras mi OK se arregla. Nada de "se siente más rápida" — tabla de antes
+vs después.
+
+ANTES DE MEDIR, si no está claro, pregúntame en simple:
+1. ¿Dónde la sientes lenta: al abrir, al navegar entre pantallas, o cuando la IA responde?
+2. ¿Algún cliente se ha quejado de lentitud, o es percepción tuya?
+Si no contesto, mide todo el recorrido igual.
+
+LEE PRIMERO: 38-PERFORMANCE-BUDGET (el presupuesto de peso y los umbrales — es el contrato),
+28-INGENIERIA-NEXTJS si la app es Next.js (RSC, caché, imágenes), 15-PATRONES-UX (rendimiento
+PERCIBIDO: skeletons, optimistic UI) y 43-MICRO-CRAFT-Y-EJECUCION (bundle, fuentes).
+
+━━━ FASE 1 — MEDIR ANTES (números reales, no impresiones) ━━━
+Corre Lighthouse en modo MÓVIL (con throttling de red y CPU — simula el celular gama media) sobre
+las 3-4 pantallas clave: landing, pantalla principal, la acción core. Y mide el peso del código
+que baja el navegador (size-limit / analizador de bundle, según 38). Anota:
+  • LCP (cuánto tarda en verse lo importante) — meta: <2.5s
+  • CLS (cuánto "salta" la pantalla mientras carga) — meta: <0.1
+  • Peso del bundle inicial — meta: dentro del presupuesto del 38
+  • INP / bloqueos de interacción si Lighthouse los reporta
+Guarda el reporte: esta es la línea base contra la que se compara TODO al final.
+
+━━━ FASE 2 — PLAN PRIORIZADO POR IMPACTO Y DETENTE (espera mi OK) ━━━
+Diagnostica a los SOSPECHOSOS DE SIEMPRE y preséntame la lista ordenada por impacto/esfuerzo:
+  • IMÁGENES sin optimizar → next/image o compresión + tamaño correcto + lazy loading.
+  • FUENTES pesadas → subset (solo los caracteres que se usan) + display swap (el texto se ve
+    de inmediato con una fuente temporal mientras carga la buena).
+  • JS DE MÁS → dynamic import de lo que no se ve al inicio, quitar librerías muertas o
+    duplicadas (revisa package.json vs lo que de verdad se importa).
+  • PERCEPCIÓN → skeletons con la forma del contenido donde hay espera real (15): a veces la
+    mejora más barata no es quitar 200ms sino que la espera SE SIENTA corta.
+  • Si es Next.js: RSC donde toca, caché bien usada, imágenes y rutas según 28.
+Cada ítem con: qué es, cuánto pesa/tarda hoy, cuánto se espera ganar, esfuerzo S/M/L.
+NO ejecutes hasta que yo apruebe.
+
+━━━ FASE 3 — (tras mi OK) ARREGLAR POR CAPAS, VERIFICANDO ━━━
+Una capa a la vez (imágenes → fuentes → JS → percepción), y tras CADA capa: tsc --noEmit + build
++ dev limpio + la app abierta a 375px verificando que NADA se rompió ni cambió visualmente.
+REGLA INNEGOCIABLE: optimizar es quitar PESO MUERTO, no vida. PROHIBIDO sacrificar las 7
+animaciones baseline, los skeletons o el diseño para ganar bytes. Si una optimización degrada la
+experiencia, se descarta y se anota por qué.
+
+━━━ FASE 4 — MEDIR DESPUÉS Y COMPARAR ━━━
+Repite EXACTAMENTE las mediciones de la Fase 1 (mismas pantallas, mismo modo móvil) y entrégame:
+  | Métrica | Antes | Después | Meta | ¿Cumple? |
+por cada pantalla medida. Si alguna meta no se cumplió, di la causa raíz y qué haría falta
+(y su costo/esfuerzo) — no lo maquilles.
+
+CIERRE: actualiza ESTADO.md con: línea base y resultado final, qué se optimizó, qué se descartó
+por dañar la experiencia, y el presupuesto de performance que las próximas features deben
+respetar (38: toda pantalla nueva se mide antes de declararse lista). Reporte con evidencia:
+✅ hecho por capa · 🔍 tsc ✓ build ✓ dev ✓ · tabla antes/después · ⚠️ pendientes.
+Empieza con la Fase 1.

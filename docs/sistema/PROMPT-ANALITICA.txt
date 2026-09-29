@@ -1,0 +1,41 @@
+ANALITICA — instrumenta decisiones, no ficcion
+================================================
+
+Instrumenta esta app para localizar fugas de adquisicion, activacion, monetizacion y retencion.
+Primero audita y presenta el plan; para cambios de mas de 5 archivos espera aprobacion.
+
+LEE: ESTADO.md, 60-OPERACION-DE-CONVERSION.md, 36-ANALITICA-Y-EVENTOS.md,
+21-BACKOFFICE.md, 18-VENTA-HOTMART.md y 24-GAMIFICACION.md.
+
+FASE 1 — AUDITORIA
+- Inventaria eventos, disparador, cliente/servidor, destino, propiedades y decision que responden.
+- Busca duplicados, render tratado como vista, clicks tratados como conversion y PII.
+- Define periodo, zona horaria y denominadores: sesiones unicas, no eventos brutos.
+- Revisa atribucion first/last touch, UTM, referrer y fbclid/ttclid/gclid/msclkid.
+- Comprueba `?qa=1`, bots y sesiones internas.
+
+FASE 2 — CONTRATO Y PLAN
+Implementa solo eventos que respondan una decision. Funnel minimo:
+landing_vista -> onboarding_iniciado -> onboarding_paso_completado -> resultado_visto ->
+paywall_visto -> checkout_iniciado -> trial_iniciado -> aha_alcanzado -> primer_cobro_confirmado.
+
+`paywall_visto` requiere >=35% de precio, renovacion y CTA en viewport. Trial y primer cobro vienen
+del webhook idempotente. Sesion anonima: UUID first-party, 30 minutos de inactividad. Atribucion:
+30 dias. Si cualquier evento de una sesion tiene `is_qa:true`, el panel excluye la sesion completa.
+
+Presenta: | Evento | Existe | Disparador | Decision | Prioridad | Verificacion |.
+
+FASE 3 — INSTRUMENTAR
+Usa un wrapper unico, snake_case, propiedades estables y cero PII/contenido sensible. Asocia la
+sesion anonima al user_id al autenticar sin reescribir historia. Instrumenta cada pantalla junto
+con la funcion que la produce, no como parche de lanzamiento.
+
+FASE 4 — VERIFICAR
+Dispara cada evento en el flujo real con `?qa=1`; confirma payload y llegada. Verifica el webhook
+con fixtures seguros, dedupe y monto >0 para primer cobro. Prueba que QA no aparece en tasas.
+
+FASE 5 — DASHBOARD
+Conecta funnel por fuente/cohorte, caida entre pasos, salud del dato, D1/D7/D30 y ventas reales al
+backoffice. Actualiza ESTADO.md con diccionario, queries y siguiente checkpoint.
+
+No uses benchmarks como meta ni declares que un evento existe si no lo viste llegar. Empieza Fase 1.

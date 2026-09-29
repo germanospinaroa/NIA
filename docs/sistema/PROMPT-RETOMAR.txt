@@ -1,0 +1,20 @@
+RETOMAR PROYECTO — retoma donde quedaste, sin perder nada
+📌 CUÁNDO USARLO: al volver al proyecto tras una pausa o al abrir una sesión nueva.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+=========================================================================
+
+Lee ESTADO.md y dime en pocas líneas: en qué app estamos, en qué fase quedamos, qué fue lo último
+que hicimos, qué quedó pendiente, y cuál es el siguiente paso. Luego espera mi OK para continuar
+con ese siguiente paso (no avances sin confirmación).
+
+Háblame simple, como dueño de la app: evita tecnicismos si no son necesarios. Si aparece un riesgo,
+costo o algo que solo yo puedo hacer (cuentas, dominio, claves, pagos), márcalo con ⚠️ y explícame
+el siguiente clic o decisión.
+Habla en ESPAÑOL LATINO NEUTRO: tuteo siempre; jamás voseo (vos/tenés/podés) ni modismos de un
+país. El copy de la app es aparte (dialecto del avatar, 52).
+
+Si no existe ESTADO.md pero hay código del proyecto, explóralo (estructura, pantallas, stack real),
+reconstruye el estado, créame el ESTADO.md con la plantilla de docs/sistema/PLANTILLA-ESTADO.md, y
+luego dime dónde quedamos.
+
+Si hubo una compactación de contexto a mitad de sesión, relee ESTADO.md + CLAUDE.md antes de seguir.

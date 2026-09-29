@@ -1,0 +1,27 @@
+INTEGRIDAD DE LANZAMIENTO — auditoría binaria antes de vender
+================================================================
+
+Audita y corrige esta app usando `docs/sistema/61-INTEGRIDAD-DE-LANZAMIENTO.md` como contrato
+canónico, P0-P8 de `62-PUBLICACION-SEGURA-Y-CONTINUA.md` para publicación y
+`48-RIGOR-DE-ENTREGA.md` para el certificado /100.
+
+LEE PRIMERO: ESTADO.md, 61, 62, 48, 27, 18, 25, 30, 31, 40 y 47. Lee además los módulos que la
+arquitectura active. No asumas que un servicio conectado corresponde a esta app: verifica project
+ID, URL, git SHA, deployment y migración.
+
+1. Crea un inventario de rutas, RPC, funciones SECURITY DEFINER, buckets, webhooks y roles.
+2. Crea o completa `docs/release/CLAIMS-LEDGER.md`, `PAYMENT-CERTIFICATION.md`,
+   `ECONOMICS-CERTIFICATION.md`, `PRIVACY-DATA-MAP.md`, `RELEASE-MANIFEST.json` y
+   `PUBLICATION-CERTIFICATE.md` desde su plantilla.
+3. Ejecuta los Gates 1-10. Para cada fila entrega OK / PARCIAL / BLOQUEANTE + evidencia.
+4. Corrige primero auth/backdoors, privacidad, RPC manipulables, pagos y datos financieros.
+5. Ejecuta lint, typecheck, tests, build, Playwright, seguridad, evals y clean-room bootstrap.
+6. Maneja la app renderizada en móvil y desktop; prueba estados de red, acceso y pago.
+7. Si una acción cuesta dinero o toca clientes/datos reales, detente antes de esa acción y pide
+   autorización. La prueba pendiente mantiene el estado NO APTO.
+8. Termina con veredicto APTO/NO APTO. No compenses un bloqueante con el puntaje /100.
+9. No pidas valores secretos por chat. Certifica Connected Git Repository, Supabase project-ref,
+   aislamiento de ambientes, dominio/callbacks, SHA y segunda publicación automática + reversión.
+
+Regla: descrito no significa implementado; implementado no significa probado; probado en otro
+commit o entorno no certifica producción.

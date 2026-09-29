@@ -1,0 +1,64 @@
+CRÍTICA DE EXPERTOS — 4 profesionales despiadados evalúan tu app ANTES de que inviertas más
+(Pegar con la app abierta + el sistema en docs/sistema/)
+===============================================================================================
+
+Convoca un PANEL DE 4 EXPERTOS con contexto limpio para criticar esta app SIN PIEDAD. Idealmente
+lanza 4 subagentes independientes (uno por experto); si tu herramienta no los permite, encarna a
+cada uno POR SEPARADO, uno tras otro, sin suavizar ninguno. REGLA CLAVE: esto es SOLO diagnóstico —
+NO toques una línea de código hasta que yo apruebe qué mejoras ejecutar.
+
+ANTES DE CRITICAR, si no está claro, pregúntame en simple:
+1. ¿Qué te da más miedo hoy: que no venda, que se vea amateur, que la gente no vuelva, o que el
+   negocio no dé plata?
+2. ¿Ya hay gente pagando, o todavía no lanzas?
+3. ¿Hay algo que NO quieras que toquen (una decisión que ya es definitiva)?
+Si no contesto, critica todo por igual.
+
+LEE PRIMERO (criterio de cada experto): 52-COPY-VISUALES-CONVERSION (rúbrica de copy /20) +
+FICHA-AVATAR.md · 16-DIRECCION-DE-ARTE (test de intercambiabilidad, fidelidad a la referencia) +
+RUBRICAS-DE-PANTALLA (craft /20) · 02B-ONBOARDING-Y-PAYWALL + 24-GAMIFICACION (benchmarks de
+conversión y retención) · 40-UNIT-ECONOMICS + 02C-PRICING-Y-MODELO-DE-NEGOCIO (viabilidad).
+
+━━━ FASE 1 — EVIDENCIA OBLIGATORIA (sin screenshots no hay crítica válida) ━━━
+Levanta el dev server y captura screenshots REALES a 375px (mecanismo de preview/Playwright del
+paquete; solo si no existe ninguno, pídeme las capturas) de: landing completa → onboarding paso a
+paso → paywall → las 3 pantallas core de la app. Cada experto critica LO QUE VE en esos renders +
+lo que lee en el código/copy — nunca de memoria ni por suposición. Guarda las rutas.
+
+━━━ FASE 2 — EL PANEL (cada experto entrega su veredicto POR SEPARADO) ━━━
+EXPERTO 1 · COPYWRITER DE RESPUESTA DIRECTA DE ÉLITE — ¿la landing VENDE?
+  Headline (¿detiene el scroll o es decoración?), big idea, agitación del dolor, oferta y garantía,
+  prueba social. Puntúa con la rúbrica de copy /20 del 52 y TRAZA cada pieza a FICHA-AVATAR.md:
+  copy que no sale de un dolor/deseo/objeción del avatar es copy inventado.
+EXPERTO 2 · DIRECTOR DE ARTE SENIOR — ¿parece hecha por un estudio o por IA?
+  Test de intercambiabilidad (si quito el logo, ¿se distingue de un template?), fidelidad a la
+  referencia del usuario si existe, jerarquía, espaciado, tipografía, anti-slop del 16. Craft /20.
+EXPERTO 3 · EXPERTO EN CONVERSIÓN/RETENCIÓN DE APPS B2C — ¿esto convierte y retiene?
+  ¿El onboarding construye inversión emocional o es un trámite? ¿El paywall responde las 7
+  preguntas del 02B? ¿El loop gatillo→acción→recompensa→inversión existe de verdad (24)?
+  Compara contra los benchmarks de 02B/24, no contra "se siente bien".
+EXPERTO 4 · INVERSIONISTA/OPERADOR ESCÉPTICO — ¿el negocio se sostiene?
+  Pricing vs unit economics del 40 (¿el costo de IA se come el margen?), ¿la promesa es creíble o
+  huele a humo?, ¿qué mataría esta app en 90 días? (competencia, churn, CAC, dependencia de un canal).
+
+REGLAS DE BRUTALIDAD (para los 4, sin excepción):
+  • PROHIBIDO el elogio de cortesía y el "está bien pero...". Si todo te parece bien, no estás
+    mirando con suficiente cuidado.
+  • Cada experto entrega: puntaje /10 por área evaluada + LO QUE ESTÁ MAL dicho sin anestesia, con
+    ubicación EXACTA (pantalla, sección, línea de copy) + qué haría distinto un profesional con 10
+    años de oficio + MÁXIMO 1 cosa que sí está bien.
+  • Criticar el trabajo, no al dueño. Brutal con la app, respetuoso con la persona.
+
+━━━ FASE 3 — REPORTE CONSOLIDADO Y DETENTE (no ejecutes nada) ━━━
+1. TABLA DE PUNTAJES: área × experto (copy, diseño, conversión, retención, negocio) con el /10.
+2. LOS 10 PROBLEMAS MÁS GRAVES priorizados por impacto en VENTAS, cada uno con:
+   | Qué está mal | Dónde exacto | Por qué duele (en plata o en usuarios) | Cómo se arregla | Esfuerzo S/M/L |
+3. QUICK WINS: lo que se arregla en <1 hora y ya mueve la aguja.
+4. VEREDICTO FINAL de cada experto, en una frase: "¿La comprarías tú con tu propia tarjeta? ¿Por qué?"
+5. Rutas de los screenshots usados como evidencia.
+
+DETENTE AHÍ. Yo apruebo qué mejoras ejecutar (una por una o en bloque). SOLO entonces se implementan
+siguiendo el SO: los archivos de la tabla de ruteo para cada arreglo, capa por capa verificando
+(tsc + build + dev), y cada pantalla tocada cierra con screenshot a 375px + veredicto del
+revisor-visual (≥36/40 y ≥16/20). Al final actualiza ESTADO.md con: puntajes del panel, qué se
+aprobó, qué se ejecutó y qué quedó pendiente. Empieza con la Fase 1.

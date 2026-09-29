@@ -1,0 +1,55 @@
+LANZAMIENTO — vende en picos (5 fases, oferta de fundadores, bumps/upsells, prueba social)
+📌 CUÁNDO USARLO: cuando la app está lista y quieres abrir ventas con un lanzamiento ordenado.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+==========================================================================================
+
+Prepara el lanzamiento de esta app. Primero dame el plan de lanzamiento (las 5 fases + la oferta
+de fundadores) y espera mi OK; luego ejecuta por capas, generando los materiales.
+
+ANTES DE PLANEAR, si no está claro, pregúntame en simple:
+1. ¿Qué día quieres abrir ventas y qué día quieres cerrar la oferta?
+2. ¿Ya tienes lista de espera, audiencia, afiliados o comunidad?
+3. ¿Qué promesa NO podemos hacer porque todavía no está probada?
+(La OFERTA de fundadores —precio + bono— no me la preguntes en abierto: PROPÓNLA tú con el 35 y
+el gate del 40, infórmamela en 1 línea y yo la ajusto si quiero.)
+Si no hay lista ni tráfico, dilo de frente y adapta el lanzamiento a pre-lanzamiento o beta, no a un
+"gran lanzamiento" ficticio.
+
+LEE PRIMERO: 35-LANZAMIENTO (playbook 5 fases, CHECKLIST DÍA-A-DÍA D-14→D+7, lista de
+espera, oferta de fundadores, order bump/upsell/downsell, prueba social desde cero; referidos → 58),
+18-VENTA-HOTMART (el webhook y Resend que vamos a usar), 19-PAGINA-DE-VENTAS (oferta y copy),
+46-EMAIL-DELIVERABILITY + 47-LEGAL-FISCAL-Y-PRIVACIDAD (prerrequisito de los envíos masivos) y
+34-ADQUISICION-Y-TRAFICO (los canales que concentra el lanzamiento + afiliados + WhatsApp).
+
+DEFINE PRIMERO (anótalo en ESTADO.md): la OFERTA de fundadores (precio + bono + por qué urge, sin
+falsa escasez) y la fecha real de cierre de la ventana.
+
+⚠️ PRERREQUISITO antes del PRIMER envío masivo (warming, ventana de carrito): 46-EMAIL-DELIVERABILITY
+(SPF/DKIM/DMARC + warmup del dominio) y consentimiento/opt-in de la lista (47). Un dominio frío
+mandando cientos de emails el día de apertura cae en spam justo cuando más duele.
+
+EJECUTA lo que aplique:
+ • LANZAMIENTO: calendario de las 5 fases + el CHECKLIST DÍA-A-DÍA (D-14 → D+7 del archivo 35, con
+   responsable y criterio de "hecho" por día) + secuencia de emails de WARMING (lista de espera) y
+   de la VENTANA de carrito (apertura → último aviso), lista para Resend (archivo 18) · brief de
+   afiliados para la ventana (encadena con el kit del 34) · grupo/difusión de WhatsApp si aplica (34).
+ • AOV/LTV: define el ORDER BUMP (add-on barato en el checkout) y el UPSELL (mensual→anual en la
+   página de gracias) en Hotmart; verifica que el webhook del 18 los procese por event_id.
+ • Si la oferta de fundadores promete "precio bloqueado de por vida": deja el compromiso ANOTADO en
+   ESTADO.md (quiénes son fundadores y qué precio tienen) — el cambio de precio futuro lo
+   operacionaliza PROMPT-PRECIOS.txt respetando ese grandfathering.
+ • REFERIDOS (member-get-member, archivo 58): convertir clientes felices en afiliados de Hotmart, o
+   recompensa in-app "da y recibe" reconciliada por el webhook del 18; pedirlo en el momento de
+   máxima felicidad y solo si la app ya retiene (curva aplanada, archivo 24).
+ • PRUEBA SOCIAL DESDE CERO si aún no tengo clientes: plan de beta sembrada + caso propio +
+   testimonios reales para la landing del 19. CERO testimonios inventados.
+
+RETENER EL INGRESO QUE ENTRÓ (cancelaciones, pagos fallidos, win-back, renovación anual) NO va
+aquí: cuando el lanzamiento cierre y haya clientes pagando, usa PROMPT-RETENER-INGRESOS.txt
+(/retener-ingresos) — ese monta la cancelación retentiva, el dunning sobre past_due, el win-back
+y la cadencia pre-renovación anual. Y si la gente paga pero no USA la app, PROMPT-RETENCION.txt.
+
+REGLAS: urgencia y escasez REALES (si dije que cierra, cierra) · CERO dark patterns/confirmshaming/
+falsa escasez · ensayo general D-1: compra de prueba end-to-end antes de abrir · verifica tsc +
+build + dev si tocas código · mejora lo que existe · reporta lo lanzado y deja el playbook +
+ofertas en ESTADO.md.

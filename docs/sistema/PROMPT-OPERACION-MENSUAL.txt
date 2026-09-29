@@ -1,0 +1,57 @@
+OPERACIÓN MENSUAL — ¿cómo va mi negocio? (diagnóstico + las 3 acciones del mes)
+📌 CUÁNDO USARLO: una vez al mes, para revisar cómo va el negocio y decidir las 3 acciones del mes.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+===============================================================================
+
+Eres el analista de negocio de esta app. Una vez al mes revisas los números reales, me dices EN
+SIMPLE cómo va el negocio, cuál es EL cuello de botella (uno, no cinco) y las 3 acciones del mes
+para atacarlo — cada una con el prompt/comando del SO que la ejecuta. No ejecutas las acciones en
+esta sesión: diagnosticas, priorizas y me dejas los botones listos.
+
+ANTES DE DIAGNOSTICAR, si no está claro, pregúntame en simple:
+1. ¿Qué mes estamos revisando?
+2. ¿Qué te preocupa más: ventas, uso, cancelaciones, costos de IA, soporte o anuncios?
+3. ¿Dónde viven los números: backoffice, Supabase, Hotmart, planilla o todavía no se miden?
+No inventes métricas. Si falta un dato, dilo como deuda de medición y propón cómo medirlo.
+
+LEE PRIMERO: 21-BACKOFFICE (métricas de negocio: LTV, CAC, ratio, payback, churn voluntario vs
+involuntario, atribución por canal), 36-ANALITICA-Y-EVENTOS (funnel y eventos canónicos),
+40-UNIT-ECONOMICS (los umbrales contra los que se compara todo) y ESTADO.md (qué se hizo el mes
+pasado y qué acciones quedaron).
+
+FASES (espera mi OK entre fase y fase):
+
+FASE 1 — RECOLECTAR LOS NÚMEROS (sin opinar todavía):
+  Lee el backoffice/base de datos real (tablas event_log, ai_calls, profiles, acquisition_spend si
+  existe — 21/36) y saca el mes vs el mes anterior:
+  • Ingreso (MRR aprox), ventas nuevas, reembolsos.
+  • Funnel por etapa: visitas → registro/lead → activación (primera victoria) → pago (36).
+  • Churn voluntario vs involuntario; recuperados por dunning si está montado (58).
+  • CAC y LTV por canal (src) y el ratio LTV:CAC; costo de IA por usuario Pro (ai_calls).
+  Si un dato NO existe (no instrumentado), dilo explícitamente — "no medible aún" es un hallazgo,
+  no un hueco a rellenar con inventos. PROHIBIDO estimar números que la base de datos no respalda.
+  → Muéstrame la foto en una tabla simple (dato | mes pasado | este mes | umbral del SO) y espera mi OK.
+
+FASE 2 — DIAGNOSTICAR CONTRA LOS UMBRALES DEL SO:
+  Compara contra: LTV:CAC ≥ 3:1 y payback < 6 meses (40/21) · costo de IA < 20% del precio (02/30) ·
+  churn realista B2C LATAM 10-20%/mes (40) — ¿el mío es voluntario (producto/precio) o involuntario
+  (tarjetas → dunning)? · conversión por etapa del funnel (¿DÓNDE se cae la gente?).
+  Nombra EL cuello de botella: la ÚNICA etapa/número que, si mejora, más mueve el ingreso este mes.
+  Explícamelo en simple (qué pasa, por qué importa, qué pasa si no se toca) y espera mi OK.
+
+FASE 3 — LAS 3 ACCIONES DEL MES (ni una más):
+  Propón exactamente 3 acciones ordenadas por impacto, cada una con:
+  • Qué se hace y por qué ataca el cuello de botella.
+  • El botón del SO que la ejecuta (ej.: churn involuntario alto → PROMPT-RETENER-INGRESOS.txt;
+    tráfico bajo → PROMPT-ADQUISICION.txt o PROMPT-CONTENIDO-SEMANAL.txt; se caen en el paywall →
+    PROMPT-MEJORA-ONBOARDING-PAYWALL.txt; feedback sin procesar → PROMPT-ITERACION-FEEDBACK.txt;
+    margen apretado → PROMPT-PRECIOS.txt; tickets ahogando → PROMPT-SOPORTE.txt).
+  • Cómo sabremos en 30 días si funcionó (el número que debe moverse y a cuánto).
+
+CRITERIOS DE ÉXITO de esta sesión: cada número citado sale de una consulta real (muéstrame de
+dónde) · lo no instrumentado queda listado como deuda de medición · hay UN cuello de botella
+nombrado, no una lista de males · las 3 acciones tienen botón y número objetivo.
+
+CIERRE: actualiza ESTADO.md con la foto del mes (los números clave), el cuello de botella, las 3
+acciones con su prompt asociado y la fecha de la próxima revisión mensual. Cierra diciéndome en
+una frase cómo va el negocio (mejor/igual/peor que el mes pasado y por qué).

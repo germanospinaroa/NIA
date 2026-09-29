@@ -1,0 +1,64 @@
+CREAR UNA APP DESDE CERO — CUALQUIER NICHO, con dirección de arte derivada (referencia opcional)
+📌 CUÁNDO USARLO: cuando ya sabes qué app quieres (nicho + idea) y quieres arrancar rápido con las
+respuestas adelantadas. Si aún no tienes idea, usa PROMPT-ARRANQUE.txt (FLUJO A te propone
+oportunidades investigadas).
+(Pegar completo en Claude Code, en la carpeta del proyecto, con el sistema en docs/sistema/.
+ La imagen de referencia es OPCIONAL.)
+======================================================================================
+
+Voy a crear una app desde cero. Sigue el protocolo de docs/sistema/INICIO.md
+pero ya te adelanto las respuestas para arrancar rápido:
+
+NICHO: [tu nicho/vertical — ej. educación, finanzas personales, bienestar, productividad, foto...]
+IDEA: [describe tu idea concreta — qué hace, para quién, qué la hace única]
+
+⚠️ EL NICHO NO CAMBIA EL PROTOCOLO — LO ALIMENTA. El sistema se pone en el papel COMPLETO de MI
+nicho: investiga MIS apps líderes, MI público objetivo y MI cliente ideal (FICHA-AVATAR con 57),
+y los NÚMEROS de MI mercado (FICHA-MERCADO). Nada se hereda de otro nicho ni de los ejemplos
+ilustrativos del SO.
+
+REFERENCIA VISUAL (opcional):
+ • SI ADJUNTO una imagen de referencia: es un CONTRATO, no una sugerencia (protocolo
+   REFERENCIA=CONTRATO al inicio de docs/sistema/16-DIRECCION-DE-ARTE.md). Extráela con su TABLA
+   DE EXTRACCIÓN mirando la imagen, no de memoria (hex exactos, fuentes candidatas, radios,
+   sombras, layout, tratamiento de gráficos y cards, densidad informativa). La referencia MANDA
+   sobre la capa anti-IA y las tablas del 29, y cada pantalla clave pasa el TEST DE FIDELIDAD
+   (screenshot al lado de la referencia; ≥2 desvíos = corregir tokens antes de declararla lista).
+   Quiero ESE nivel de pulido o mejor, FIEL a la referencia.
+ • SI NO ADJUNTO imagen: no me la pidas ni la des por existente. La dirección visual se DERIVA
+   completa con el PASO 0 del 16 (brief → arquetipo → mundo del sujeto → paleta/tipografía/motion)
+   + la TABLA DE LÍDERES del 16 (PASO 0.2bis: INVESTIGA las 3-5 apps LÍDERES de MI nicho —
+   búscalas tú con búsqueda web/stores, no las asumas — y 1-2 gigantes admirados; FUSIONA lo
+   mejor de cada una) + las COMBINACIONES TIPOGRÁFICAS PROBADAS del 29 (la fila de MI nicho; si
+   no existe fila para mi nicho, derívala con la matriz audiencia×nicho del 29 — prohibido
+   inventar combinaciones que ninguna app grande use) + el banco del 54 SOLO para el dispositivo
+   ownable. El modo (oscuro/claro) se deriva de MI audiencia — NO se asume por el nicho, y aplica
+   la capa anti-IA del 16.
+
+PROCESO (sigue el ciclo profesional de docs/sistema/12-FLUJO-AGENTICO.md):
+1. Dirección de arte: con referencia adjunta → extracción REFERENCIA=CONTRATO del 16 y RÉPLICA
+   FIEL del 54 (mi app con ese estilo replicado lo más igual posible). Si NO adjunté referencia,
+   ANTES de proponer diseño hazme LA PREGUNTA DE REFERENCIA del 54 (¿te propongo yo los estilos
+   o tienes capturas de un estilo que te guste?) — quizá tengo una captura guardada. Sin
+   referencia → PASO 0 del 16 (TABLA DE LÍDERES de MI nicho primero, fusión de lo probado) +
+   banco del 54 para el dispositivo. En todos los casos preséntame la FICHA-ARTE.md (paleta con
+   hex, tipografía, craft, regla del acento, modo derivado y por qué) y ESPERA MI OK.
+2. Define la idea, features (3-5 máx) y el App Brief siguiendo docs/sistema/01-IDEACION.md.
+3. Diseña arquitectura y flujo con docs/sistema/04 y 15-PATRONES-UX.md.
+4. DETENTE y muéstrame el plan visual + de pantallas antes de codear. ESPERA MI OK.
+5. (tras mi OK) Construye aplicando RIGUROSAMENTE:
+   - docs/sistema/14-LEYES-DE-DISENO.md (specs numéricas exactas)
+   - docs/sistema/16-DIRECCION-DE-ARTE.md (identidad audaz y cohesiva, capa anti-IA)
+   - docs/sistema/17-VISUALIZACION-DATOS.md (si la app muestra datos: anillos, barras, tendencias)
+   - docs/sistema/15-PATRONES-UX.md (skeleton, empty states, micro-interacciones, háptica)
+   - docs/sistema/11-DISENO-EMOCIONAL.md (personalidad, celebraciones, movimiento)
+6. Verifica tsc + build + dev server en cada capa; cada pantalla se cierra con screenshot REAL
+   a 375px puntuado por el SUBAGENTE revisor-visual (gate ≥36/40 y ≥16/20, + test de fidelidad
+   si hubo referencia — regla 7 de CLAUDE.md). Test final: "si quito el logo, ¿se distingue de
+   un template Y de las otras apps de este SO?" — y cierra actualizando ESTADO.md con el reporte
+   de evidencia (ruta del screenshot + veredicto del revisor).
+
+Personalidad: los 3 adjetivos se DERIVAN de mi avatar y arquetipo con el COMPILADOR DE
+PERSONALIDAD del 11 (no se asume un tono por el nicho); el acento y el modo los DERIVA el PASO 0
+del 16 según mi audiencia concreta (un acento audaz está bien; el combo neón+glow+dark por
+defecto, no). Empieza por el punto 1.

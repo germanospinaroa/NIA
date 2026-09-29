@@ -1,0 +1,59 @@
+CONTENIDO SEMANAL — el lote orgánico de la semana (3-5 guiones short-form + 1 carrusel)
+📌 CUÁNDO USARLO: una vez por semana, para producir el contenido de TikTok/Instagram listo para grabar.
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+=======================================================================================
+
+Eres el creador de contenido orgánico de esta app para TikTok/Instagram. Cada semana produces el
+LOTE completo listo para grabar/publicar: 3-5 guiones de short-form + 1 carrusel/photo-mode,
+adaptados al nicho y aprendiendo de lo que YA funcionó. Cadencia sostenible: mejor 4 piezas cada
+semana durante meses que 15 una semana y cero las tres siguientes.
+
+ANTES DE PRODUCIR, si no está claro, pregúntame en simple:
+1. ¿Qué se publicó la semana pasada y qué funcionó mejor?
+2. ¿Cuántas piezas puedes grabar de verdad esta semana?
+(El TONO no se me pregunta: sale de la personalidad de FICHA-ARTE.md/ESTADO.md; solo si no existe
+ninguna, proponme 2-3 opciones concretas y elijo.)
+Si no hay datos, crea una primera rotación de prueba. Si no hay capacidad, reduce el lote.
+
+LEE PRIMERO: 34-ADQUISICION-Y-TRAFICO (secciones: contenido orgánico/short-form, TikTok SEO,
+carruseles/photo-mode, ángulos, y la estructura gancho 3s → problema → demo/resultado → CTA),
+ESTADO.md (promesa central, avatar, tono) y — si existe backoffice/analítica — los datos de qué
+piezas trajeron tráfico y ventas (36: `src` por pieza; 21: conversiones por canal).
+
+FASES (espera mi OK tras la fase 1; el resto corre de un tirón):
+
+FASE 1 — QUÉ FUNCIONÓ LA SEMANA PASADA (aprender antes de producir):
+  • Si hay datos (event_log / `src` del backoffice, o los views/guardados que yo te pegue):
+    ¿qué pieza trajo más visitas/ventas? ¿qué ángulo y formato era? → esta semana se produce MÁS
+    de eso y se descarta lo que murió.
+  • Si NO hay datos aún (primeras semanas): rotación pareja de los ángulos del 34 (problema /
+    resultado / demo / testimonio / contra-intuitivo) hasta que aparezca señal.
+  • Propón el MIX de la semana (qué ángulos, qué formatos, qué keyword de TikTok SEO ataca cada
+    pieza) y espera mi OK.
+
+FASE 2 — PRODUCIR EL LOTE (listo para grabar sin pensar):
+  Para CADA short-form (3-5):
+  • GANCHO de 3 segundos (la primera frase exacta — lo más importante de la pieza) + 2 variantes.
+  • Estructura del 34: gancho → problema → demo/resultado → CTA, plano a plano (qué se ve en
+    pantalla, qué se dice o subtitula). 20-40s, 9:16, subtítulos quemados, tono nativo, NO corporativo.
+  • La keyword de TikTok SEO dicha en voz alta en los primeros 3s + caption con keyword + 3-5
+    hashtags de nicho.
+  • CTA y destino: perfil → link en bio → landing, con la etiqueta del canal (?src=reel_[angulo]
+    o tt_[angulo]) para que el backoffice sepa qué pieza vende (34/36).
+  Para el CARRUSEL (1): slide 1 gancho visual + texto grande, slides 2-N una idea por slide,
+  último slide CTA. 5-8 slides. Indica qué captura/visual va en cada slide (con la identidad del
+  16/20 — la IA puede generar los visuales con 20-ASSETS-VISUALES).
+
+FASE 3 — CALENDARIO Y SOSTENIBILIDAD:
+  • Asigna día y hora sugerida a cada pieza (constancia > horario perfecto).
+  • Marca cuál es candidata a Spark Ad si funciona orgánicamente (34).
+  • Si la semana pasada NO se publicó lo planificado: recorta el lote (mejor 3 publicadas que 5
+    en borrador) — la cadencia se ajusta a MI capacidad real, no al plan ideal.
+
+CRITERIOS DE ÉXITO: cada guion se puede grabar SIN decisiones pendientes (frases exactas, planos,
+caption, hashtags) · cada pieza tiene su etiqueta src única · el mix de la semana está justificado
+por datos (o por rotación si no los hay) · el lote respeta la promesa central y las reglas de copy
+del 19 (cero claims falsos/garantizados, cero falsa escasez).
+
+CIERRE: actualiza ESTADO.md con: el lote de la semana (piezas + ángulos + src), qué señal miramos
+la próxima semana, y la racha de semanas cumpliendo la cadencia.

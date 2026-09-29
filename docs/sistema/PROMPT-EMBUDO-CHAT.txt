@@ -1,0 +1,62 @@
+EMBUDO DE CHAT — clonar y adaptar la plataforma del curso para vender TU app conversando
+📌 CUÁNDO USARLO: cuando ya tienes tu app (o su venta definida) y quieres el segundo camino de
+venta: Meta Ads → página propia con formato de conversación → checkout de Hotmart. Adapta la
+plataforma del curso (carpeta wsp-funnel); si tu app aún no existe, arranca con /arranque y di
+"quiero vender por embudo de chat".
+(Pegar completo en Claude Code, con tu app abierta y el sistema en docs/sistema/)
+==============================================================================
+
+Monta mi EMBUDO DE CHAT adaptando la plataforma del curso a mi app. LEE PRIMERO
+docs/sistema/63-EMBUDO-DE-CHAT.md COMPLETO (qué es, la regla de marca, el guion de 7 etapas,
+las reglas de copy y la medición) — nada de lo de abajo se ejecuta sin haberlo leído. La venta
+cierra SIEMPRE en el checkout de Hotmart (18); la landing del 19 sigue existiendo como default
+y la decisión landing vs chat quedó (o quedará) anotada en ESTADO.md.
+
+GATE DE FICHAS: si FICHA-AVATAR.md no está completa y aprobada, créala PRIMERO conmigo (57).
+TODO el copy del chat se DERIVA de sus dolores/deseos/objeciones y del mecanismo nombrado de
+FICHA-MODELO.md / la Constitución — cada burbuja trazable a un campo. Sin ficha no hay guion.
+
+PASO 1 — DUPLICAR SIN TOCAR EL ORIGINAL. Localiza la carpeta wsp-funnel (la plataforma del
+curso: builder visual de embudos + rutas públicas + analítica + Supabase). Duplícala a una
+carpeta HERMANA con el nombre de mi app (ej. chat-[miapp]), excluyendo node_modules, .git y
+todo archivo .env. En la copia: inicializa un git propio y crea el .env desde el .env.example.
+PROHIBIDO modificar la carpeta original del curso y PROHIBIDO tocar el proyecto de mi app:
+todo el trabajo ocurre en la copia.
+
+PASO 2 — REVISAR ANTES DE TOCAR. Recorre la copia completa (rutas, builder, esquema de
+Supabase, analítica, componentes del chat) y anota en ESTADO.md qué trae, qué sirve tal cual
+y qué hay que quitar o adaptar. Ningún cambio antes de terminar este inventario.
+
+PASO 3 — QUITAR LO QUE NO VA. Elimina los pagos internos (Stripe / MercadoPago y cualquier
+checkout embebido — mi venta cierra en Hotmart, no dentro de la plataforma) y los flujos/datos
+de demo. Verifica que nada quede colgando (rutas, imports, tablas huérfanas).
+
+PASO 4 — MARCA PROPIA. Cero logo, nombre o trade dress de WhatsApp (regla §2 del 63: eso es
+suplantación y puede hacer rechazar los anuncios). Tematiza el chat con MI FICHA-ARTE.md:
+paleta, tipografía, radios, avatar de marca. Es "el chat de [mi app]", no un WhatsApp falso.
+
+PASO 5 — SERVICIOS. Configura el Supabase PROPIO de esta copia (proyecto nuevo, no el de la
+app) y deja listo el punto de inyección del Píxel de Meta (el ID lo pongo yo — ver reporte).
+
+PASO 6 — CREAR EL FLUJO. Construye en el builder el guion de 7 etapas del 63 (E1 apertura →
+E2 mini-diagnóstico → E3 resultado por ramas → E4 demo real o slot [VIDEO AQUÍ] → E5 oferta
+anual/mensual/duda → E6 cierre con links de Hotmart → E7 rescate sin urgencia falsa), con las
+reglas de copy del §4 (burbujas ≤3 líneas, 1 idea, mecanismo nombrado en E1/E3/E5, delays
+1-2.5s, cero "visto" falso). Cada plan sale a su link de checkout con sck=chat-[campaña]-[plan].
+
+PASO 7 — VERIFICAR. Levanta la plataforma y recorre a 375px TODAS las ramas de la
+conversación (cada combinación de E2, cada objeción de E6, el rescate de E7) hasta llegar a
+su checkout de Hotmart correcto con su sck correcto. tsc + build + dev limpios. Nada se
+declara listo sin este recorrido completo.
+
+REPORTE FINAL — EN SIMPLE, PASO A PASO. Cierra con la lista de lo que SOLO YO puedo hacer,
+explicado como a alguien que nunca lo hizo, en orden y con ✅ en lo que ya esté:
+1) crear las cuentas que falten (Supabase, Vercel, Meta Business);
+2) las variables/claves que la plataforma necesita, POR NOMBRE y con el panel exacto donde se
+   introducen (yo respondo solo "configurada" — cero secretos en el chat);
+3) grabar el video de 30-60s de E4 (guion sugerido incluido) si quedó el slot [VIDEO AQUÍ];
+4) desplegar en Vercel y conectar el subdominio (ej. chat.miapp.com);
+5) crear el Píxel en Meta y darme su ID para dejarlo activo;
+6) hacer la compra de prueba que verifica Píxel + sck de punta a punta;
+7) recién entonces, encender los ads (34 — con el gate del píxel cumplido).
+Actualiza ESTADO.md con lo hecho, lo pendiente y la decisión landing vs chat.

@@ -1,0 +1,90 @@
+PROTOCOLO DE PUBLICACION SEGURA Y CONTINUA — GitHub + Supabase + Vercel
+CUANDO USARLO: primera publicación, reparación de auto-deploy o recertificación tras cambiar repo,
+cuenta/equipo, dominio, rama, Supabase, Auth, pagos, email o webhooks.
+===============================================================================================
+
+Publica esta app aplicando COMPLETO `docs/sistema/62-PUBLICACION-SEGURA-Y-CONTINUA.md`. Lee también
+`08-DEPLOY.md`, `09-SEGURIDAD.md`, `25-BASE-DE-DATOS.md`, `27-REVISION-SEGURIDAD.md` y
+`61-INTEGRIDAD-DE-LANZAMIENTO.md`. Usa conectores/OAuth cuando estén disponibles y CLI autenticada
+como alternativa. No asumas que conectar las cuentas, subir a GitHub, ejecutar `vercel link` e importar
+un repo son la misma cosa: verifica cada capa y crea `PUBLICATION-CERTIFICATE.md` desde su plantilla.
+
+REGLA DE ACOMPAÑAMIENTO
+- Ejecuta tú todo lo verificable. Cuando una acción de cuenta exija al dueño, explica por qué, da la ruta
+  exacta, pide UNA acción y describe el resultado esperado. Continúa cuando responda solo el estado.
+- Habla en simple y define cualquier término técnico en la misma frase.
+- No declares terminado lo que no puedas observar. Usa `PASS / BLOCKED / NOT_APPLICABLE`.
+- Antes de una compra, cambio destructivo o dato real, explica impacto/costo y espera aprobación.
+
+PROTOCOLO CERO SECRETOS EN CHAT — BLOQUEO DURO
+- JAMAS pidas, aceptes, repitas o muestres valores de claves, tokens, passwords, cookies, connection
+  strings, HOTTOK, API keys, OAuth secrets o firmas de webhook.
+- Pide solo nombres y estado (`configurada`, `falta`, `no verificada`). El dueño pega cada valor
+  DIRECTAMENTE en el dashboard oficial o prompt interactivo de CLI; nunca en el chat ni como argumento.
+- No muestres `.env`, headers ni logs completos. No pidas screenshots con valores visibles.
+- Si aparece un secreto: no lo cites, detén el deploy, exige revocación/rotación y audita archivos,
+  historial Git, logs y artefactos antes de seguir.
+
+PASO 0 — INVENTARIO Y PRE-VUELO
+1. Identifica local root, GitHub owner/repo/remote/rama, Vercel scope/proyecto/repo conectado/rama/root,
+   Supabase environment/project-ref y dominio. Si hay duplicados o nombres parecidos, compara IDs y SHA.
+2. Corre lint, typecheck, tests, build, E2E, auditoría 27 y Gates 1-10 de 61. Corrige causa raíz.
+3. Verifica `.gitignore` (`.env*`, excepción `.env.example`, `.vercel/`, dumps), scan de secretos,
+   `.env.example`, migraciones y árbol limpio. No publiques con crítico abierto.
+
+PASO 1 — GITHUB
+1. Crea/usa el repo correcto, privado por defecto para una app comercial; no crees otro por comodidad.
+2. Confirma `origin`, owner/repo, rama y SHA; autentica por conector, GitHub App, SSH o navegador, nunca
+   con token incrustado en URL/comando.
+3. Push y confirma SHA remoto. Si Vercel no ve el repo, guía `Configure GitHub App` y acceso mínimo al repo.
+
+PASO 2 — CONEXION PERSISTENTE GITHUB -> VERCEL
+1. En el proyecto Vercel CANONICO verifica `Settings -> Git -> Connected Git Repository = owner/repo`.
+2. Verifica scope/team, Production Branch, Framework, Root Directory, comandos/runtime e Ignored Build Step.
+3. Si hay `.vercel/project.json`, úsalo solo para comprobar que apunta al mismo proyecto; no lo subas.
+4. `vercel link` o `vercel --prod` NO satisfacen este paso por sí solos. No cierres sin Connected Git Repo.
+
+PASO 3 — SUPABASE Y MIGRACIONES
+1. Separa Development/Preview de Production y verifica nombre + `project-ref` antes de tocar datos.
+2. Enlaza con `supabase link --project-ref`, compara `supabase migration list`, ejecuta
+   `supabase db push --dry-run`, revisa destino/SQL y recién después aplica.
+3. Prueba clean-room local, RLS/IDOR, grants, advisors, SECURITY DEFINER y Storage.
+4. PROHIBIDO `supabase db reset --linked` o `--include-seed` contra Production. Toda operación remota
+   destructiva requiere mostrar destino/impacto y aprobación explícita.
+
+PASO 4 — VARIABLES AISLADAS
+1. Crea inventario de NOMBRES y clasifica pública/secreta + Development/Preview/Production.
+2. Preview usa DB/keys/email/pagos de prueba, nunca credenciales live de Production.
+3. Guía al dueño a introducir secretos directamente en Vercel/Supabase/servicio y responder solo
+   `configurada`. Marca Sensitive cuando exista. Verifica presencia sin leer valores.
+4. Crea un deployment nuevo después de cambiar variables; deployments previos no se actualizan.
+
+PASO 5 — PREVIEW AUTOMATICO
+1. Crea rama y commit canario inocuo; push SIN usar `vercel`.
+2. Confirma Preview automático, Source=Git, mismo SHA, check Vercel en GitHub, URL y E2E.
+3. Si no aparece, repara permisos, repo, rama, autor, root o Ignored Build Step. No uses deploy manual
+   para ocultar una integración rota.
+
+PASO 6 — DOMINIO, AUTH Y CALLBACKS
+1. Configura dominio/SSL/canonical y site URL final; redeploy.
+2. Actualiza Supabase Auth Site URL + redirects exactos, OAuth origins/callbacks, Resend, pagos, retorno,
+   CORS/CSP/cookies y todos los webhooks. Registra cada dependencia en `PUBLICATION-CERTIFICATE.md`.
+3. Prueba confirmación, login, reset, logout, email, pago/webhook e idempotencia en el dominio final.
+
+PASO 7 — PRODUCCION Y TRAZABILIDAD
+1. Merge/push por Git a Production Branch. Confirma auto-deploy Ready, Source=Git y checks verdes.
+2. Compara SHA local/remoto/Vercel/`/api/version`; completa `RELEASE-MANIFEST.json`.
+3. Corre smoke/E2E completo en dominio final y documenta rollback de código + DB expand/contract.
+
+PASO 8 — PRUEBA DE LA SEGUNDA PUBLICACION (OBLIGATORIA)
+1. Haz otro commit canario, push normal SIN CLI Vercel y confirma deployment automático + SHA + dominio.
+2. Revierte el canario con un commit y confirma que la reversión también se auto-despliega.
+3. Solo entonces marca `automatic_updates_verified: true`.
+
+REPORTE DE CIERRE
+- Estado P0-P8 + evidencia y enlaces no sensibles.
+- GitHub owner/repo/branch/SHA; Vercel project/connected repo/production SHA; Supabase project-ref/migration.
+- `secrets_shared_in_chat=false`, aislamiento de entornos y lista de variables SOLO por nombre.
+- Resultado de Auth, core, pago/webhook, email, analytics, backoffice, rollback y segunda publicación.
+- Pendientes con responsable y paso exacto. Sin P0-P8 completos: `NO APTO`, aunque la URL abra.
+

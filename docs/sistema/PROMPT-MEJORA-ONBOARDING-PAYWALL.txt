@@ -1,0 +1,55 @@
+MEJORAR ONBOARDING Y PAYWALL — menos friccion, mas valor y medicion real
+======================================================================
+
+Audita y mejora el onboarding y paywall de esta app sin asumir que mas preguntas, mas texto o mas
+agresividad convierten mejor. Primero demuestra el problema; despues disena el recorrido mas corto
+que personaliza, entrega valor y prepara una decision informada.
+
+LEE PRIMERO: ESTADO.md, FICHA-AVATAR.md, 60-OPERACION-DE-CONVERSION.md,
+02B-ONBOARDING-Y-PAYWALL.md, 02C-PRICING-Y-MODELO-DE-NEGOCIO.md,
+50-DISENO-ONBOARDING-PAYWALL.md, 52-COPY-VISUALES-CONVERSION.md,
+36-ANALITICA-Y-EVENTOS.md y 18-VENTA-HOTMART.md.
+
+FASE R1 — EXPLORAR, CERO CAMBIOS
+- Recorre produccion/dev como usuario nuevo a 390x844 y 1440x900.
+- Lista cada pantalla, pregunta, decision, dato guardado, evento y destino del CTA.
+- Comprueba que haya UNA pregunta o decision por pantalla. Nombre y meta nunca comparten pantalla.
+- Reconstruye el funnel limpio por paso y verifica `paywall_visto` por visibilidad real.
+- Separa `checkout_iniciado`, `trial_iniciado` y `primer_cobro_confirmado`.
+
+FASE R2 — DIAGNOSTICAR
+Para cada paso pregunta: ¿personaliza algo visible, entrega valor, construye compromiso honesto o
+reduce una objecion real? Si no, es candidato a eliminar. La longitud inicial es:
+- utilidad/valor obvio: 1-3 pasos, maximo 5;
+- consumo personalizado: 4-8 pasos;
+- 9-20 solo si el diagnostico es producto y los datos por paso justifican la inversion.
+
+Audita el paywall corto por defecto:
+- una promesa especifica trazada al deseo principal;
+- un visual del resultado real, no una card decorativa;
+- hasta 3 beneficios (un 4º SOLO si responde una objecion de la FICHA-AVATAR) y hasta
+  2 planes (3 solo si el tier es real);
+- precio, ciclo, renovacion y fecha de cobro legibles;
+- CTA honesto, salida limpia y una linea de confianza verdadera;
+- sin testimonios, garantias, urgencia ni resultados inventados.
+
+FASE R3 — PLAN Y APROBACION
+Presenta la fuga demostrada, la hipotesis, el cambio propuesto, archivos, riesgo y evento que dira si
+funciono. No estimes un uplift numerico. Para cambios de mas de 5 archivos, espera aprobacion.
+
+FASE R4 — IMPLEMENTAR POR CAPAS
+1. Estructura: una pregunta por pantalla, progreso honesto, respuestas persistidas y saltos no criticos.
+2. Resultado: primera victoria o preview usable; loading solo mientras hay trabajo real.
+3. Paywall: jerarquia corta, personalizacion, planes y renovacion transparentes.
+4. Checkout: Hotmart directo por defecto, sin email previo; URL `off`, `showOnlyTrial=1`, `sck`.
+5. Analitica: visibilidad real, sesion de 30 min, QA y eventos server-side separados.
+6. Craft: feedback, focus, reduced motion, errores recuperables y mobile sin solapamientos.
+
+Tras cada capa: tsc, build y dev limpios segun el proyecto.
+
+FASE R5 — VERIFICAR
+Repite el flujo con `?qa=1`, confirma eventos en destino y comprueba que QA no contamina el panel.
+Captura onboarding, resultado, paywall y salida a Hotmart. Actualiza ESTADO.md con baseline y siguiente
+checkpoint. No declares que convierte mejor hasta observar datos limpios.
+
+Empieza con R1.

@@ -1,0 +1,62 @@
+EMAILS — monta TODOS los correos del negocio de una vez (acceso, carrito, cobros, bienvenida)
+(Pegar con la app abierta + el sistema en docs/sistema/)
+===============================================================================================
+
+Eres el responsable de email de este negocio. Monta de una sola vez TODOS los correos que la app
+necesita para vender, entregar y retener — con los transaccionales (los que SÍ o SÍ deben llegar)
+primero. Primero preséntame el inventario y el plan, y ESPERA MI OK; luego implementa y PRUEBA.
+
+ANTES DE PROPONER, si no está claro, pregúntame en simple:
+1. ¿Ya tienes el dominio verificado en Resend (el servicio que manda los correos de tu app)?
+2. ¿Ya hay ventas por Hotmart, o estamos preparando antes de lanzar?
+3. ¿Tienes lead magnet (el regalo gratis a cambio del email) o lista de espera?
+Si no contesto, dedúcelo de ESTADO.md y del código, y avanza con lo que haya.
+
+LEE PRIMERO: 18-VENTA-HOTMART (el email de acceso post-compra — el corazón del modelo — y su
+sección "Carrito abandonado nativo": informe + webhook de Hotmart),
+46-EMAIL-DELIVERABILITY (que los correos LLEGUEN: dominio verificado, SPF/DKIM/DMARC),
+58-RETENCION-DE-INGRESOS (dunning y win-back),
+34-ADQUISICION-Y-TRAFICO (nurturing del lead magnet), 11-DISENO-EMOCIONAL (la voz del arquetipo)
++ FICHA-AVATAR.md (el copy sale de ahí, no se inventa).
+
+━━━ FASE 1 — INVENTARIO (solo lectura, cero cambios) ━━━
+Revisa qué emails EXISTEN hoy (código, Resend, Hotmart) y cuáles faltan. Verifica el estado real
+de la entregabilidad: ¿dominio verificado en Resend? ¿SPF/DKIM/DMARC configurados? (46). Si el
+dominio no está listo, eso va PRIMERO en el plan — un email perfecto que cae en spam no existe.
+
+━━━ FASE 2 — PLAN PRIORIZADO Y DETENTE (espera mi OK) ━━━
+Preséntame la lista completa con qué existe ✅ / falta ❌, en ESTE orden de prioridad:
+A. TRANSACCIONALES (primero SIEMPRE — si no llegan, el negocio se rompe):
+   1. ACCESO POST-COMPRA con magic link (el enlace que entra sin contraseña) — EL MÁS CRÍTICO:
+      si no llega, el cliente PAGÓ y no puede entrar → reembolso + reseña destructiva.
+   2. RECUPERACIÓN DE ACCESO ("no puedo entrar") — reenvío del acceso.
+B. CARRITO ABANDONADO (18 — sección "Carrito abandonado nativo": informe + webhook de Hotmart):
+   la secuencia para quien llegó al checkout y no pagó.
+C. DUNNING + WIN-BACK (58): pagos fallidos (tarjeta vencida) y recuperación de quien canceló.
+D. BIENVENIDA/ACTIVACIÓN D1-D7: que el que pagó USE la app en su primera semana.
+E. NURTURING DEL LEAD MAGNET (34): del regalo gratis a la venta.
+NO ejecutes hasta que yo apruebe la lista.
+
+━━━ FASE 3 — (tras mi OK) ESCRIBIR + IMPLEMENTAR ━━━
+CADA email lleva: ASUNTO en 2 variantes + PREHEADER (la frasecita gris que se ve junto al asunto)
++ cuerpo CORTO en la voz del arquetipo (11) derivada de FICHA-AVATAR — cada frase trazable a un
+dolor/deseo/objeción del avatar — + UN solo CTA claro. Todo en el idioma del usuario final.
+REGLAS DURAS:
+  • Deliverability primero (46): dominio verificado en Resend, SPF/DKIM/DMARC en verde; si hay
+    volumen de marketing, DOS subdominios dedicados (tx.tudominio.com transaccional /
+    news.tudominio.com marketing — regla de 46) para no quemar el principal.
+  • Anti-spam ÉTICO: nada de MAYÚSCULAS GRITONAS, urgencia falsa ("¡ÚLTIMAS 2 HORAS!" que se
+    repite cada día), ni asuntos-trampa que no cumple el cuerpo.
+  • Transaccionales separados de marketing (el de acceso jamás comparte reputación con promos).
+
+━━━ FASE 4 — PROBAR DE VERDAD (un email no probado no existe) ━━━
+Los transaccionales se prueban END-TO-END: compra de prueba en Hotmart → el webhook dispara →
+el email LLEGA a una bandeja real (no a spam) → el magic link FUNCIONA y entra a la app.
+Los demás: envío de prueba a tu correo + revisar que se vea bien en el celular (donde se leen).
+Si algo no llega o cae en spam: causa raíz (46), no "reintentar y ver".
+
+CIERRE — REPORTE CON EVIDENCIA: tabla de emails implementados ✅ con su prueba (llegó/no llegó,
+link funcionó sí/no) · estado de deliverability (dominio, SPF/DKIM/DMARC) · qué quedó pendiente
+⚠️ y por qué. Actualiza ESTADO.md con: emails activos, dónde vive cada plantilla, y qué mirar en
+la operación mensual (tasa de apertura del acceso, recuperación de carrito, rescate de dunning).
+Empieza con la Fase 1.

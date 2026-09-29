@@ -1,0 +1,64 @@
+OPERACION DE CONVERSION — diagnostica y corrige la fuga comercial real
+(Pegar con la app abierta + el sistema en docs/sistema/)
+====================================================================
+
+Audita y mejora la conversion de esta app desde la primera visita hasta el primer cobro. No empieces
+reescribiendo copy: primero demuestra con datos y con el recorrido real donde se pierde la gente.
+
+CONTEXTO OPCIONAL DEL USUARIO:
+[trafico, fechas, paises, oferta, precios, sintomas o cambios recientes]
+
+LEE PRIMERO, EN ESTE ORDEN:
+1. ESTADO.md y FICHA-AVATAR.md del proyecto.
+2. docs/sistema/60-OPERACION-DE-CONVERSION.md (contrato canonico y diagnostico).
+3. docs/sistema/36-ANALITICA-Y-EVENTOS.md y 21-BACKOFFICE.md.
+4. docs/sistema/18-VENTA-HOTMART.md y 02C-PRICING-Y-MODELO-DE-NEGOCIO.md.
+5. docs/sistema/19-PAGINA-DE-VENTAS.md, 02B-ONBOARDING-Y-PAYWALL.md,
+   50-DISENO-ONBOARDING-PAYWALL.md y 55-DISENO-DE-LANDING.md.
+
+FASE 1 — AUDITORIA DE DATOS, SOLO LECTURA
+- Define periodo, zona horaria y denominadores antes de calcular tasas.
+- Separa sesiones unicas, usuarios, eventos, QA y bots. Excluye la sesion completa marcada `is_qa`.
+- Reconstruye por fuente y cohorte el funnel:
+  landing_vista -> onboarding_iniciado -> onboarding_paso_completado -> resultado_visto ->
+  paywall_visto -> checkout_iniciado -> trial_iniciado -> aha_alcanzado -> primer_cobro_confirmado.
+- Verifica que `paywall_visto` signifique visibilidad real, no montaje del componente.
+- Verifica que trial y primer cobro vengan del webhook, sean idempotentes y esten separados.
+- Si faltan datos, dilo como limitacion; no inventes tasas ni atribucion.
+
+FASE 2 — RECORRIDO REAL
+- Abre produccion con `?qa=1` en 390x844 y 1440x900.
+- Recorre landing, onboarding, resultado, paywall, Hotmart real y regreso como trafico frio.
+- Comprueba una pregunta por pantalla, valor antes de registro, oferta digerible, precio/renovacion
+  visibles, CTA honesto, URL `off` + `showOnlyTrial=1` + `sck`, moneda y opcion de trial.
+- No completes un cobro real sin autorizacion. Usa una oferta de prueba o detente antes de pagar.
+- Registra evidencia: screenshots, consola/red, evento recibido y estado server-side.
+
+FASE 3 — DIAGNOSTICO Y PLAN
+Clasifica cada conclusion como HECHO, HIPOTESIS, BENCHMARK o DECISION. Usa la matriz del 60 para
+identificar la primera fuga significativa. Prioriza errores de medicion, bloqueo del checkout,
+message-match, comprension de la oferta y aha durante el trial, en ese orden segun la evidencia.
+
+Presenta un plan pequeno por impacto, esfuerzo, riesgo y metrica de exito. Para cambios de mas de
+5 archivos, espera aprobacion. No prometas una mejora numerica ni uses benchmarks como pronostico.
+
+FASE 4 — IMPLEMENTAR LA CAUSA RAIZ
+- Cambia una capa principal por vez para conservar aprendizaje.
+- No pidas email antes de Hotmart si todavia no existe por una necesidad legitima del producto.
+- Antes de ver precio, un CTA sticky solo lleva a la oferta; despues puede abrir Hotmart.
+- Paywall corto por defecto: una promesa, un visual de valor, hasta 3 beneficios, hasta 2 planes,
+  renovacion clara, CTA y una linea de confianza verdadera.
+- Conserva first/last touch y click IDs durante 30 dias; sesion anonima vence tras 30 minutos.
+- Conecta el resultado al backoffice desde el primer dia, aunque aun no haya ventas.
+
+FASE 5 — VERIFICAR Y OPERAR
+- Ejecuta tsc, build y dev segun el stack del proyecto.
+- Repite el flujo en mobile y desktop con `?qa=1`; confirma cada evento en su destino.
+- Comprueba que QA no aparece en las tasas comerciales.
+- Actualiza ESTADO.md con definiciones, cambios, baseline y checkpoint.
+- Si el volumen es bajo, no declares ganador A/B: usa como primer checkpoint operativo 100 sesiones
+  limpias de landing o 20 inicios de checkout, lo que ocurra primero. No es significancia estadistica.
+
+CIERRE:
+Entrega: fuga demostrada, cambios implementados, evidencia tecnica/visual, metricas a observar y
+fecha/umbral del siguiente analisis. Empieza por la Fase 1.

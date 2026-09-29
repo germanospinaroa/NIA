@@ -1,0 +1,48 @@
+PANEL DE ADMIN — conversion, ventas, usuarios, margen y salud operativa
+======================================================================
+
+Construye o mejora el panel privado del dueno. Debe permitir decidir, no decorar datos. El panel de
+conversion existe ANTES de las primeras ventas; no esperar a tener clientes para descubrir que el
+funnel nunca se midio.
+
+LEE: ESTADO.md, 21-BACKOFFICE.md, 60-OPERACION-DE-CONVERSION.md,
+36-ANALITICA-Y-EVENTOS.md, 18-VENTA-HOTMART.md, 09-SEGURIDAD.md,
+31-EVALS-OBSERVABILIDAD-OPERACION.md, 40-UNIT-ECONOMICS.md y 17-VISUALIZACION-DATOS.md.
+Aplica también los Gates 2 y 7 de 61-INTEGRIDAD-DE-LANZAMIENTO.md.
+
+FASE 1 — AUDITA FUENTES Y DEFINICIONES
+- Identifica tablas, webhooks, eventos, zona horaria y periodos disponibles.
+- Comprueba RLS, rol admin server-side y que el cliente no pueda consultar datos globales.
+- Detecta datos faltantes, QA, bots, duplicados e inconsistencias Hotmart.
+- No inventes cero: distingue `0`, `sin datos`, `no instrumentado` y `error de fuente`.
+
+FASE 2 — PROPON EL PANEL Y ESPERA APROBACION SI SUPERA 5 ARCHIVOS
+Orden por decisiones:
+1. Salud del dato: ultima recepcion, sesiones limpias, QA excluido, eventos huerfanos, webhook.
+2. Conversion: sesiones unicas y tasas por fuente/cohorte para landing -> onboarding -> resultado ->
+   paywall real -> checkout -> trial -> aha -> primer cobro. Periodo actual y anterior comparables.
+3. Trial: activacion D1, retorno D3, cancelacion pre-cobro por dia, trial -> primer cobro.
+4. Ventas: ingresos confirmados, MRR, reembolsos, cancelacion y churn voluntario/involuntario.
+5. Usuarios/retencion: activacion y D1/D7/D30.
+6. Ganancia conciliada por moneda: bruto - fees reales - afiliados - impuestos - IA - infra - email.
+   Si falta conciliación, rotula ESTIMACIÓN. Nunca sumar COP+USD ni cambiar solo la etiqueta.
+7. Operacion: costos de IA, errores y avisos accionables.
+
+Cada metrica muestra definicion/tooltip, numerador, denominador, periodo y ultima actualizacion. Los
+filtros minimos son fecha, fuente, pais/moneda si existe, plan, variante y exclusion QA.
+
+FASE 3 — IMPLEMENTA
+- Queries/RPC server-side con indices y limites; nada de descargar toda una tabla al navegador.
+- RLS en toda tabla y autorizacion admin en cada endpoint.
+- Estados loading, vacio, error y datos parciales. Graficos honestos, tablas accesibles y mobile.
+- Las alertas dicen que paso, por que importa y que hacer. Sin umbrales inventados.
+
+FASE 4 — VERIFICA
+- Prueba admin autorizado, usuario normal y anonimo.
+- Reconciliacion manual de una cohorte contra filas fuente.
+- Confirma que una sesion `?qa=1` queda fuera completa.
+- Confirma que boleto pendiente/expirado no cuenta como cobro y trial $0 no cuenta como venta.
+- Confirma APPROVED+COMPLETE = un ingreso y reconcilia una liquidación Hotmart.
+- Ejecuta lint, tsc, tests, build y dev; captura vistas desktop/mobile.
+
+Actualiza ESTADO.md con fuentes, definiciones, accesos y alertas. Empieza con Fase 1.

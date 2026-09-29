@@ -1,0 +1,60 @@
+AUDITORÍA Y PERFECCIONAMIENTO LEGAL — términos, privacidad, cookies y protección del negocio
+📌 CUÁNDO USARLO: cuando la app ya tiene (o debería tener) sus páginas legales y quieres que la
+IA las revise, complete y perfeccione — o las cree si faltan. Ideal antes de vender y tras
+cualquier cambio grande (nueva feature de IA, nuevo país, cambio de precios).
+(Pegar completo en Claude Code, en la carpeta del proyecto, con el sistema en docs/sistema/.)
+======================================================================================
+
+Actúa como auditor legal de producto para mi app. Tu misión: dejar la capa legal COMPLETA,
+PROFESIONAL y COHERENTE con lo que la app realmente hace — sin que yo tenga que investigar
+nada. La doctrina vive en docs/sistema/47-LEGAL-FISCAL-Y-PRIVACIDAD.md: léela primero y
+síguela al pie de la letra.
+
+PASO 1 — INVENTARIO REAL (antes de opinar):
+- Lee las páginas legales existentes del proyecto (privacidad, términos, reembolsos,
+  disclaimer, cookies) y compáralas contra las 6 páginas obligatorias del 47.
+- Lee ESTADO.md, FICHA-MERCADO.md y el código para saber QUÉ hace de verdad la app: ¿usa IA
+  (qué proveedor)?, ¿qué datos recopila?, ¿tiene analytics?, ¿cookies no esenciales?, ¿acepta
+  menores?, ¿maneja datos sensibles (salud/finanzas)?, ¿en qué países vende?, ¿precio, trial y
+  garantía vigentes? Las páginas deben describir LA APP REAL, no una genérica.
+
+PASO 2 — PÍDEME SOLO LO QUE NO PUEDES SABER (una tanda de preguntas, cortas y en simple):
+- Nombre o razón social del responsable y país desde el que opero.
+- Email de contacto legal (si no existe, proponme uno: legal@ o soporte@).
+- ¿Tengo empresa constituida o vendo como persona física?
+- Solo si aplica: ¿algo de la app cambió y no está en ESTADO.md?
+Todo lo demás lo deduces del proyecto — no me hagas un cuestionario de abogado.
+
+PASO 3 — AUDITA CONTRA ESTE CHECKLIST (el corazón del trabajo). Verifica que:
+[ ] Privacidad: datos recopilados reales · usos · lista NOMBRADA de subprocesadores con
+    función (Supabase, proveedor de IA, Vercel, Resend, Hotmart, analytics) · transferencia
+    internacional a la IA declarada · derecho de eliminación con el CAMINO real (¿el botón de
+    borrar cuenta existe y funciona? pruébalo en el código) · contacto · fecha de última
+    actualización + aviso de cambios materiales por email.
+[ ] Términos: qué hace y qué NO hace la app · licencia de uso · propiedad de los outputs de
+    IA · limitación de responsabilidad · suspensión de cuentas · ley aplicable coherente con
+    mi país.
+[ ] Reembolsos: ALINEADA con la política real de Hotmart y con la garantía prometida en la
+    landing (mismos días, mismas condiciones — si la landing dice 14 y la página dice 7, es
+    una demanda esperando fecha).
+[ ] Disclaimer de IA: "puede generar información incorrecta", no sustituye consejo
+    profesional (médico/legal/financiero según el nicho), y el usuario decide bajo su
+    responsabilidad — visible donde se usa la IA, no solo enterrado en los términos.
+[ ] Cookies: si hay analytics/píxeles → banner con "Aceptar" y "Rechazar" igual de fáciles y
+    NADA no esencial se carga antes del consentimiento (verifícalo en el código, no en la
+    promesa).
+[ ] Edad mínima coherente con el nicho (y regla reforzada si hay datos sensibles o menores).
+[ ] Suscripción: renovación automática divulgada ANTES del pago, cancelación tan fácil como
+    la contratación, pre-aviso del cobro anual (California ARL si vendo a EE.UU. — 47/58).
+[ ] COHERENCIA TOTAL: lo que dicen las páginas = lo que hace el código = lo que promete la
+    landing. Cada discrepancia es un hallazgo CRÍTICO.
+
+PASO 4 — CORRIGE Y COMPLETA: reescribe o crea lo que falte, en español simple y humano (la
+regla del 47: que un usuario real lo entienda), con las páginas enlazadas desde el footer.
+Registra en ESTADO.md la fecha de esta auditoría legal.
+
+PASO 5 — REPORTE FINAL en simple: qué estaba bien · qué corregiste y por qué importaba (en
+términos de riesgo real: multa, demanda, baneo de Hotmart/Meta) · qué queda pendiente que
+solo un humano puede hacer (⚠️ y cuándo: p. ej. "si superas ~$X/mes o manejas datos de salud,
+valida con un abogado local — esta auditoría es de completitud profesional, no asesoría legal
+colegiada").
