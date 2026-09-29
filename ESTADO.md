@@ -19,15 +19,17 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Demanda cualitativa: “daily affirmations” alta y con intención de pago alta, pero competida; “positive self-talk / self-talk” es el territorio más adecuado para NIA.
 - Precios observados: I Am alrededor de US$14,99/mes y US$59,99/año; ThinkUp US$7,99/mes y US$39,99/año; Rosebud US$12,99/mes y US$107,99/año. Son referencias del documento, no una decisión final.
 
-## Avatar y venta (Sesión 1 — base recibida, pendiente de cerrar ficha)
-- Avatar inicial: Laura, 30–42 años, profesional, con ingresos propios, consume contenido de crecimiento personal y ya conoce afirmaciones, journaling, podcasts o ChatGPT.
-- Dolor central: sabe cómo quiere mostrarse, pero en momentos importantes vuelve a dudar, sobrepensar, minimizarse o echarse atrás.
-- Deseo central: actuar con más seguridad, decidir, hablar y poner límites sin que la duda gobierne el momento.
-- Objeciones/fricciones: no quiere otra rutina pesada, no quiere explicar su vida cada día, no quiere mensajes genéricos ni sentirse vigilada.
-- Nivel inicial: consciente de soluciones; no necesita que le expliquemos qué es el self-talk, sino por qué NIA no es otra colección de frases.
+## Avatar y venta (Sesión 1 — contexto recibido)
+- Avatar inicial: Laura, 33 años, profesional, vive en una ciudad grande, tiene ingresos propios, consume contenido de crecimiento personal y ya conoce afirmaciones, journaling, podcasts o ChatGPT. El documento aclara que es un perfil de lanzamiento, no una afirmación demográfica general.
+- Dolor central: sabe cómo quiere reaccionar, pero bajo presión vuelve al diálogo interno de duda, exigencia o miedo; las frases genéricas dejan de servirle justo cuando más las necesita.
+- Deseo central: convertirse en alguien que confía en sí misma cuando importa, sin depender de motivación externa.
+- Deseos funcionales: palabras creíbles y específicas, ayuda en segundos, memoria sin exposición íntima y pequeñas acciones que demuestren cambio.
+- Objeciones/fricciones: “esto es otra app de frases bonitas”; puede usar ChatGPT gratis; no quiere calificar mensajes o llenar registros a diario; teme que la app almacene pensamientos íntimos y que la abandone como las anteriores.
+- Nivel inicial: consciente del problema y de las soluciones, pero escéptica.
+- Lenguaje clave: “Sé cómo quiero reaccionar, pero cuando llega el momento vuelvo a dudar de mí”; “No quiero otra rutina”; “Quiero que me conozca un poco, pero no demasiado”; “Quiero terminar haciendo algo diferente, no solo sentir bonito”.
 - Ángulo comercial: “Actúa más como la persona que quieres ser, justo en los momentos en que normalmente vuelves a dudar de ti.”
 - Claims prohibidos: no prometer ingresos, salud, tratamiento psicológico ni aceptación externa.
-- FICHA-AVATAR.md: no creada todavía. El PDF “NIA - Cliente.pdf” llegó ilegible/corrupto y debe reenviarse para cerrar dolores, lenguaje y objeciones con fidelidad.
+- FICHA-AVATAR.md: no creada todavía; el contenido de “NIA - Cliente2.pdf” ya fue leído y queda incorporado aquí como base.
 
 ## Propuesta de valor y posicionamiento
 - Versión elegida: “Ayudo a mujeres profesionales que sobrepiensan en momentos importantes a actuar con más seguridad, sin journaling, frases genéricas ni largas conversaciones con una IA.”
@@ -83,12 +85,12 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Después: cerrar avatar y validación final, definir modelo de negocio completo, app modelo, arquitectura y plan maestro.
 
 ## Problemas conocidos ⚠️
-- “NIA - Cliente.pdf” no es legible en este entorno: sus seis páginas llegan con streams dañados y sin texto/render recuperable. No se usará para inventar información.
+- “NIA - Cliente.pdf” original era ilegible; fue reemplazado correctamente por “NIA - Cliente2.pdf”, que sí pudo leerse completo.
 - La validación actual es positiva pero no final: el propio documento exige probar la diferencia adaptativa contra una versión estática y pedir dinero real.
 - No declarar NIA lista para vender hasta pasar los gates de seguridad, integridad y rigor de entrega.
 
 ## Pendientes del usuario
-- [ ] Reenviar “NIA - Cliente.pdf” en una copia legible, si desea que su contenido se incorpore literalmente.
+- [ ] Ninguno para continuar con la Constitución del Producto.
 
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
