@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-⏸️ CHECKPOINT — Última acción completada: comparativa visual A/B/C preparada y capturada a 375 px / Siguiente acción exacta: recibir elección o ajuste de dirección de arte.
+⏸️ CHECKPOINT — Última acción completada: referencia visual `Visual NIA.png` aprobada y B4 cerrada / Siguiente acción exacta: presentar el Plan Maestro antes de construir.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -90,14 +90,14 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Idioma inicial previsto: español para LATAM, sujeto a confirmación del mercado objetivo.
 - IA: el valor diferencial no puede depender solo de generación; debe apoyarse en historial estructurado, feedback, continuidad y evidencia acumulada.
 
-## Dirección de arte — comparativa pendiente de elección
-- Territorio fijado por el usuario: premium, editorial, íntima, contemporánea, serena pero no pasiva, femenina adulta, sofisticada, humana y tecnológica sin look de IA.
-- Prohibiciones: wellness pastel genérico, rosa/lila dominante, símbolos espirituales, degradé morado/azul de IA, SaaS, dashboards, ilustración infantil, look de hábitos y exceso decorativo.
-- Opción A — “Editorial de fuego bajo”: marfil #F5EFE5, carbón #2B2722, copper #A95739; Fraunces + Instrument Sans; marcador editorial y nota protagonista.
-- Opción B — “Señal en penumbra”: carbón cálido #20221F, hueso #F3EEE4, copper #C97851; Newsreader + Figtree; rail vertical y cápsulas táctiles.
-- Opción C — “Galería de intención”: hueso #EBE6DC, tinta verde #26312D, arcilla #C46D4D; Gloock + DM Sans; bloques escultóricos y evidencia acumulada.
-- Comparativa: `direcciones-abc.html` con `data-kit="abc-v2"`; captura: `output/playwright/direcciones-abc.png`.
-- Estado: opciones preparadas; ninguna dirección está elegida ni congelada todavía.
+## Dirección de arte — referencia aprobada
+- FICHA-ARTE.md: existe y aprobada por el usuario: SÍ — 2026-09-29.
+- Referencia contractual: `Visual NIA.png`. Define atmósfera, jerarquía, color, tipografía, densidad y carácter; no define funciones ni exige copia pixel-perfect.
+- Territorio: premium, editorial, íntimo, contemporáneo, sereno pero activo, femenino adulto, sofisticado, humano y tecnológico sin look de IA.
+- Brand kit de referencia: marfil cálido `#F4EFE6` · carbón `#181714` · copper `#C76338` · serif editorial + sans limpia.
+- Sistema: estado claro para hogar/intención; estado carbón para Punto NIA, foco e intervención; copper moderado para acciones y señales.
+- Firma: wordmark NIA simple con punto copper; evidencia como narrativa personal, no dashboard.
+- `direcciones-abc.html` queda como exploración archivada, no como contrato final.
 
 ## Sesiones completadas ✅
 - Sesión 1 — Sistema instalado, git inicial creado y documentos base de NIA incorporados; verificado 2026-09-29.
@@ -106,7 +106,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Sesión 1 — Cierre de contexto y paso hacia la Constitución del Producto.
 
 ## Próximas sesiones 📋
-- Próximo paso: elegir, combinar o ajustar una dirección A/B/C; después preparar el tour de la app con la opción elegida.
+- Próximo paso: presentar el Plan Maestro; después preparar el tour de la app con el contrato visual aprobado.
 - Después: cerrar avatar y validación final, definir modelo de negocio completo, app modelo, arquitectura y plan maestro.
 
 ## Conflictos revisados con el Sistema Operativo
@@ -120,7 +120,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - No declarar NIA lista para vender hasta pasar los gates de seguridad, integridad y rigor de entrega.
 
 ## Pendientes del usuario
-- [ ] Indicar si tiene una referencia visual concreta o prefiere que se preparen tres direcciones de arte.
+- [ ] Aprobar el Plan Maestro antes de iniciar la construcción por etapas.
 
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
