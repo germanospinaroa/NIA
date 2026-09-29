@@ -76,7 +76,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Punto NIA on demand queda incluido en el plan pago, pero no se congelan límites, créditos ni fair-use hasta conocer costo real por intervención, frecuencia, margen y comportamiento.
 - Trial: 7 días; no es demo limitada. Debe incluir intención persistente, intervenciones, feedback, memoria, adaptación, Punto NIA, microacciones cuando apliquen y primeras evidencias.
 - Hotmart: trial gratuito configurado en la suscripción; plan elegido antes del checkout; transparencia obligatoria sobre 7 días gratis, precio, moneda, primer cobro, periodicidad, renovación automática y cancelación.
-- Garantía operativa provisional: 15 días sobre la transacción inicial, para que sea mayor que el trial de 7 días; reconfirmar en la configuración real de Hotmart antes de publicar.
+- Garantía candidata: 7 días sobre el primer cobro, sin convertirla en requisito mayor que el trial. Hotmart permite 7, 15, 21 o 30 días; la decisión comercial final se tomará explícitamente antes de publicar.
 
 ## Instrumentación mínima obligatoria
 - Eventos canónicos: `landing_viewed`, `cta_started`, `onboarding_started`, `onboarding_completed`, `first_intervention_received`, `feedback_given`, `adapted_intervention_received`, `nia_now_started`, `microaction_completed`, `plan_selected`, `checkout_started`, `trial_started`, `returned_d1`, `returned_d3`, `returned_d7`, `trial_cancelled`, `trial_completed`, `first_payment_succeeded`, `first_payment_failed`, `subscription_cancelled`.
@@ -140,3 +140,41 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
 - No pedir una batería de preguntas: la Constitución congelada es la versión entregada por el usuario y no debe reinterpretarse como app de apertura reactiva ni como coach conversacional.
+
+## Brief operativo de página de ventas — B6
+
+### Objetivo y promesa
+- Objetivo único: llevar a una mujer que reconoce que sobrepiensa o duda en momentos importantes a querer experimentar NIA durante 7 días gratis.
+- Promesa principal: “Actúa más como la persona que quieres ser, justo en los momentos en que normalmente vuelves a dudar de ti.”
+- Apoyo: “Sin frases genéricas. Sin journaling. Sin largas conversaciones con una IA.”
+- Big Idea: Laura no necesita otra frase para sentirse bien; necesita que algo recuerde qué le ayuda y ajuste lo siguiente cuando vuelva a dudar.
+
+### Argumento y mecanismo
+- Problema: ya sabe cómo quiere actuar y ha probado crecimiento personal, frases, ChatGPT o journaling, pero el momento real la devuelve al mismo diálogo interno. Lo genérico empieza de cero cada día.
+- Enemigo comercial: genericidad y falta de continuidad; nunca “ser negativa” ni una condición clínica.
+- Punto NIA en lenguaje simple: NIA muestra una intervención → Laura responde con una microseñal → NIA recuerda → lo siguiente cambia.
+- Demostración obligatoria: intervención inicial → “Más real” → intervención futura menos absoluta y más creíble. La adaptación debe verse, no explicarse con arquitectura o machine learning.
+
+### Claims y CTA
+- Claims permitidos: volver a la intención, aprender de microseñales, adaptar futuras intervenciones, requerir segundos, evitar empezar de cero, memoria controlada por la usuaria y microacción cuando aporte valor.
+- Claims prohibidos: terapia, tratamiento, ansiedad/depresión, curación, resultados clínicos o transformaciones garantizadas.
+- CTA principal: “Probar NIA 7 días gratis”. Variante: “Empieza tus 7 días gratis”.
+- Recorrido: landing → CTA → onboarding público → primera experiencia → selección de plan/checkout cuando corresponda. Hotmart no se integra en esta etapa.
+- Transparencia preparada: “7 días gratis. Después se cobra el plan elegido salvo cancelación.” Importe, moneda y periodicidad deben aparecer antes de confirmar el trial.
+
+### Arquitectura exacta de la landing
+1. Hero: promesa, apoyo, CTA y preview de intervención; `landing_viewed` y `cta_started`.
+2. Reconocimiento: el momento en que sabe cómo quiere actuar pero vuelve a dudar.
+3. Por qué falla lo actual: frases genéricas, empezar de cero, ChatGPT/journaling con demasiado esfuerzo.
+4. Diferencia: NIA aprende qué sí le ayuda y usa hoy para ser más relevante mañana.
+5. Demostración Punto NIA: antes → “Más real” → después; interacción simulada, no chat.
+6. Cómo funciona: intención, intervención, microseñal, memoria, adaptación y microacción cuando aplica.
+7. Memoria bajo control: qué recuerda y qué no recuerda; visible, editable y revocable.
+8. Objeción ChatGPT: NIA aparece sin prompt, no exige explicar todo otra vez y no abre una conversación larga.
+9. Trial: 7 días de acceso al producto real; después cobro del plan elegido salvo cancelación. Sin precio falso ni urgencia.
+10. CTA final: repetir la acción principal y resumir el resultado esperado.
+11. Privacidad/legal básico: memoria mínima, no terapia, política de privacidad, términos y cancelación; sin social proof inventado.
+
+### Diseño y gate
+- Dirección: marfil cálido para reconocimiento/intención; carbón para la demostración de Punto NIA; copper solo para CTA, señales y transición; serif editorial + sans limpia; mucho aire y texto protagonista.
+- Gate: comprensión sin explicación externa, diferencia adaptativa clara, no genérica/no terapia/no coach, CTA correcto, claims trazables, fidelidad a FICHA-ARTE, responsive 375 px, accesibilidad, eventos verificados, lint/typecheck/build limpios.

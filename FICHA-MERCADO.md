@@ -27,8 +27,8 @@
 ## 4. PRUEBA Y GARANTÍA
 - Hotmart permite un período gratuito: el primer cobro ocurre después del plazo definido; las recurrencias siguen la configuración del plan | fuente: https://help.hotmart.com/es/article/115002364191// | fecha: 2026-09-29.
 - Prueba elegida: 7 días gratis, acceso completo al mecanismo real.
-- Garantía elegida provisionalmente: 15 días sobre la transacción inicial, sujeta a confirmación en la configuración real del producto.
-- Regla SO: garantía 15 > prueba 7 → SÍ.
+- Garantía candidata sobre el primer cobro: 7 días, sujeta a confirmación en la configuración real del producto.
+- La garantía aplica únicamente al primer cobro de la suscripción; no se documenta como requisito que sea mayor que el trial.
 - Transparencia obligatoria: plan, importe, moneda, primer cobro aproximado, periodicidad, renovación automática y cancelación antes de Hotmart y de forma coherente en checkout.
 
 ## 5. CONVERSIÓN ESPERABLE
