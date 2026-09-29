@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-⏸️ CHECKPOINT — Última acción completada: contexto base de NIA incorporado / Siguiente acción exacta: completar la Constitución del Producto, empezando por la primera victoria.
+⏸️ CHECKPOINT — Última acción completada: borrador de Constitución del Producto redactado / Siguiente acción exacta: recibir correcciones o aprobación de la Constitución.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -40,10 +40,21 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 
 ## Mecanismo y alcance actual
 - Mecanismo central: INTENCIÓN → INTERVENCIÓN → FEEDBACK MÍNIMO → MEMORIA → ADAPTACIÓN → MICROACCIÓN → EVIDENCIA.
+- Nombre propuesto del mecanismo: “Punto NIA”. Nombra el momento breve en que la intención de la usuaria se convierte en una intervención creíble y una acción pequeña; el sistema aprende de la respuesta para ajustar la próxima intervención.
 - La memoria guarda solo lo que la persona decide enseñar: intención, lenguaje, respuesta y acciones; no infiere secretos ni construye una biografía íntima indiscriminada.
 - Primera victoria propuesta: onboarding breve que termina con una intervención y produce “esto no parece una frase para cualquiera”.
 - Segunda victoria: la persona nota que NIA cambió porque ayer indicó que algo no le servía.
 - No construir ahora: NIA DEEP con memoria vital amplia, voz, recaps, múltiples intenciones o conversaciones profundas.
+
+## Constitución del Producto (borrador para aprobar)
+1. Usuario y situación: Laura, profesional de 33 años, usa NIA antes o después de una reunión, decisión o conversación importante, y también dentro de una rutina diaria breve, cuando nota que vuelve a dudar o sobrepensar.
+2. Problema y evitación: bajo presión vuelve al diálogo interno de duda, exigencia o miedo aunque sepa cómo quiere actuar. Quiere evitar frases genéricas, buscar ayuda en ChatGPT, escribir durante minutos y mantener otra rutina pesada.
+3. Promesa: “NIA ayuda a mujeres profesionales que sobrepiensan en momentos importantes a actuar con más seguridad, sin journaling, frases genéricas ni largas conversaciones con una IA, mediante intervenciones breves que aprenden de su respuesta y se vuelven más relevantes.”
+4. Primera victoria: en menos de cinco minutos, la usuaria escribe una intención concreta —por ejemplo, “quiero expresar mi desacuerdo sin justificarme de más”—, recibe una intervención específica y creíble, indica con un toque si le sirve, y termina con una microacción observable. Debe pensar: “Esto sí habla de lo que me está pasando” y no solo sentirse motivada durante unos segundos.
+4b. Mecanismo: “Punto NIA”. Test de falsabilidad: si se elimina el feedback y la memoria, NIA se comporta como una biblioteca de frases; si el mecanismo funciona, la segunda intervención cambia de forma reconocible según la respuesta anterior y aumenta la relevancia percibida o la probabilidad de completar la microacción.
+5. Tres flujos principales: (a) intención del momento → intervención breve; (b) feedback mínimo → adaptación de la siguiente intervención; (c) microacción → evidencia mínima de lo que la usuaria hizo, sin convertirlo en journaling.
+6. Comportamientos prohibidos: no presionar con culpa, rachas ni gamificación adictiva; no hacer claims clínicos ni presentarse como terapia; no inferir secretos ni guardar memoria íntima sin control; no exigir conversaciones o registros largos; no fingir certeza ni entregar frases positivas que la usuaria no puede creer; no compartir sus datos.
+- Estado: borrador pendiente de aprobación del usuario.
 
 ## Estrategia de monetización
 - Modelo propuesto: onboarding-first con 3 experiencias adaptativas gratuitas sin tarjeta y luego pantalla de planes.
