@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-⏸️ CHECKPOINT — Última acción completada: referencia visual `Visual NIA.png` aprobada y B4 cerrada / Siguiente acción exacta: presentar el Plan Maestro antes de construir.
+⏸️ CHECKPOINT — Última acción completada: Plan Maestro presentado para revisión / Siguiente acción exacta: esperar aprobación o correcciones antes de construir.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -76,7 +76,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Gamificación: no decidida; evitar presión por rachas salvo evidencia posterior.
 
 ## Secuencia maestra de construcción
-- Estado: B4 cerrada; Constitución del Producto aprobada y congelada; Plan Maestro pendiente; validación final pendiente.
+- Estado: B5 presentada; Constitución del Producto aprobada y congelada; validación final pendiente.
 - Ruta obligatoria: `/` → `/onboarding` → `/paywall` → `/login` → `/app` → servicios externos.
 - Landing: pendiente — no escribir copy final hasta cerrar avatar y Constitución.
 - Onboarding: pendiente — debe entregar una intervención real antes de pedir esfuerzo pesado.
@@ -106,8 +106,8 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Sesión 1 — Cierre de contexto y paso hacia la Constitución del Producto.
 
 ## Próximas sesiones 📋
-- Próximo paso: presentar el Plan Maestro; después preparar el tour de la app con el contrato visual aprobado.
-- Después: cerrar avatar y validación final, definir modelo de negocio completo, app modelo, arquitectura y plan maestro.
+- Próximo paso: revisar/aprobar el Plan Maestro; no construir hasta esa aprobación.
+- Después: completar FICHA-AVATAR.md, FICHA-MERCADO.md y FICHA-MODELO.md antes de escribir copy o fijar precio definitivo.
 
 ## Conflictos revisados con el Sistema Operativo
 - No hay conflicto de producto: el modelo híbrido mantiene la experiencia breve, el feedback mínimo, el valor antes del registro y la prohibición de coaching conversacional.
@@ -120,7 +120,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - No declarar NIA lista para vender hasta pasar los gates de seguridad, integridad y rigor de entrega.
 
 ## Pendientes del usuario
-- [ ] Aprobar el Plan Maestro antes de iniciar la construcción por etapas.
+- [ ] Aprobar o corregir el Plan Maestro antes de iniciar la construcción por etapas.
 
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
