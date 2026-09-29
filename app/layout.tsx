@@ -1,0 +1,29 @@
+import type { Metadata } from "next";
+import { Fraunces, Instrument_Sans } from "next/font/google";
+import "./globals.css";
+
+const display = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+});
+
+const body = Instrument_Sans({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "NIA — Actúa como la persona que quieres ser",
+  description: "Una intervención breve que aprende qué te ayuda y adapta lo siguiente.",
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html
+      lang="es"
+      className={`${display.variable} ${body.variable} antialiased`}
+    >
+      <body>{children}</body>
+    </html>
+  );
+}

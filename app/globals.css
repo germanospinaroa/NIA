@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "../components/landing/tokens.css";
+
+:root { --background: var(--bg); --foreground: var(--text-primary); }
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); }
+::selection { background: color-mix(in oklab, var(--accent) 24%, transparent); color: var(--text-primary); }
+a { text-decoration: none; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+#hero { overflow-x: clip; }
+@media (max-width: 639px) {
+  .landing-hero-copy { width: calc(100vw - 40px) !important; max-width: calc(100vw - 40px) !important; }
+  .landing-hero-copy h1 { width: 100%; max-width: 100%; font-size: 34px; overflow-wrap: anywhere; }
+  .landing-hero-copy > p { max-width: 100%; }
+  .landing-hero-copy > div { max-width: 100%; }
+}

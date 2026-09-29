@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-✅ CHECKPOINT — Última acción completada: estrategia de validación corregida y documentación de mercado/modelo actualizada / Siguiente acción exacta: cerrar documentación preconstrucción y comenzar página de ventas.
+✅ CHECKPOINT — Última acción completada: Etapa 1 — página de ventas construida y verificada / Siguiente acción exacta: esperar aprobación antes de diseñar onboarding.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -178,3 +178,12 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 ### Diseño y gate
 - Dirección: marfil cálido para reconocimiento/intención; carbón para la demostración de Punto NIA; copper solo para CTA, señales y transición; serif editorial + sans limpia; mucho aire y texto protagonista.
 - Gate: comprensión sin explicación externa, diferencia adaptativa clara, no genérica/no terapia/no coach, CTA correcto, claims trazables, fidelidad a FICHA-ARTE, responsive 375 px, accesibilidad, eventos verificados, lint/typecheck/build limpios.
+
+## Etapa 1 — Página de ventas ✅
+- Estado: construida en `/` con Next.js App Router y kit canónico de landing; no se construyó onboarding, paywall, login, app interna, Hotmart ni Evolution.
+- Dirección aplicada: marfil cálido `#F4EFE6`, carbón `#181714`, copper `#C76338`, serif editorial + sans limpia; la demostración de Punto NIA usa la transición clara → carbón.
+- CTA: “Probar NIA 7 días gratis” → `/onboarding` como destino futuro, sin inventar todavía esa etapa.
+- Instrumentación: `landing_viewed` al entrar y `cta_started` al pulsar cualquier CTA; eventos guardados en `window.__niaEvents` y emitidos como `nia:event` para conectar analítica real más adelante.
+- Verificación 2026-09-29: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera del recorrido activo · `npm run build` ✓ · viewport Playwright 375 px ✓ · `scrollWidth === 375` ✓ · consola de página sin errores ✓ · eventos verificados ✓.
+- Capturas: `output/playwright/landing-375.png` y `output/playwright/landing-375-full.png`.
+- Pendiente de aprobación: revisión visual independiente del sistema; no hay agente `revisor-visual` disponible en este workspace, por lo que se conserva la captura para la revisión del usuario.
