@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-29 | Sesión actual: 1
 
-⏸️ CHECKPOINT — Última acción completada: Constitución corregida según el modelo de interacción híbrido / Siguiente acción exacta: esperar aprobación explícita antes de avanzar.
+⏸️ CHECKPOINT — Última acción completada: Constitución aprobada y congelada como contrato vigente / Siguiente acción exacta: resolver la referencia visual antes de diseñar.
 
 ## Qué es esta app
 NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
@@ -45,7 +45,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - La microacción no es obligatoria en cada intervención; aparece solo cuando aporta valor.
 - No construir ahora: NIA DEEP con memoria vital amplia, voz, recaps, múltiples intenciones o conversaciones profundas.
 
-## Constitución del Producto (vigente; pendiente de aprobación explícita)
+## Constitución del Producto (vigente y congelada — contrato de producto)
 1. Usuaria: Laura, profesional de 30–42 años, con ingresos propios y familiarizada con crecimiento personal. Tiende a dudar o sobrepensar en reuniones, decisiones, conversaciones, límites o situaciones de presión. No busca terapia ni un coach virtual; quiere una intervención breve que la ayude a volver a cómo quiere actuar.
 2. Problema: sabe racionalmente cómo quiere actuar, pero bajo presión vuelve al mismo diálogo interno de duda, exigencia o miedo. Las frases genéricas se convierten en ruido y las alternativas profundas exigen demasiado: journaling, prompts, conversaciones largas o repetir el contexto.
 3. Promesa: “NIA ayuda a mujeres profesionales que sobrepiensan en momentos importantes a actuar más como la persona que quieren ser, sin journaling, frases genéricas ni largas conversaciones con una IA.”
@@ -76,7 +76,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Gamificación: no decidida; evitar presión por rachas salvo evidencia posterior.
 
 ## Secuencia maestra de construcción
-- Estado: Constitución del Producto vigente / pendiente de aprobación explícita; validación final pendiente.
+- Estado: referencia visual pendiente; Constitución del Producto aprobada y congelada; validación final pendiente.
 - Ruta obligatoria: `/` → `/onboarding` → `/paywall` → `/login` → `/app` → servicios externos.
 - Landing: pendiente — no escribir copy final hasta cerrar avatar y Constitución.
 - Onboarding: pendiente — debe entregar una intervención real antes de pedir esfuerzo pesado.
@@ -111,8 +111,8 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - No declarar NIA lista para vender hasta pasar los gates de seguridad, integridad y rigor de entrega.
 
 ## Pendientes del usuario
-- [ ] Aprobar o corregir la Constitución de Producto vigente antes de avanzar.
+- [ ] Indicar si tiene una referencia visual concreta o prefiere que se preparen tres direcciones de arte.
 
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
-- No pedir una batería de preguntas: la Constitución vigente es la versión entregada por el usuario y no debe reinterpretarse como app de apertura reactiva ni como coach conversacional.
+- No pedir una batería de preguntas: la Constitución congelada es la versión entregada por el usuario y no debe reinterpretarse como app de apertura reactiva ni como coach conversacional.
