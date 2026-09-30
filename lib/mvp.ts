@@ -31,6 +31,7 @@ export type MvpState = {
   firstName: string;
   email: string;
   directionKey: DirectionKey;
+  directionText?: string;
   voiceStyle: VoiceStyle;
   messageFrequency: MessageFrequency;
   messageTime1: string;

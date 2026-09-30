@@ -2,6 +2,16 @@
 
 Última actualización: 2026-09-30.
 
+## Supabase Auth + DB — implementación en curso
+
+Se añadieron los clientes oficiales `@supabase/ssr` y `@supabase/supabase-js`, separados en browser, server y admin server-only. La migración trazable está en `supabase/migrations/20260930_initial_mvp.sql` y define `onboarding_drafts`, `profiles`, `interactions`, `evidence_entries` y `subscriptions`, con RLS por usuaria. Los drafts solo se escriben mediante `POST /api/onboarding-draft`; no existe lectura pública ni enumeración.
+
+La protección de `/app`, `/app/punto`, `/app/evidencia` y `/app/tu` se hace mediante sesión SSR. `/login`, `/forgot-password` y `/reset-password` usan Supabase Auth real. Los endpoints de perfil, interacciones y evidencia validan sesión server-side. `SUPABASE_SECRET_KEY` solo se importa desde el cliente admin server.
+
+El código está preparado, pero el proyecto remoto devolvió `404` para las cinco tablas: la migración todavía no ha sido aplicada en Supabase. Hasta aplicarla y ejecutar pruebas de aislamiento con dos usuarios, Auth/DB/RLS no se consideran operativos ni se despliega a producción.
+
+Lifecycle previsto: `onboarding_draft → compra confirmada → auth.user → profile`. La activación Hotmart sigue pendiente y no se simula.
+
 ## Estado honesto
 
 El repositorio no tenía auth, base de datos, API, email transaccional, Hotmart ni WhatsApp configurados. La V1 implementada en esta fase es una superficie funcional local-first: pre-paywall, shell de app, motor determinista curado, navegación, Home, Punto NIA, Evidencia y Tú. La persistencia local permite probar la experiencia, pero no equivale a una cuenta real ni está lista para usuarias externas.

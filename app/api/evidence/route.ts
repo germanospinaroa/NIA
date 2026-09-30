@@ -1,0 +1,6 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+
+async function userClient() { const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); return { supabase, user }; }
+export async function GET() { const { supabase, user } = await userClient(); if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); const { data, error } = await supabase.from('evidence_entries').select('*').order('created_at', { ascending: false }); if (error) return NextResponse.json({ error: 'evidence_unavailable' }, { status: 500 }); return NextResponse.json({ evidence: data }); }
+export async function POST(request: Request) { const { supabase, user } = await userClient(); if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); const body = await request.json(); const { data, error } = await supabase.from('evidence_entries').insert({ user_id: user.id, direction_key: body.direction_key, evidence_key: body.evidence_key, evidence_text: body.evidence_text }).select('*').single(); if (error) return NextResponse.json({ error: 'evidence_save_failed' }, { status: 400 }); return NextResponse.json({ evidence: data }); }

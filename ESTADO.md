@@ -335,3 +335,13 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Bloqueos externos: Auth/DB/RLS, Hotmart/webhook, email de activación y WhatsApp no configurados. WhatsApp no bloquea el uso local del Home.
 - Gates: App shell BUILT; pre-paywall BUILT local; auth BLOCKED; payment BLOCKED; messaging BLOCKED; controlled users NO; paid traffic NO.
 - `/` preservado y `/descubre` extendido solo mediante su CTA existente hacia `/onboarding`; no se modificó su arquitectura inicial.
+
+## Supabase Auth + DB + RLS — 2026-09-30
+- Packages: `@supabase/ssr` y `@supabase/supabase-js` instalados. Clientes browser/server/admin separados; la clave secreta solo se referencia server-side.
+- Migración: `supabase/migrations/20260930_initial_mvp.sql`, con las cinco entidades MVP, timestamps, índices mínimos, constraints y RLS. `onboarding_drafts` no tiene policies públicas.
+- Auth: login, logout desde el shell, forgot password y reset password implementados; middleware SSR protege `/app` y sus subrutas.
+- API: endpoints server-side para profile, interactions, evidence y creación controlada de onboarding draft.
+- Persistencia: Home, perfil y evidencia comienzan a leer/escribir por API autenticada; `lib/mvp.ts` queda como contenido/motor y fallback de preview, no como autorización.
+- Verificación: typecheck PASS, lint PASS con 3 warnings heredados, build PASS. El Supabase remoto devolvió HTTP 404 para `profiles`, `onboarding_drafts`, `interactions`, `evidence_entries` y `subscriptions`; la migración no está aplicada todavía.
+- Estado: AUTH/DB/RLS = PREPARADO EN CÓDIGO, BLOQUEADO EN ENTORNO REMOTO. No deploy ni controlled users hasta aplicar la migración y probar aislamiento User A/User B.
+- Próximo paso único: aplicar `supabase/migrations/20260930_initial_mvp.sql` en el proyecto Supabase configurado y ejecutar las pruebas RLS.

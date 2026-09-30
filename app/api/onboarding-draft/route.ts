@@ -1,0 +1,4 @@
+import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+export async function POST(request: Request) { const body = await request.json(); if (typeof body.first_name !== 'string' || typeof body.email !== 'string' || !body.email.includes('@')) return NextResponse.json({ error: 'invalid_input' }, { status: 400 }); const allowed = ['first_name','email','direction_key','direction_text','voice_style','message_frequency','message_time_1','message_time_2','timezone','whatsapp_enabled','whatsapp_phone','first_feedback']; const values = Object.fromEntries(Object.entries(body).filter(([key]) => allowed.includes(key))); const { data, error } = await createAdminClient().from('onboarding_drafts').insert(values).select('id,status,created_at').single(); if (error) return NextResponse.json({ error: 'draft_unavailable' }, { status: 500 }); return NextResponse.json({ draft: data }); }
