@@ -278,3 +278,17 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Smoke producción 2026-09-30: 1440, 390 × 844 y 375 × 812 sin overflow; cuatro assets completos; consola limpia; `landing_viewed` y `cta_started` verificados; “Más real” muestra el ajuste adaptativo; `/onboarding` conserva 404 por alcance.
 - Gate visual: pendiente de aprobación visual explícita del usuario; Etapa 1 no se declara cerrada en esta revisión.
 - Etapa 2: NO iniciada.
+
+## Landing V4 — CRO / Product Proof Pass
+- Motivo: hacer la landing más clara, demostrable y persuasiva sin cambiar la identidad visual V3 ni el posicionamiento NIA Identity.
+- Arquitectura V4: hero funcional → reconocimiento/distancia comprimidos → demo Punto NIA en el primer tercio → mecanismo Recordarte/Elegirte/Reconocerte → continuidad/evidencia → trade-offs → memoria/control → FAQ → trial sin precio → CTA final.
+- Demo: cinco estados visibles: intención → intervención → microseñal → señal guardada → intervención futura; etiquetada como ejemplo predefinido y sin fingir personalización real.
+- Evidencia: convertida a secuencia descriptiva Día 1/Día 3/Día 5/Día 7; no usa score, porcentaje, badges, rachas ni evaluación psicológica.
+- Memoria: representación conceptual de Ver memoria / Borrar / Reiniciar; marcada como control pendiente de implementación real en Etapa 2.
+- Comparación: cambiada de bloques de desacreditación a tabla de trade-offs entre ChatGPT, journaling, afirmaciones y NIA.
+- CTA: hero, después de demo, bloque de prueba y cierre; todos conservan `/onboarding` y `cta_started`.
+- Longitud local a 1440: anterior 8.695 px → V4 7.169 px, aproximadamente 18% menor, con más producto visible por pantalla.
+- Responsive local: 320, 375, 390 y 430 px sin overflow; 375 y 390 con captura completa; un solo H1; targets interactivos ≥44 px.
+- Gates pendientes: `OFFER COMMERCIAL GATE: BLOCKED` por precio/plan/moneda/periodicidad/cancelación final no congelados; `LEGAL GATE: BLOCKED` porque `/privacidad`, `/terminos` y `/cancelacion` todavía no existen como textos aprobados; `FUNNEL GATE: BLOCKED` porque `/onboarding` no está construido.
+- Paid traffic: NO autorizado mientras exista cualquiera de esos gates críticos.
+- Etapa 2: NO iniciada.
