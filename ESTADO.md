@@ -187,3 +187,12 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Verificación 2026-09-29: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera del recorrido activo · `npm run build` ✓ · viewport Playwright 375 px ✓ · `scrollWidth === 375` ✓ · consola de página sin errores ✓ · eventos verificados ✓.
 - Capturas: `output/playwright/landing-375.png` y `output/playwright/landing-375-full.png`.
 - Pendiente de aprobación: revisión visual independiente del sistema; no hay agente `revisor-visual` disponible en este workspace, por lo que se conserva la captura para la revisión del usuario.
+
+## Publicación Vercel — 2026-09-29
+- Proyecto Vercel creado y enlazado: `germans-projects-baef13ff/nia`.
+- Repositorio conectado en Vercel: `https://github.com/germanospinaroa/NIA`.
+- Root Directory: `.` · Framework: Next.js · Build: `npm run build` · Node configurado por Vercel: 24.x.
+- Preview/despliegue inicial verificado como `READY`: `https://nia-snowy-zeta.vercel.app`.
+- Inspector: `https://vercel.com/germans-projects-baef13ff/nia/7CNx8YUzyLV1tt9ZGob5AY1y8KuK`.
+- Pendiente para certificar actualizaciones automáticas: el remoto GitHub no tiene ramas (`git ls-remote --heads origin` vacío); falta hacer el primer push de `main` y comprobar Preview automático + segunda publicación.
+- No hay variables de entorno necesarias en esta etapa de landing; no se añadieron secretos.
