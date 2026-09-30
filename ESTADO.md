@@ -308,3 +308,16 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Capturas: `output/playwright/discover-start-390.png`, `discover-name-390.png`, `discover-reveal-390.png`, `discover-direction-390.png`, `discover-point-390.png`, `discover-adaptation-390.png`, `discover-commercial-390.png`, `discover-desktop-1440.png`, `root-regression-390.png`.
 - Pendientes/gates: `OFFER COMMERCIAL GATE: BLOCKED` por términos comerciales finales no publicados; `LEGAL GATE: BLOCKED` porque privacidad, términos y cancelación aprobados siguen pendientes; `FUNNEL GATE: BLOCKED` porque `/onboarding` no existe.
 - Paid traffic: NO autorizado. Etapa 2/onboarding: NO iniciada.
+
+## `/descubre` — Evidence Pass
+- Evidencia incorporada: bloque editorial sobre la brecha intención–conducta modulada por el contexto, con disclosure opcional y enlace a PubMed.
+- Fenómeno elegido: `intention–behavior gap modulated by context`.
+- Fuente principal: Webb & Sheeran (2006), metaanálisis de 47 pruebas experimentales; `d = 0.66` para intención y `d = 0.36` para conducta, solo en disclosure y sin convertirlo en porcentaje.
+- Sin estadística en el main flow: PASS. La evidencia aparece como explicación breve; el detalle se abre bajo demanda.
+- Seguridad de claims: no se publican claims causales sobre mujeres, automaticidad, ansiedad, autoestima, asertividad ni eficacia de NIA.
+- JITAI tratado como inspiración de diseño, no como validación de detección automática ni de resultados.
+- Implementation intentions documentado como mecanismo adyacente, no como validación de NIA.
+- Documento canónico: `docs/EVIDENCE-NIA.md`.
+- Analytics: eventos existentes conservados; se añadió únicamente `discover_evidence_opened` para el disclosure opcional.
+- Root: `/` no modificado.
+- Etapa 2: NO iniciada. Oferta comercial, legales y onboarding siguen bloqueados; no ready for paid traffic.
