@@ -321,3 +321,17 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Analytics: eventos existentes conservados; se añadió únicamente `discover_evidence_opened` para el disclosure opcional.
 - Root: `/` no modificado.
 - Etapa 2: NO iniciada. Oferta comercial, legales y onboarding siguen bloqueados; no ready for paid traffic.
+
+## Construcción MVP de App — 2026-09-30
+- Source of truth: `docs/APP-MVP.md`.
+- Auditoría: el repo era una landing Next.js estática; no existían auth, DB/RLS, API, Hotmart, email ni WhatsApp configurados.
+- Arquitectura actual: `/descubre` → `/onboarding` pre-paywall → `/paywall` → activación futura → `/login` → `/app`.
+- Construido local-first: shell con `Hoy · Punto NIA · Evidencia · Tú`, motor determinista curado en `lib/mvp.ts`, pre-paywall de voz/mensajes/email/resumen y pantallas de paywall/login/activación preparadas sin fingir integraciones.
+- Estado local: `localStorage` solo para preview; `/descubre` aporta nombre y dirección vía `sessionStorage`. No representa auth ni persistencia de producción.
+- Home: saludo, mensaje diario determinista, feedback humano, CTA Punto NIA, dirección activa y evidencia confirmada.
+- Punto NIA: cinco contextos cerrados, intervención breve y una adaptación de una sola respuesta; no hay chat abierto.
+- Evidencia: empty state y timeline descriptiva; solo entradas confirmadas por la usuaria; sin scores, streaks ni gráficas.
+- Tú: dirección, estilo, mensajes, memoria y límites de cuenta visibles; plan y cancelación no inventados.
+- Bloqueos externos: Auth/DB/RLS, Hotmart/webhook, email de activación y WhatsApp no configurados. WhatsApp no bloquea el uso local del Home.
+- Gates: App shell BUILT; pre-paywall BUILT local; auth BLOCKED; payment BLOCKED; messaging BLOCKED; controlled users NO; paid traffic NO.
+- `/` preservado y `/descubre` extendido solo mediante su CTA existente hacia `/onboarding`; no se modificó su arquitectura inicial.
