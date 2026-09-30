@@ -13,8 +13,8 @@ const body = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "NIA — Actúa como la persona que quieres ser",
-  description: "Una intervención breve que aprende qué te ayuda y adapta lo siguiente.",
+  title: "NIA — Vuelve a tu propio criterio",
+  description: "Una intervención breve para sostener cómo quieres actuar cuando llega la fricción.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

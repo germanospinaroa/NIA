@@ -1,15 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import { ArrowDown, ArrowRight, Check, Eye, LockKeyhole, MessageSquareQuote, Sparkles } from 'lucide-react';
-import { Agitacion } from '@/components/landing/Agitacion';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Check, Compass, Eye, Hand, LockKeyhole, MessageSquareQuote, Scale, Sparkles } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { CtaFinal } from '@/components/landing/CtaFinal';
 import { Faq } from '@/components/landing/Faq';
 import { FooterLegal } from '@/components/landing/FooterLegal';
 import { Hero } from '@/components/landing/Hero';
-import { Problema } from '@/components/landing/Problema';
-import { Solucion } from '@/components/landing/Solucion';
-import { CtaButton, Kicker, SectionShell, StickyCtaMobile } from '@/components/landing/ui';
+import { CtaButton, Hairline, IconChip, Kicker, SectionShell, StickyCtaMobile, useReveal, VIEWPORT_ONCE } from '@/components/landing/ui';
 
 const CTA_HREF = '/onboarding';
 const CTA_LABEL = 'Probar NIA 7 días gratis';
@@ -23,83 +21,57 @@ function trackEvent(eventName: string) {
   window.dispatchEvent(new CustomEvent('nia:event', { detail: event }));
 }
 
-function AdaptationDemo() {
-  return (
-    <SectionShell id="demostracion" elevacion="base" className="bg-[var(--surface-2)]" ariaLabel="Demostración de adaptación de Punto NIA">
-      <div className="mx-auto max-w-[980px]">
-        <div className="mx-auto max-w-[640px] text-center">
-          <Kicker>EL PUNTO NIA</Kicker>
-          <h2 className="text-balance text-[32px] font-bold leading-[1.08] text-[var(--text-primary)] [font-family:var(--font-display)] md:text-[48px]">
-            Lo que marcas hoy cambia lo que recibes después.
-          </h2>
-          <p className="mt-4 text-[16px] leading-relaxed text-[var(--text-secondary)] md:text-[18px]">
-            No es una conversación. Es una señal pequeña que hace que la siguiente intervención parta de un lugar más real.
-          </p>
-        </div>
-        <div className="relative mt-10 grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
-          <article className="rounded-[var(--radius-card)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)] md:p-8">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Primera intervención</p>
-            <p className="mt-6 text-[25px] leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
-              Puedes manejar esta conversación perfectamente.
-            </p>
-            <div className="mt-7 inline-flex items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--accent)_10%,transparent)] px-3 py-2 text-[13px] font-semibold text-[var(--accent)]">
-              <span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />Señal: <strong>Más real</strong>
-            </div>
-          </article>
-          <div className="flex items-center justify-center gap-2 text-[var(--accent)] md:flex-col">
-            <span className="hidden text-center text-[11px] font-bold uppercase tracking-[0.13em] md:block">NIA ajusta</span>
-            <ArrowRight className="hidden md:block" size={22} aria-hidden="true" />
-            <ArrowDown className="md:hidden" size={22} aria-hidden="true" />
-          </div>
-          <article className="rounded-[var(--radius-card)] bg-[var(--text-primary)] p-6 text-[var(--bg)] shadow-[var(--shadow-2)] md:p-8">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color-mix(in_oklab,var(--bg)_62%,transparent)]">Más adelante</p>
-            <p className="mt-6 text-[25px] leading-[1.15] [font-family:var(--font-display)]">
-              No tienes que sentirte completamente segura. Puedes entrar a la conversación con una idea clara de lo que sí quieres decir.
-            </p>
-            <div className="mt-7 flex items-center gap-2 text-[13px] font-semibold text-[var(--accent)]"><Sparkles size={16} aria-hidden="true" />Menos absoluto. Más creíble.</div>
-          </article>
-        </div>
-      </div>
-    </SectionShell>
-  );
+function SectionHeading({ kicker, title, children, align = 'left' }: { kicker?: string; title: string; children?: ReactNode; align?: 'left' | 'center' }) {
+  return <div className={`${align === 'center' ? 'mx-auto text-center' : ''} max-w-[680px]`}>{kicker && <Kicker>{kicker}</Kicker>}<h2 className="text-balance text-[32px] font-bold leading-[1.1] text-[var(--text-primary)] [font-family:var(--font-display)] md:text-[48px]">{title}</h2>{children && <div className="mt-5 text-[16px] leading-[1.65] text-[var(--text-secondary)] md:text-[18px]">{children}</div>}</div>;
+}
+
+function RecognitionSection() {
+  const { contenedor, item } = useReveal();
+  return <SectionShell id="reconocimiento" elevacion="elevada" ariaLabel="Reconocimiento del problema"><motion.div variants={contenedor} initial="hidden" whileInView="visible" viewport={VIEWPORT_ONCE} className="mx-auto max-w-[780px]"><motion.div variants={item}><SectionHeading kicker="¿TE SUENA?" title="No necesitas que alguien te diga quién ser."><p>Probablemente ya sabes bastante sobre ti.</p><p className="mt-4">Sabes qué ya no quieres tolerar, cómo te gustaría responder y qué parte de ti quieres dejar de minimizar.</p><p className="mt-4">El problema no suele ser entenderlo. Aparece cuando llega la vida real.</p></SectionHeading></motion.div><motion.div variants={item} className="mt-8 rounded-[var(--radius-card)] bg-[var(--bg)] p-6 shadow-[var(--shadow-1)] md:p-8"><p className="text-[18px] leading-relaxed text-[var(--text-secondary)]">Entre la presión, la duda, el miedo a equivocarte o lo que otros esperan de ti…</p><p className="mt-4 text-[25px] font-semibold leading-tight text-[var(--text-primary)] [font-family:var(--font-display)] md:text-[32px]">terminas reaccionando como siempre.</p><p className="mt-5 border-l-2 border-[var(--accent)] pl-4 text-[17px] font-medium leading-relaxed text-[var(--text-primary)]">Saber cómo quieres actuar y conseguir sostenerlo son dos cosas diferentes.</p></motion.div></motion.div></SectionShell>;
+}
+
+function DistanceSection() {
+  const situations = [['Quieres confiar en tu criterio.', 'Pero vuelves a buscar cinco opiniones antes de decidir.', Compass], ['Quieres dejar de minimizar lo que piensas.', 'Pero llega la reunión y vuelves a callarte.', MessageSquareQuote], ['Quieres poner un límite.', 'Pero llega la conversación y vuelves a decir que sí.', Hand], ['Quieres tratarte diferente cuando algo sale mal.', 'Pero aparece el error y vuelve la misma voz de siempre.', Scale]] as const;
+  const { contenedor, item } = useReveal();
+  return <SectionShell id="distancia" elevacion="base" ariaLabel="La distancia entre intención y acción"><motion.div variants={contenedor} initial="hidden" whileInView="visible" viewport={VIEWPORT_ONCE} className="mx-auto max-w-[980px]"><motion.div variants={item}><SectionHeading kicker="LA DISTANCIA" title="A veces hay una distancia entre lo que sabes que quieres y lo que terminas haciendo." /></motion.div><div className="mt-10 grid gap-4 md:grid-cols-2">{situations.map(([want, but, Icon]) => <motion.article key={want} variants={item} className="rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--text-tertiary)_20%,transparent)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)] md:p-7"><div className="flex items-start gap-4"><IconChip icon={Icon} tone="muted" /><div><p className="text-[18px] font-semibold leading-snug text-[var(--text-primary)]">{want}</p><p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)]">{but}</p></div></div></motion.article>)}</div><motion.div variants={item} className="mt-10 max-w-[640px]"><p className="text-[18px] leading-relaxed text-[var(--text-secondary)]">NIA trabaja precisamente en esa distancia.</p><p className="mt-3 text-[22px] font-semibold leading-tight text-[var(--text-primary)] [font-family:var(--font-display)] md:text-[30px]">No para decidir por ti. Para ayudarte a recordar desde dónde querías actuar antes de que el automático decida primero.</p></motion.div></motion.div></SectionShell>;
+}
+
+function EntraNiaSection() {
+  const { contenedor, item } = useReveal();
+  return <SectionShell id="entra-nia" elevacion="elevada" ariaLabel="Cómo entra NIA"><motion.div variants={contenedor} initial="hidden" whileInView="visible" viewport={VIEWPORT_ONCE} className="mx-auto grid max-w-[980px] gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-center"><motion.div variants={item}><SectionHeading kicker="ENTRA NIA" title="Un pequeño momento puede cambiar lo que haces después."><p>Tú le dices a NIA qué quieres reforzar en ti.</p><p className="mt-4">No una meta perfecta. No diez hábitos. No la historia completa de tu vida.</p><p className="mt-4 font-medium text-[var(--text-primary)]">Una intención.</p></SectionHeading></motion.div><motion.div variants={item} className="rounded-[var(--radius-card)] bg-[var(--text-primary)] p-7 text-[var(--bg)] shadow-[var(--shadow-2)] md:p-9"><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color-mix(in_oklab,var(--bg)_60%,transparent)]">Ejemplo de intención</p><p className="mt-5 text-[28px] leading-tight [font-family:var(--font-display)] md:text-[36px]">Quiero confiar más en mi criterio sin necesitar estar completamente segura.</p><div className="mt-8 border-t border-[color-mix(in_oklab,var(--bg)_16%,transparent)] pt-5"><p className="text-[15px] leading-relaxed text-[color-mix(in_oklab,var(--bg)_75%,transparent)]">A partir de ahí, NIA puede aparecer cuando lo necesitas con una intervención breve construida alrededor de esa dirección.</p><p className="mt-5 text-[18px] font-semibold text-[var(--accent)]">Eso es un Punto NIA.</p></div></motion.div></motion.div></SectionShell>;
+}
+
+function PointNiaDemo() {
+  const [adapted, setAdapted] = useState(false);
+  const reduce = useReducedMotion();
+  return <SectionShell id="demostracion" elevacion="base" className="bg-[var(--surface-2)]" ariaLabel="Demostración interactiva de Punto NIA"><div className="mx-auto max-w-[980px]"><SectionHeading kicker="PUNTO NIA" title="Imagina que hoy necesitas decidir algo." align="center"><p>Una intervención puntual, una microseñal y un siguiente paso que parte de ti.</p></SectionHeading><div className="mt-10 grid gap-4 md:grid-cols-[0.75fr_1.25fr] md:items-stretch"><div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)] md:p-8"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">Tu intención</p><p className="mt-5 text-[27px] leading-tight text-[var(--text-primary)] [font-family:var(--font-display)]">Quiero confiar más en mi criterio.</p><div className="mt-8 flex items-center gap-2 text-[13px] text-[var(--text-secondary)]"><span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />un Punto NIA · unos segundos</div></div><motion.div layout transition={{ duration: reduce ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }} className="rounded-[var(--radius-card)] bg-[var(--text-primary)] p-6 text-[var(--bg)] shadow-[var(--shadow-2)] md:p-8"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[color-mix(in_oklab,var(--bg)_58%,transparent)]">{adapted ? 'Más adelante' : 'Primera intervención'}</p><p className="mt-5 max-w-[620px] text-[28px] leading-[1.08] [font-family:var(--font-display)] md:text-[38px]">{adapted ? 'Quizá todavía quieras escuchar otras opiniones.' : 'No necesitas tener certeza absoluta para tener una opinión propia.'}</p><p className="mt-5 max-w-[620px] text-[17px] leading-relaxed text-[color-mix(in_oklab,var(--bg)_76%,transparent)]">{adapted ? 'La diferencia es que esta vez no tienen que reemplazar la tuya.' : 'Puedes decidir con lo que sabes hoy y ajustar después si hace falta.'}</p>{!adapted ? <div className="mt-8 border-t border-[color-mix(in_oklab,var(--bg)_16%,transparent)] pt-6"><p className="text-[14px] font-medium text-[color-mix(in_oklab,var(--bg)_72%,transparent)]">¿Cómo te cayó?</p><div className="mt-4 flex flex-wrap gap-2">{['Así sí', 'Más real', 'Otro enfoque'].map((label) => <button key={label} type="button" onClick={() => setAdapted(label === 'Más real')} className="min-h-11 rounded-[var(--radius-button)] border border-[color-mix(in_oklab,var(--bg)_24%,transparent)] px-4 text-[14px] font-semibold text-[var(--bg)] transition-colors duration-150 hover:border-[var(--accent)] hover:text-[var(--accent)] focus-visible:outline-[var(--accent)]">{label}</button>)}</div></div> : <div className="mt-8 flex items-center gap-2 text-[14px] font-semibold text-[var(--accent)]"><Sparkles size={17} aria-hidden="true" />Menos absoluto. Más creíble.</div>}</motion.div></div><p className="mx-auto mt-8 max-w-[600px] text-center text-[20px] font-semibold leading-tight text-[var(--text-primary)] [font-family:var(--font-display)]">Lo que respondes hoy cambia lo que NIA hace después.</p><p className="mx-auto mt-3 max-w-[520px] text-center text-[15px] leading-relaxed text-[var(--text-secondary)]">No recibe más información para conocerte por curiosidad. La recibe para ser más útil la próxima vez.</p></div></SectionShell>;
+}
+
+function HeartSection() {
+  const ideas = [['RECORDARTE', 'Volver a lo que tú misma decidiste que importa cuando el ruido del momento empieza a taparlo.'], ['ELEGIRTE', 'Intentar actuar de forma más congruente con aquello que tú decidiste que importa, incluso cuando todavía existe duda.'], ['RECONOCERTE', 'Empezar a ver las pequeñas evidencias de las veces en que sí actuaste diferente.']];
+  return <SectionShell id="volver-a-ti" elevacion="elevada" ariaLabel="El corazón de NIA"><div className="mx-auto max-w-[980px]"><SectionHeading kicker="VOLVER A TI" title="Recordarte. Elegirte. Reconocerte." align="center"><p>Un sistema de dirección propia, no tres slogans independientes.</p></SectionHeading><div className="mt-10 grid gap-4 md:grid-cols-3">{ideas.map(([title, text], i) => <article key={title} className="rounded-[var(--radius-card)] bg-[var(--bg)] p-6 shadow-[var(--shadow-1)] md:p-7"><span className="text-[12px] font-bold tracking-[0.12em] text-[var(--accent)]">0{i + 1}</span><h3 className="mt-6 text-[23px] font-semibold [font-family:var(--font-display)]">{title}</h3><p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)]">{text}</p></article>)}</div><p className="mx-auto mt-10 max-w-[620px] text-center text-[18px] leading-relaxed text-[var(--text-primary)]">NIA no decide por ti cómo deberías vivir. <strong>La dirección sigue siendo tuya.</strong></p></div></SectionShell>;
+}
+
+function EvidenceSection() {
+  const { contenedor, item } = useReveal();
+  return <SectionShell id="evidencia" elevacion="base" ariaLabel="Evidencia y reconocimiento"><motion.div variants={contenedor} initial="hidden" whileInView="visible" viewport={VIEWPORT_ONCE} className="mx-auto grid max-w-[980px] gap-10 md:grid-cols-[0.85fr_1.15fr] md:items-center"><motion.div variants={item}><SectionHeading kicker="EVIDENCIA / RECONOCIMIENTO" title="Porque cambiar también significa darte cuenta de que estás cambiando."><p>Notamos cada vez que volvemos a caer en lo mismo, pero dejamos pasar las veces en que respondimos diferente.</p><p className="mt-4">Hablaste aunque dudabas. Dijiste que no. Tomaste una decisión sin pedir otra validación.</p><p className="mt-4">NIA puede conservar esas pequeñas señales y, cuando existe evidencia suficiente, devolvértelas.</p></SectionHeading></motion.div><motion.div variants={item}><Hairline surface="surface" emphasis className="shadow-[var(--shadow-1)]"><div className="p-7 md:p-9"><p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">Una señal que permanece</p><p className="mt-6 text-[16px] leading-relaxed text-[var(--text-secondary)]">Hace unas semanas dijiste:</p><p className="mt-3 text-[26px] leading-tight text-[var(--text-primary)] [font-family:var(--font-display)]">“Quiero dejar de callarme cuando no estoy 100% segura.”</p><p className="mt-6 text-[16px] leading-relaxed text-[var(--text-secondary)]">Desde entonces registraste tres momentos en los que hablaste igualmente.</p><p className="mt-8 border-t border-[color-mix(in_oklab,var(--text-tertiary)_22%,transparent)] pt-5 text-[22px] font-semibold text-[var(--text-primary)] [font-family:var(--font-display)]">Eso también cuenta.</p></div></Hairline><p className="mt-5 text-[14px] leading-relaxed text-[var(--text-secondary)]">No para felicitarte por todo. No para darte puntos. Para ayudarte a ver lo que realmente está ocurriendo.</p></motion.div></motion.div></SectionShell>;
+}
+
+function ComparisonSection() {
+  const items = [['Frases / affirmations', 'Pueden inspirarte. Pero no saben qué pasó después.'], ['ChatGPT', 'Puede ayudarte muchísimo. Pero normalmente tienes que abrirlo, explicar lo que pasa y construir la conversación.'], ['Journaling', 'Puede ayudarte a profundizar. Pero requiere tiempo y energía.']];
+  return <SectionShell id="diferencia" elevacion="elevada" ariaLabel="NIA frente a otras herramientas"><div className="mx-auto max-w-[980px]"><SectionHeading kicker="LA DIFERENCIA" title="No necesitas otra herramienta que empiece de cero contigo cada día." /><div className="mt-10 grid gap-4 md:grid-cols-3">{items.map(([title, text]) => <article key={title} className="rounded-[var(--radius-card)] bg-[var(--bg)] p-6"><h3 className="text-[18px] font-semibold text-[var(--text-primary)]">{title}</h3><p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)]">{text}</p></article>)}<article className="rounded-[var(--radius-card)] bg-[var(--text-primary)] p-6 text-[var(--bg)] md:col-span-3 md:flex md:items-center md:justify-between md:gap-8"><div><h3 className="text-[22px] font-semibold [font-family:var(--font-display)]">NIA</h3><p className="mt-2 max-w-[600px] text-[16px] leading-relaxed text-[color-mix(in_oklab,var(--bg)_76%,transparent)]">Está disponible en segundos y continúa desde donde tú estabas. Necesita recordar lo mínimo para que la siguiente intervención sea más relevante.</p></div><Sparkles className="mt-5 shrink-0 text-[var(--accent)] md:mt-0" size={28} aria-hidden="true" /></article></div></div></SectionShell>;
 }
 
 function MemorySection() {
-  return (
-    <SectionShell id="memoria" elevacion="elevada" ariaLabel="Memoria controlada de NIA">
-      <div className="mx-auto grid max-w-[980px] gap-10 md:grid-cols-[0.85fr_1.15fr] md:items-center">
-        <div>
-          <Kicker>MEMORIA BAJO CONTROL</Kicker>
-          <h2 className="mt-2 text-balance text-[31px] font-bold leading-[1.1] text-[var(--text-primary)] [font-family:var(--font-display)] md:text-[44px]">NIA recuerda lo mínimo necesario para no empezar de cero.</h2>
-          <p className="mt-5 max-w-[470px] text-[16px] leading-relaxed text-[var(--text-secondary)]">Tú decides qué permanece. La memoria se puede revisar, editar o borrar; no construye una biografía sobre ti.</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <div className="flex items-center gap-3 text-[var(--accent)]"><Eye size={19} aria-hidden="true" /><span className="text-[12px] font-bold uppercase tracking-[0.12em]">Sí conserva</span></div>
-            <ul className="mt-5 space-y-3 text-[15px] leading-snug text-[var(--text-primary)]">{['Tu intención', 'Qué lenguaje te resulta real', 'Señales y contextos elegidos'].map((item) => <li key={item} className="flex gap-2"><Check size={17} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden="true" />{item}</li>)}</ul>
-          </div>
-          <div className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-5">
-            <div className="flex items-center gap-3 text-[var(--text-secondary)]"><LockKeyhole size={19} aria-hidden="true" /><span className="text-[12px] font-bold uppercase tracking-[0.12em]">No guarda</span></div>
-            <ul className="mt-5 space-y-3 text-[15px] leading-snug text-[var(--text-secondary)]">{['Secretos o diagnósticos', 'Una conversación abierta', 'Una historia íntima inventada'].map((item) => <li key={item} className="flex gap-2"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--text-tertiary)]" aria-hidden="true" />{item}</li>)}</ul>
-          </div>
-        </div>
-      </div>
-    </SectionShell>
-  );
+  return <SectionShell id="memoria" elevacion="base" ariaLabel="Memoria y privacidad"><div className="mx-auto grid max-w-[980px] gap-10 md:grid-cols-[0.85fr_1.15fr] md:items-center"><SectionHeading kicker="MEMORIA Y PRIVACIDAD" title="Te conoce lo suficiente para continuar. No lo suficiente para invadirte."><p>NIA puede recordar tu intención actual, qué lenguaje te sirve, qué no te funciona, las señales que tú decides darle y pequeñas acciones que tú decides registrar.</p><p className="mt-4 font-semibold text-[var(--text-primary)]">NIA recuerda dirección, no secretos.</p></SectionHeading><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]"><div className="flex items-center gap-3 text-[var(--accent)]"><Eye size={19} aria-hidden="true" /><span className="text-[12px] font-bold uppercase tracking-[0.12em]">Sí conserva</span></div><ul className="mt-5 space-y-3 text-[15px] leading-snug">{['Tu intención actual', 'Lenguaje y señales elegidas', 'Pequeñas acciones registradas'].map((item) => <li key={item} className="flex gap-2"><Check size={17} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden="true" />{item}</li>)}</ul></div><div className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-6"><div className="flex items-center gap-3 text-[var(--text-secondary)]"><LockKeyhole size={19} aria-hidden="true" /><span className="text-[12px] font-bold uppercase tracking-[0.12em]">No necesita</span></div><ul className="mt-5 space-y-3 text-[15px] leading-snug text-[var(--text-secondary)]">{['Inferir traumas', 'Diagnosticarte', 'Construir una biografía escondida'].map((item) => <li key={item} className="flex gap-2"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--text-tertiary)]" aria-hidden="true" />{item}</li>)}</ul></div></div></div></SectionShell>;
+}
+
+function ContinuitySection() {
+  return <SectionShell id="continuidad" elevacion="elevada" ariaLabel="Continuidad de NIA"><div className="mx-auto max-w-[760px] text-center"><SectionHeading kicker="CONTINUIDAD" title="La NIA de mañana no debería responderte exactamente como la de hoy." align="center"><p>Porque hoy le enseñaste algo.</p><p className="mt-4">Quizá que las frases demasiado absolutas no te funcionan. Quizá que necesitas menos motivación y más perspectiva. Quizá que algo que antes costaba ahora está empezando a ocurrir distinto.</p><p className="mt-4 font-medium text-[var(--text-primary)]">NIA no intenta acumular conversaciones contigo. Intenta acumular suficiente continuidad para ser un poco más relevante cuando vuelvas a necesitarla.</p></SectionHeading></div></SectionShell>;
 }
 
 function TrialSection() {
-  return (
-    <SectionShell id="trial" elevacion="base" ariaLabel="Prueba gratuita de NIA">
-      <div className="mx-auto max-w-[700px] text-center">
-        <Kicker>PRUÉBALA EN EL MOMENTO REAL</Kicker>
-        <h2 className="text-balance text-[32px] font-bold leading-[1.1] text-[var(--text-primary)] [font-family:var(--font-display)] md:text-[46px]">Siete días para comprobar si lo siguiente cambia para ti.</h2>
-        <p className="mx-auto mt-5 max-w-[560px] text-[16px] leading-relaxed text-[var(--text-secondary)]">Acceso al producto real: intención, intervenciones, microseñales, adaptación, Punto NIA y evidencia. 7 días gratis. Después se cobra el plan elegido salvo cancelación.</p>
-        <div className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-3 text-[14px] text-[var(--text-secondary)]">{['Sin rachas ni culpa', 'Cancelación clara', 'Memoria bajo tu control'].map((item) => <span key={item} className="inline-flex items-center gap-2"><Check size={16} className="text-[var(--accent)]" aria-hidden="true" />{item}</span>)}</div>
-        <div className="mt-8"><CtaButton href={CTA_HREF}>{CTA_LABEL}</CtaButton></div>
-      </div>
-    </SectionShell>
-  );
+  return <SectionShell id="trial" elevacion="base" ariaLabel="Prueba gratuita de NIA"><div className="mx-auto max-w-[720px] text-center"><SectionHeading kicker="PRUÉBALA EN EL MOMENTO REAL" title="No tienes que creer que NIA es diferente."><p>Puedes experimentarlo.</p><p className="mt-5">Durante tus primeros 7 días tendrás acceso al mecanismo real: definirás qué quieres reforzar, recibirás Puntos NIA, responderás con microseñales y podrás comprobar si lo siguiente realmente se siente diferente.</p></SectionHeading><div className="mt-8"><CtaButton href={CTA_HREF}>{CTA_LABEL}</CtaButton></div><p className="mt-4 text-[13px] text-[var(--text-secondary)]">7 días gratis. Después se cobra el plan que hayas elegido, salvo que canceles antes.</p></div></SectionShell>;
 }
 
 export default function Home() {
@@ -116,29 +88,9 @@ export default function Home() {
     return () => document.removeEventListener('click', onClick);
   }, []);
 
-  return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--text-primary)] [font-family:var(--font-body)]">
-      <Hero appName="NIA" logo={<span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />} h1Marked="Actúa como la persona que quieres ser [acento]cuando importa[/acento]" subtitleMarked="NIA aprende qué te ayuda y adapta lo siguiente, sin frases genéricas." ctaLabel={CTA_LABEL} ctaHref={CTA_HREF} socialProof={<span>7 días gratis · después eliges cómo continuar</span>} visual={<HeroPreview />} />
-      <Problema titulo="¿Te suena?" preguntas={[{ icon: MessageSquareQuote, textoMarked: 'Sabes cómo quieres actuar, pero al llegar el momento [b]vuelves a dudar[/b].' }, { icon: ArrowDown, textoMarked: 'Guardas frases, escuchas podcasts o abres ChatGPT para [b]volver a empezar[/b].' }, { icon: Sparkles, textoMarked: 'Lo que ayer te ayudó hoy ya suena [b]demasiado genérico[/b].' }]} />
-      <Agitacion frases={['No te falta información: te falta algo que aparezca cuando [b]ya estás dentro del momento[/b].', 'Otra frase bonita puede acompañarte un minuto. Pero no cambia lo que recibes [acento]mañana[/acento].']} contraste={{ labelHoy: 'Lo que pasa ahora', hoy: 'Encuentras una frase, la pruebas, y al día siguiente todo vuelve a empezar.', labelFuturo: 'Lo que cambia con NIA', futuro: 'Una señal pequeña modifica el lenguaje y el enfoque de la próxima intervención.' }} />
-      <AdaptationDemo />
-      <Solucion tituloMarked="Una señal. [acento]Un siguiente paso distinto.[/acento]" mecanismo="Punto NIA" bigIdeaMarked="La inteligencia no está en hablar más. Está en que [b]lo que ocurre hoy modifique lo que NIA hace después[/b]." pasos={[{ titulo: 'Define tu intención', detalle: 'Elige cómo quieres volver a actuar cuando llegue el momento.' }, { titulo: 'Responde con una señal', detalle: 'Marca “Así sí”, “Más real” u “Otro enfoque” con un toque.' }, { titulo: 'Recibe algo más preciso', detalle: 'La próxima intervención parte de lo que ya señalaste.' }]} antesDespues={{ labelAntes: 'Sin continuidad', antes: 'La misma frase para todos, todos los días.', labelDespues: 'Con Punto NIA', despues: 'Una intervención que cambia porque tú ya marcaste qué te sirve.' }} />
-      <MemorySection />
-      <SectionShell id="chatgpt" elevacion="base" ariaLabel="NIA frente a ChatGPT"><div className="mx-auto grid max-w-[920px] gap-8 md:grid-cols-[0.8fr_1.2fr] md:items-center"><div><Kicker>NO ES OTRA CONVERSACIÓN</Kicker><h2 className="mt-2 text-balance text-[31px] font-bold leading-[1.1] [font-family:var(--font-display)] md:text-[44px]">Menos esfuerzo que abrir ChatGPT y explicar todo otra vez.</h2></div><div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)] md:p-8"><div className="flex items-center gap-3 text-[var(--accent)]"><MessageSquareQuote size={20} aria-hidden="true" /><span className="text-[12px] font-bold uppercase tracking-[0.12em]">La diferencia</span></div><p className="mt-5 text-[18px] leading-relaxed text-[var(--text-primary)]">NIA no te pide construir un prompt ni sostener una sesión. Tú das una señal pequeña; lo que recibes después se vuelve más relevante.</p></div></div></SectionShell>
-      <TrialSection />
-      <Faq items={[{ pregunta: '¿NIA es una app de afirmaciones?', respuestaMarked: 'No. Las intervenciones se ajustan con tus señales; la diferencia está en la continuidad, no en acumular frases.' }, { pregunta: '¿NIA es terapia o un coach virtual?', respuestaMarked: 'No. NIA ofrece intervenciones breves y opciones de un toque. No diagnostica, no trata y no abre conversaciones largas.' }, { pregunta: '¿Qué recuerda NIA?', respuestaMarked: 'Recuerda tu intención, señales, contextos y lenguaje que te resulta real. La memoria es visible, editable y revocable.' }, { pregunta: '¿Qué ocurre después de los 7 días?', respuestaMarked: 'Se cobra el plan que hayas elegido, salvo que canceles. El importe, la moneda y la periodicidad se muestran antes de confirmar.' }]} />
-      <CtaFinal h2Marked="Vuelve a ti [acento]cuando importa[/acento]" futurePacingMarked="Empieza con una intención. Da una señal. Deja que lo siguiente parta de ahí." ctaLabel={CTA_LABEL} ctaHref={CTA_HREF} recap="7 días gratis · sin frases genéricas · sin journaling" psMarked="NIA recuerda lo mínimo necesario para que no tengas que empezar de cero." />
-      <FooterLegal appName="NIA" soporteEmail="soporte@nia.app" enlaces={[{ label: 'Privacidad', href: '/privacidad' }, { label: 'Términos y Condiciones', href: '/terminos' }, { label: 'Cancelación', href: '/cancelacion' }]} />
-      <StickyCtaMobile labelComercial={CTA_LABEL} href={CTA_HREF} ofertaId="trial" />
-    </div>
-  );
+  return <div className="min-h-dvh bg-[var(--bg)] text-[var(--text-primary)] [font-family:var(--font-body)]"><Hero appName="NIA" logo={<span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />} h1Marked="Sabes cómo quieres actuar. [acento]Lo difícil es sostenerlo cuando llega el momento.[/acento]" supportingCopy={<>En una conversación. En una decisión. Cuando necesitas poner un límite. Cuando algo sale mal. Cuando dudas de ti justo antes de hacer eso que sabes que quieres hacer.</>} subtitleMarked="NIA te ayuda a volver a tu propio criterio en esos momentos." ctaLabel={CTA_LABEL} ctaHref={CTA_HREF} socialProof={<span>7 días gratis. Cancela cuando quieras.</span>} visual={<HeroPreview />} /><RecognitionSection /><DistanceSection /><EntraNiaSection /><PointNiaDemo /><HeartSection /><EvidenceSection /><ComparisonSection /><MemorySection /><ContinuitySection /><TrialSection /><CtaFinal h2Marked="No se trata de convertirte en otra mujer." futurePacingMarked="Vuelve a ti en el momento. Actúa un poco más desde ti. Reconoce las pequeñas pruebas de que algo sí está cambiando." ctaLabel={CTA_LABEL} ctaHref={CTA_HREF} recap="7 días gratis · sin frases genéricas · sin journaling" psMarked="NIA trabaja en la distancia entre eso que sabes y la forma en que terminas actuando cuando la vida se pone real." /><Faq items={[{ pregunta: '¿NIA es una app de afirmaciones?', respuestaMarked: 'No. NIA ofrece intervenciones breves que se ajustan con tus señales; la diferencia está en la continuidad, no en acumular frases.' }, { pregunta: '¿NIA es terapia o un coach virtual?', respuestaMarked: 'No. No diagnostica, no trata y no abre conversaciones largas. Te ayuda a volver a una dirección que tú misma elegiste.' }, { pregunta: '¿Qué recuerda NIA?', respuestaMarked: 'Recuerda tu intención, señales, contextos y lenguaje que te resulta real. La memoria es visible, editable y revocable.' }, { pregunta: '¿Puede decirme si estoy cambiando?', respuestaMarked: 'Solo cuando existen señales o acciones suficientes para sostenerlo. No inventa progreso ni te da una puntuación.' }, { pregunta: '¿Qué ocurre después de los 7 días?', respuestaMarked: 'Se cobra el plan que hayas elegido, salvo que canceles. El importe, la moneda y la periodicidad se muestran antes de confirmar.' }]} /><FooterLegal appName="NIA" soporteEmail="soporte@nia.app" enlaces={[{ label: 'Privacidad', href: '/privacidad' }, { label: 'Términos y Condiciones', href: '/terminos' }, { label: 'Cancelación', href: '/cancelacion' }]} /><StickyCtaMobile labelComercial={CTA_LABEL} href={CTA_HREF} ofertaId="trial" /></div>;
 }
 
 function HeroPreview() {
-  return (
-    <div className="mx-auto mt-8 w-full max-w-[760px] rounded-[var(--radius-card)] bg-[var(--text-primary)] p-4 text-left shadow-[var(--shadow-2)] sm:p-6">
-      <div className="flex items-center justify-between border-b border-[color-mix(in_oklab,var(--bg)_16%,transparent)] pb-4"><span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color-mix(in_oklab,var(--bg)_60%,transparent)]">Punto NIA · ahora</span><span className="flex items-center gap-2 text-[12px] text-[color-mix(in_oklab,var(--bg)_60%,transparent)]"><span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />unos segundos</span></div>
-      <div className="grid min-w-0 gap-5 py-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"><p className="min-w-0 max-w-[520px] break-words text-[28px] leading-[1.07] text-[var(--bg)] [font-family:var(--font-display)] sm:text-[38px]">No necesitas llegar sin dudas. Solo necesitas recordar cómo quieres entrar.</p><div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--accent)]"><span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />una señal cambia lo siguiente</div></div>
-    </div>
-  );
+  return <div className="mx-auto mt-8 w-full max-w-[760px] rounded-[var(--radius-card)] bg-[var(--text-primary)] p-4 text-left shadow-[var(--shadow-2)] sm:p-6"><div className="flex items-center justify-between border-b border-[color-mix(in_oklab,var(--bg)_16%,transparent)] pb-4"><span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color-mix(in_oklab,var(--bg)_60%,transparent)]">Punto NIA · ahora</span><span className="flex items-center gap-2 text-[12px] text-[color-mix(in_oklab,var(--bg)_60%,transparent)]"><span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />unos segundos</span></div><div className="grid min-w-0 gap-5 py-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"><p className="min-w-0 max-w-[520px] break-words text-[28px] leading-[1.07] text-[var(--bg)] [font-family:var(--font-display)] sm:text-[38px]">No necesitas llegar sin dudas. Solo necesitas recordar cómo quieres entrar.</p><div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--accent)]"><span className="size-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />una señal cambia lo siguiente</div></div></div>;
 }

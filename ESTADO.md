@@ -1,5 +1,5 @@
 # ESTADO — NIA
-Última actualización: 2026-09-30 | Sesión actual: 1.5
+Última actualización: 2026-09-30 | Sesión actual: Landing 2.0
 
 ✅ CHECKPOINT — Última acción completada: Etapa 1 — página de ventas construida y verificada / Siguiente acción exacta: esperar aprobación antes de diseñar onboarding.
 
@@ -248,3 +248,17 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Evidencia: `output/playwright/etapa1-production-375.png`.
 - No avanzar todavía a onboarding, Hotmart, Evolution, login, paywall ni app interna.
 - No hay variables de entorno necesarias en esta etapa de landing; no se añadieron secretos.
+
+## Etapa 1 — Landing 2.0 ✅
+- Motivo del rework: aplicar el reencuadre estratégico de Etapa 1.5 sin avanzar a onboarding.
+- Posicionamiento aplicado: distancia entre intención y acción bajo fricción; territorio `VOLVER A TI`; continuidad adaptativa y evidencia narrativa.
+- Secciones actualizadas: reconocimiento, distancia, entrada de NIA, demo Punto NIA, Recordarte/Elegirte/Reconocerte, evidencia, comparación de herramientas, memoria/privacidad, continuidad, trial y cierre.
+- Punto NIA mantenido: intervención breve, microseñal de un toque y adaptación visible; CTA mantiene `/onboarding` sin construirlo.
+- Evidencia/reconocimiento incorporados como narrativa personal, sin dashboard, score, streaks ni adulación.
+- Eventos verificados: `landing_viewed` y `cta_started`; no se añadieron eventos nuevos.
+- Responsive verificado: desktop 1440 px y mobile 375 px; `scrollWidth` coincide con el viewport.
+- Assets: no se añadieron imágenes externas; el visual de hero sigue siendo una mini-demo honesta.
+- Verificación local: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera del recorrido activo · `npm run build` ✓.
+- Capturas: `output/playwright/landing2-375.png`, `output/playwright/landing2-375-viewport.png`, `output/playwright/landing2-desktop.png`.
+- Producción: pendiente del commit/push de esta sesión y su deployment automático en el proyecto Vercel existente.
+- Etapa 2: NO iniciada.

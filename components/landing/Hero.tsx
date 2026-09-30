@@ -23,6 +23,8 @@ export interface HeroProps {
   h1Marked: string;
   /** Copy MARCADO — máx 14 palabras (52): el kit trunca y avisa si excede. */
   subtitleMarked: string;
+  /** Contexto situacional opcional que precede a la explicación principal. */
+  supportingCopy?: ReactNode;
   /** 1ª persona + beneficio ("Probar mi primer escaneo") — nunca "Registrarse". */
   ctaLabel: string;
   /** Destino según el MODELO de 02C: checkout Hotmart (M1) u /onboarding (M2). */
@@ -43,6 +45,7 @@ export function Hero({
   loginLabel = 'Entrar',
   h1Marked,
   subtitleMarked,
+  supportingCopy,
   ctaLabel,
   ctaHref,
   socialProof,
@@ -94,6 +97,7 @@ export function Hero({
           </h1>
 
           <p className="mt-4 max-w-[560px] text-[17px] leading-relaxed text-[var(--text-secondary)] md:text-[18px]">
+            {supportingCopy && <span className="mb-3 block text-[15px] text-[var(--text-tertiary)] md:text-[16px]">{supportingCopy}</span>}
             <MarkedCopy text={subtitulo} />
           </p>
 
