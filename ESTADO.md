@@ -274,5 +274,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Responsive verificado: 1440 px, 390 × 844 y 375 × 812; `scrollWidth` coincide con el viewport; assets cargan sin roturas; consola limpia en producción local.
 - Capturas V3: `output/playwright/landing-v3-1440.png`, `output/playwright/landing-v3-390.png`, `output/playwright/landing-v3-375.png` y primer fold `output/playwright/landing-v3-390-firstfold.png`.
 - Calidad local: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera de esta landing · `npm run build` ✓.
+- Git/deploy: commits `2b3970b` y `db0ee46` en `main`; push verificado; Vercel tomó el último push y `https://nia.gritlab.pro` sirve la V3 con HTTP 200.
+- Smoke producción 2026-09-30: 1440, 390 × 844 y 375 × 812 sin overflow; cuatro assets completos; consola limpia; `landing_viewed` y `cta_started` verificados; “Más real” muestra el ajuste adaptativo; `/onboarding` conserva 404 por alcance.
 - Gate visual: pendiente de aprobación visual explícita del usuario; Etapa 1 no se declara cerrada en esta revisión.
 - Etapa 2: NO iniciada.
