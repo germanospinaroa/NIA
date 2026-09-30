@@ -196,6 +196,16 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Inspector: `https://vercel.com/germans-projects-baef13ff/nia/7CNx8YUzyLV1tt9ZGob5AY1y8KuK`.
 - Primer push completado: `main` remoto existe en `germanospinaroa/NIA` y coincide con SHA `a1ad5208aea1e1b9ccbd209ccae16e11fe37c1ff`.
 - Vercel detectó el push desde GitHub y el deployment automático quedó `READY`; producción sigue usando `main` como fuente.
-- Dominio solicitado en Vercel: `nia.gritlab.pro`; pendiente configurar DNS externo con el registro exacto `A` / `nia.gritlab.pro` / `76.76.21.21`.
-- No marcar `nia.gritlab.pro` como dominio oficial operativo hasta que Vercel valide DNS y HTTPS.
+- Dominio `nia.gritlab.pro` añadido a Vercel y validado tras configurar el registro DNS requerido.
+- DNS de `nia.gritlab.pro` validado por Vercel; HTTPS operativo y dominio asignado a producción.
+
+## Etapa 1 — Producción cerrada ✅
+- Vercel = producción; proyecto `germans-projects-baef13ff/nia` con framework Next.js.
+- GitHub `germanospinaroa/NIA`, branch `main` = fuente de deployment automático.
+- Dominio oficial operativo: `https://nia.gritlab.pro`.
+- Verificación final 2026-09-30: HTTP 200, HTTPS activo, estilos/fuentes/assets cargados, viewport 375 px sin overflow, landing renderizada y sin errores relevantes durante la carga.
+- Eventos verificados en producción: `landing_viewed` al cargar y `cta_started` al pulsar el CTA.
+- El CTA conserva `/onboarding` como destino futuro; la ruta aún no se construye por decisión de alcance de Etapa 1.
+- Evidencia: `output/playwright/etapa1-production-375.png`.
+- No avanzar todavía a onboarding, Hotmart, Evolution, login, paywall ni app interna.
 - No hay variables de entorno necesarias en esta etapa de landing; no se añadieron secretos.
