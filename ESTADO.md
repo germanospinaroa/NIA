@@ -263,3 +263,16 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Producción: deployment automático del proyecto Vercel existente `READY` en `https://nia-ov3vkk0zg-germans-projects-baef13ff.vercel.app`, con alias oficial `https://nia.gritlab.pro`.
 - Smoke production 2026-09-30: HTTP 200, fuentes cargadas, assets completos, sin overflow a 375 px, demo “Más real” adaptativa y consola limpia durante la carga.
 - Etapa 2: NO iniciada.
+
+## Etapa 1 — Landing V3 — EN REVISIÓN VISUAL
+- Motivo: reconstrucción visual y de conversión sobre Landing 2.0; la base estratégica permanece aprobada y no se modificó la Constitución del Producto.
+- Posicionamiento aplicado: identificación humana → distancia entre intención y acción → demostración Punto NIA → continuidad → evidencia → deseo de probar.
+- Cambios visuales: hero asimétrico con fotografía y Punto NIA integrado; reconocimiento con escena humana; distancia tipográfica/editorial; bloque carbón de producto; Recordarte/Elegirte/Reconocerte como sistema; evidencia narrativa; comparación editorial; privacidad sobria; cierre cinematográfico.
+- Assets incorporados: `public/images/nia/hero-before-the-moment.png` (antes de una conversación), `recognition-entering.png` (entrada al trabajo), `evidence-after-conversation.png` (después de una conversación), `closing-leaving.png` (salida después de una decisión). Son cuatro escenas humanas distintas; el hero reutiliza el mismo archivo solo entre variantes responsive desktop/mobile.
+- Punto NIA mantenido: intención → intervención → microseñal; “Más real” cambia la intervención futura y muestra el ajuste adaptativo.
+- Eventos conservados: `landing_viewed` y `cta_started`; CTA conserva `/onboarding`, que sigue sin construirse.
+- Responsive verificado: 1440 px, 390 × 844 y 375 × 812; `scrollWidth` coincide con el viewport; assets cargan sin roturas; consola limpia en producción local.
+- Capturas V3: `output/playwright/landing-v3-1440.png`, `output/playwright/landing-v3-390.png`, `output/playwright/landing-v3-375.png` y primer fold `output/playwright/landing-v3-390-firstfold.png`.
+- Calidad local: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera de esta landing · `npm run build` ✓.
+- Gate visual: pendiente de aprobación visual explícita del usuario; Etapa 1 no se declara cerrada en esta revisión.
+- Etapa 2: NO iniciada.
