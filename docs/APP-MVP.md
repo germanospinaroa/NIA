@@ -8,7 +8,7 @@ Se añadieron los clientes oficiales `@supabase/ssr` y `@supabase/supabase-js`, 
 
 La protección de `/app`, `/app/punto`, `/app/evidencia` y `/app/tu` se hace mediante sesión SSR. `/login`, `/forgot-password` y `/reset-password` usan Supabase Auth real. Los endpoints de perfil, interacciones y evidencia validan sesión server-side. `SUPABASE_SECRET_KEY` solo se importa desde el cliente admin server.
 
-La base remota está operativa. Las pruebas reportadas confirman aislamiento entre usuarios, inserción propia de interacciones, bloqueo de suscripciones desde cliente y bloqueo anónimo de drafts. `onboarding_drafts` mantiene RLS sin policies públicas de forma intencional; el aviso Security Advisor “RLS Enabled No Policy” es esperado. El índice de suscripciones se conserva aunque inicialmente aparezca como unused_index.
+La base remota está operativa. Las pruebas reportadas confirman aislamiento entre usuarios, inserción propia de interacciones, bloqueo de suscripciones desde cliente y bloqueo anónimo de drafts. Una prueba Auth real con dos cuentas sintéticas confirmó login, profile propio, aislamiento cruzado y bloqueo de subscription mutation; las cuentas y datos de prueba fueron eliminados después. `onboarding_drafts` mantiene RLS sin policies públicas de forma intencional; el aviso Security Advisor “RLS Enabled No Policy” es esperado. El índice de suscripciones se conserva aunque inicialmente aparezca como unused_index.
 
 Lifecycle previsto: `onboarding_draft → compra confirmada → auth.user → profile`. La activación Hotmart sigue pendiente y no se simula.
 

@@ -343,5 +343,6 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - API: endpoints server-side para profile, interactions, evidence y creación controlada de onboarding draft.
 - Persistencia: Home, perfil y evidencia comienzan a leer/escribir por API autenticada; `lib/mvp.ts` queda como contenido/motor y fallback de preview, no como autorización.
 - Verificación DB/RLS remota: VERIFIED según pruebas del proyecto: A/B aislados en profiles, interactions y evidence; insert de interacción ajena bloqueado; mutation de subscriptions bloqueada; drafts anónimos bloqueados. El índice puede aparecer como unused_index hasta tener tráfico.
-- Estado: DB/RLS = VERIFIED. Auth UI y persistencia end-to-end de usuarios controlados = PENDING de validación en este entorno. No inventar que Auth está validado.
-- Próximo paso único: crear dos usuarios de testing mediante Supabase Auth y validar login, sesión y persistencia real desde la UI.
+- Estado: DB/RLS = VERIFIED. Auth API real con dos usuarios sintéticos = VERIFIED; las cuentas temporales fueron limpiadas. Auth UI end-to-end y persistencia visual completa quedan PENDING de una sesión de navegador autenticada.
+- Vercel: variables de producción configuradas sin imprimir valores; redeploy de `nia.gritlab.pro` PASS. `/` y `/descubre` HTTP 200; `/login` HTTP 200; `/app` sin sesión redirige HTTP 307 a `/login`.
+- Próximo paso único: validar en navegador una sesión autenticada completa y capturar las pantallas de app; luego el único blocker de producto será Hotmart.
