@@ -225,7 +225,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Instrumentación: `landing_viewed` al entrar y `cta_started` al pulsar cualquier CTA; eventos guardados en `window.__niaEvents` y emitidos como `nia:event` para conectar analítica real más adelante.
 - Verificación 2026-09-29: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera del recorrido activo · `npm run build` ✓ · viewport Playwright 375 px ✓ · `scrollWidth === 375` ✓ · consola de página sin errores ✓ · eventos verificados ✓.
 - Capturas: `output/playwright/landing-375.png` y `output/playwright/landing-375-full.png`.
-- Pendiente de aprobación: revisión visual independiente del sistema; no hay agente `revisor-visual` disponible en este workspace, por lo que se conserva la captura para la revisión del usuario.
+- Revisión visual independiente: no hay agente `revisor-visual` disponible en este workspace; se conservaron capturas de Landing 2.0 para revisión del usuario.
 
 ## Publicación Vercel — 2026-09-29
 - Proyecto Vercel creado y enlazado: `germans-projects-baef13ff/nia`.
