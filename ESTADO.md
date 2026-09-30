@@ -194,5 +194,8 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Root Directory: `.` · Framework: Next.js · Build: `npm run build` · Node configurado por Vercel: 24.x.
 - Preview/despliegue inicial verificado como `READY`: `https://nia-snowy-zeta.vercel.app`.
 - Inspector: `https://vercel.com/germans-projects-baef13ff/nia/7CNx8YUzyLV1tt9ZGob5AY1y8KuK`.
-- Pendiente para certificar actualizaciones automáticas: el remoto GitHub no tiene ramas (`git ls-remote --heads origin` vacío); falta hacer el primer push de `main` y comprobar Preview automático + segunda publicación.
+- Primer push completado: `main` remoto existe en `germanospinaroa/NIA` y coincide con SHA `a1ad5208aea1e1b9ccbd209ccae16e11fe37c1ff`.
+- Vercel detectó el push desde GitHub y el deployment automático quedó `READY`; producción sigue usando `main` como fuente.
+- Dominio solicitado en Vercel: `nia.gritlab.pro`; pendiente configurar DNS externo con el registro exacto `A` / `nia.gritlab.pro` / `76.76.21.21`.
+- No marcar `nia.gritlab.pro` como dominio oficial operativo hasta que Vercel valide DNS y HTTPS.
 - No hay variables de entorno necesarias en esta etapa de landing; no se añadieron secretos.
