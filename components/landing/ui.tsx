@@ -16,13 +16,10 @@ export function Accent({ children }: { children: ReactNode }) {
   return <span className="text-[var(--accent)]">{children}</span>;
 }
 
-/* ── <Kicker> — caps 12px/600 tracking +0.08em en acento (máx 1 por sección) ── */
-export function Kicker({ children }: { children: ReactNode }) {
-  return (
-    <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--accent)]">
-      {children}
-    </p>
-  );
+/* ── <Kicker> — legacy no-op: NIA no usa pretítulos decorativos. ── */
+export function Kicker(_props: { children: ReactNode }) {
+  void _props;
+  return null;
 }
 
 /* ── <IconChip> — ícono SVG 22px dentro de chip 44px (55: jamás emoji) ──────

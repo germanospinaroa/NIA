@@ -355,3 +355,8 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - QA browser: capturas autenticadas generadas en `output/playwright/`; login, Home, Punto, Evidencia, Tú y logout comprobados con una cuenta sintética. El primer daily comparison necesitó esperar la hidratación del profile; la igualdad de contenido persistido está respaldada por la fila única remota.
 - Cleanup: cuenta sintética y datos asociados eliminados mediante Supabase Auth admin.
 - Estado real: DB/RLS VERIFIED; Auth API VERIFIED; Daily NIA DEPLOYED; browser QA completo y reset visual siguen PENDING; Hotmart sigue siendo el siguiente blocker de negocio después de cerrar ese QA.
+
+## Regla visual permanente — sin pretítulos
+- NIA no utiliza eyebrows, kickers, overlines, pretítulos ni etiquetas decorativas/programáticas encima de títulos principales o contenido real.
+- La regla aplica a todas las rutas, estados y componentes reutilizables. Se conservan únicamente labels funcionales o títulos que aportan contenido real, como etiquetas de formularios, fechas y campos de una demostración.
+- Auditoría global aplicada el 2026-09-30 sin cambios de lógica, navegación, autenticación ni identidad visual.
