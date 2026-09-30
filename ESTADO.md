@@ -346,3 +346,12 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Estado: DB/RLS = VERIFIED. Auth API real con dos usuarios sintéticos = VERIFIED; las cuentas temporales fueron limpiadas. Auth UI end-to-end y persistencia visual completa quedan PENDING de una sesión de navegador autenticada.
 - Vercel: variables de producción configuradas sin imprimir valores; redeploy de `nia.gritlab.pro` PASS. `/` y `/descubre` HTTP 200; `/login` HTTP 200; `/app` sin sesión redirige HTTP 307 a `/login`.
 - Próximo paso único: validar en navegador una sesión autenticada completa y capturar las pantallas de app; luego el único blocker de producto será Hotmart.
+
+## Gate App autenticada + Daily NIA — 2026-09-30
+- Daily NIA: BUILT/DEPLOYED. `/api/daily` usa timezone del profile, `local_date`, `interaction_type=daily_message`, índice único y recuperación tras colisión. El feedback se actualiza sobre la misma interacción.
+- Home: lee profile, evidence y daily desde Supabase; si falla la carga muestra error manejado y no recurre a localStorage.
+- Tú: dirección, voz, frecuencia 0/1/2, hora y nombre se guardan vía `PATCH /api/profile`.
+- Punto NIA: flujo browser probado contra producción y la interacción quedó asociada al usuario sintético correcto.
+- QA browser: capturas autenticadas generadas en `output/playwright/`; login, Home, Punto, Evidencia, Tú y logout comprobados con una cuenta sintética. El primer daily comparison necesitó esperar la hidratación del profile; la igualdad de contenido persistido está respaldada por la fila única remota.
+- Cleanup: cuenta sintética y datos asociados eliminados mediante Supabase Auth admin.
+- Estado real: DB/RLS VERIFIED; Auth API VERIFIED; Daily NIA DEPLOYED; browser QA completo y reset visual siguen PENDING; Hotmart sigue siendo el siguiente blocker de negocio después de cerrar ese QA.

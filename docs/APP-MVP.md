@@ -10,6 +10,10 @@ La protección de `/app`, `/app/punto`, `/app/evidencia` y `/app/tu` se hace med
 
 La base remota está operativa. Las pruebas reportadas confirman aislamiento entre usuarios, inserción propia de interacciones, bloqueo de suscripciones desde cliente y bloqueo anónimo de drafts. Una prueba Auth real con dos cuentas sintéticas confirmó login, profile propio, aislamiento cruzado y bloqueo de subscription mutation; las cuentas y datos de prueba fueron eliminados después. `onboarding_drafts` mantiene RLS sin policies públicas de forma intencional; el aviso Security Advisor “RLS Enabled No Policy” es esperado. El índice de suscripciones se conserva aunque inicialmente aparezca como unused_index.
 
+### Daily NIA
+
+`GET /api/daily` calcula la fecha local usando el timezone del perfil, reutiliza la fila existente y persiste una nueva `daily_message` solo cuando no existe. La unicidad y la carrera de inserción se resuelven con la restricción de la base; un conflicto vuelve a leer la fila ganadora. `PATCH /api/daily` conserva el feedback de la usuaria en esa misma interacción. Home no usa localStorage para profile, daily, evidence ni Punto NIA.
+
 Lifecycle previsto: `onboarding_draft → compra confirmada → auth.user → profile`. La activación Hotmart sigue pendiente y no se simula.
 
 ## Estado honesto
