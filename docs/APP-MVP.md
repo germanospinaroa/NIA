@@ -71,3 +71,21 @@ Chat abierto, journaling, múltiples direcciones, comunidad, streaks, gamificaci
 ## Decisiones pendientes
 
 Configurar un único proveedor de DB/auth, configurar Hotmart con webhook firmado e idempotente, definir oferta comercial real, configurar email de activación y decidir si/ cuándo se activa WhatsApp. Hasta entonces: no controlled users, no paid traffic.
+
+## Evolución del motor de personalización — 2026-09-30
+
+La aplicación mantiene un único motor server-side para Daily NIA y Punto NIA. Ya no acepta una frase enviada por el navegador como intervención final. El flujo es: `brief → 3 candidatos → auditoría determinista → selección → persistencia → feedback contextual`.
+
+El brief separa `desired_change_original`, `current_context_original` y `learning_profile`. El onboarding recoge dos respuestas abiertas obligatorias y una opcional: qué quiere cambiar o vivir diferente, en qué situaciones le cuesta actuar como quiere y qué lenguaje le resultaría propio. Las preferencias de voz y mensajes siguen después, sin mostrar términos internos del sistema.
+
+La auditoría local verifica contexto real, longitud, una sola idea, cliché, lenguaje de chatbot/coaching, lenguaje de framework (incluidos “sostener” y “mantener” como lenguaje introducido por NIA), repetición literal, similitud léxica/conceptual, concepto saturado y reutilización reciente de estructura. Los candidatos rechazados y sus razones se guardan en `intervention_candidates`; la intervención aprobada y su brief/auditoría se guardan en `interventions`.
+
+El feedback deja de ser universal. `feedbackFor()` elige una pregunta y hasta tres opciones según la función de la intervención; `learningFromFeedback()` convierte la respuesta en una señal concreta, por ejemplo contexto cambiado, redacción poco propia, especificidad baja o ángulo rechazado. `intervention_feedback` y `learning_signals` conservan esa trazabilidad.
+
+La recalibración está preparada en `GET/POST /api/recalibration`: primera revisión a los siete días y actualización explícita de contexto o de cambio deseado. Los contextos anteriores se conservan en `context_history`; no se diagnostica ni se infiere personalidad.
+
+La comparación semántica actual es determinista y configurable (`lib/intervention-engine.ts`); no se añadió un proveedor de embeddings ni un LLM inexistente. `pgvector`, embeddings persistidos y auditoría LLM estructurada quedan pendientes de una decisión/proveedor real. La interfaz del motor permite incorporarlos sin duplicar el pipeline. No se declara eficacia científica de NIA.
+
+Migración aditiva preparada: `supabase/migrations/20260930210000_personalization_audit_learning.sql`. Debe aplicarse al proyecto Supabase antes de usar en producción las nuevas rutas; no elimina ni reescribe datos MVP existentes. Añade campos de perfil/draft, historial de contexto, intervenciones, candidatos, feedback y señales de aprendizaje, con RLS por usuaria.
+
+Reglas permanentes de voz: NIA es concreta, adulta y breve; no es coach, terapeuta ni chatbot. No genera frases motivacionales genéricas, no atribuye cambios que no puede verificar y no usa `sostener`/`mantener` como lenguaje propio. La intervención programada, Punto NIA y el futuro canal WhatsApp consumen el mismo motor y no conversan indefinidamente.

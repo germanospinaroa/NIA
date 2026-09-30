@@ -365,3 +365,16 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - `/app` queda centrada en una sola intervención dinámica, una pregunta breve y el CTA `Volver a mí →`.
 - Se retiraron de Home el pretítulo, explicaciones repetidas, feedback diario, resumen de dirección y bloques vacíos de evidencia.
 - Se mantienen Supabase, daily NIA, autenticación, Punto NIA y navegación inferior sin cambios de producto.
+
+## Evolución del motor de personalización — 2026-09-30
+- Estado: BUILT LOCAL / MIGRATION PENDING REMOTE VERIFICATION. Se sustituyó la generación directa de una frase por un motor único server-side con brief, tres candidatos, auditoría determinista, selección, persistencia y feedback contextual.
+- Modelo: `desired_change_original`, `current_context_original`, historial de contextos y `learning_profile`; se conserva el lenguaje original de la usuaria y no se crea expediente psicológico.
+- Onboarding: ahora pregunta en lenguaje abierto qué quiere cambiar o vivir diferente, en qué situaciones le cuesta actuar como quiere y, opcionalmente, qué tendría que decir NIA para sentirse propia. No muestra `desired change`, `learning profile` ni taxonomía interna.
+- Auditoría: revisa contexto, especificidad, longitud, una idea, clichés, coaching/chatbot, lenguaje prohibido, duplicado literal/conceptual y repetición de concepto/ángulo/estructura. El motor no envía candidatos sin auditoría.
+- Aprendizaje: feedback contextual según función; `context_changed`, `wording_off`, `too_general` y `angle_change` producen señales estructuradas. La recalibración se expone mediante `/api/recalibration`, con primera revisión prevista a siete días y contextos históricos conservados.
+- Punto NIA: usa el mismo motor que Daily NIA; recibe un contexto cerrado, obtiene una intervención breve, muestra una sola pregunta contextual y termina. El navegador ya no envía el texto de la intervención.
+- Datos/migración: `supabase/migrations/20260930210000_personalization_audit_learning.sql` añade campos y tablas RLS para `context_history`, `interventions`, `intervention_candidates`, `intervention_feedback` y `learning_signals`. No se aplicó remotamente desde este entorno por no existir CLI/configuración de Supabase disponible; debe verificarse antes de deploy.
+- Semántica: hay similitud local léxica/conceptual configurable, no embeddings reales. No existe proveedor de embeddings ni LLM en el repo; quedan pendientes y no se simulan.
+- WhatsApp: preparado arquitectónicamente porque el resultado del motor es independiente del canal (`intervention`, feedback y channel), pero la integración continúa PENDING.
+- Tests: `npm run test:intervention` cubre genérica, cliché, duplicado semántico, contexto específico, aprendizaje y feedback. Typecheck/build pasan; lint pasa con warnings heredados.
+- Riesgos: aplicar la migración y validar RLS remoto; resolver concurrencia de intervenciones auditables si se habilitan dos pestañas; decidir proveedor/modelo de embeddings y auditoría LLM antes de afirmar similitud semántica profunda.

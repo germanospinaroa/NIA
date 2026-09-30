@@ -7,7 +7,7 @@ export type FeedbackType = 'resonates' | 'needs_grounding' | 'different_angle';
 export const directionLabels: Record<DirectionKey, string> = {
   trust_own_judgment: 'Confiar más en mi criterio incluso cuando todavía tenga dudas.',
   say_what_i_mean: 'Decir lo que realmente quiero decir.',
-  hold_boundaries: 'Sostener mis límites sin explicarme tanto.',
+  hold_boundaries: 'Poner límites sin explicarme tanto.',
   act_with_doubt: 'Actuar aunque todavía tenga dudas.',
   less_validation: 'Necesitar menos opiniones para sentirme segura.',
   self_response_after_failure: 'Tratarme diferente cuando algo sale mal.',
@@ -24,7 +24,7 @@ export const contextLabels: Record<ContextKey, string> = {
   decision: 'Tengo que decidir algo.',
   conversation: 'Voy a tener una conversación.',
   failure: 'Algo no salió como esperaba.',
-  intention: 'Solo necesito volver a mi intención.',
+  intention: 'Solo necesito pensar con más claridad.',
 };
 
 export type MvpState = {
@@ -41,6 +41,12 @@ export type MvpState = {
   onboardingComplete: boolean;
   activated: boolean;
   evidence: { id: string; date: string; context: string; text: string }[];
+  desiredChangeOriginal?: string;
+  desiredChangeSummary?: string;
+  currentContextOriginal?: string;
+  currentContextSummary?: string;
+  currentContextDomain?: string;
+  preferredLanguage?: string[];
 };
 
 export const defaultMvpState: MvpState = {
@@ -59,16 +65,6 @@ export function readMvpState(): MvpState {
 }
 
 export function saveMvpState(state: MvpState) { if (typeof window !== 'undefined') localStorage.setItem('nia_mvp_state', JSON.stringify(state)); }
-
-export function getIntervention(state: Pick<MvpState, 'firstName' | 'directionKey' | 'voiceStyle'>, context: ContextKey, feedback?: FeedbackType) {
-  const name = state.firstName || 'Laura';
-  if (context === 'doubting') return `${name}, la duda puede estar aquí sin borrar lo que ya pensabas. Antes de buscar una respuesta nueva, vuelve un momento a la que ya tenías.`;
-  if (context === 'decision') return `${name}, puedes decidir con lo que sabes hoy y ajustar después si hace falta. Escuchar no tiene que reemplazar tu criterio.`;
-  if (context === 'conversation') return `${name}, no necesitas encontrar la forma perfecta. Empieza por decir aquello que tú ya sabes que importa.`;
-  if (context === 'failure') return `${name}, que algo no haya salido como querías no convierte el momento en una sentencia sobre ti. Vuelve a la forma en que decidiste tratarte.`;
-  if (feedback === 'needs_grounding') return `${name}, no tienes que sentirte completamente segura para conservar una opinión propia.`;
-  return `${name}, vuelve por un momento a la dirección que tú misma elegiste sostener: ${directionLabels[state.directionKey].toLowerCase()}`;
-}
 
 export function trackMvp(name: string, properties: Record<string, string | number | boolean> = {}) {
   if (typeof window === 'undefined') return;

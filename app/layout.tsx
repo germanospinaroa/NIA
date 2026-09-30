@@ -14,7 +14,7 @@ const body = Instrument_Sans({
 
 export const metadata: Metadata = {
   title: "NIA — Vuelve a tu propio criterio",
-  description: "Una intervención breve para sostener cómo quieres actuar cuando llega la fricción.",
+    description: "Una intervención breve para ayudarte a actuar como quieres cuando llega la fricción.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

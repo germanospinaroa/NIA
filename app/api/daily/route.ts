@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { defaultMvpState, getIntervention, type MvpState } from '@/lib/mvp';
+import { resolveIntervention } from '@/lib/server/intervention';
 
 function localDate(timezone: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -15,9 +15,9 @@ export async function GET() {
   const date = localDate(profile.timezone);
   const { data: existing } = await supabase.from('interactions').select('*').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', date).maybeSingle();
   if (existing) return NextResponse.json({ interaction: existing, local_date: date });
-  const state: MvpState = { ...defaultMvpState, firstName: profile.first_name, directionKey: profile.direction_key ?? defaultMvpState.directionKey, voiceStyle: profile.voice_style ?? defaultMvpState.voiceStyle };
-  const content = getIntervention(state, 'intention');
-  const { data: created, error } = await supabase.from('interactions').insert({ user_id: user.id, interaction_type: 'daily_message', direction_key: state.directionKey, content, local_date: date }).select('*').single();
+  let result;
+  try { result = await resolveIntervention(supabase, user.id, 'intention'); } catch { return NextResponse.json({ error: 'daily_unavailable' }, { status: 500 }); }
+  const { data: created, error } = await supabase.from('interactions').insert({ user_id: user.id, interaction_type: 'daily_message', direction_key: profile.direction_key, content: result.intervention.text, local_date: date }).select('*').single();
   if (!error) return NextResponse.json({ interaction: created, local_date: date });
   const { data: winner } = await supabase.from('interactions').select('*').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', date).single();
   if (winner) return NextResponse.json({ interaction: winner, local_date: date });
