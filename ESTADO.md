@@ -260,5 +260,6 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Assets: no se añadieron imágenes externas; el visual de hero sigue siendo una mini-demo honesta.
 - Verificación local: `npm run typecheck` ✓ · `npm run lint` ✓ con 3 warnings heredados fuera del recorrido activo · `npm run build` ✓.
 - Capturas: `output/playwright/landing2-375.png`, `output/playwright/landing2-375-viewport.png`, `output/playwright/landing2-desktop.png`.
-- Producción: pendiente del commit/push de esta sesión y su deployment automático en el proyecto Vercel existente.
+- Producción: deployment automático del proyecto Vercel existente `READY` en `https://nia-ov3vkk0zg-germans-projects-baef13ff.vercel.app`, con alias oficial `https://nia.gritlab.pro`.
+- Smoke production 2026-09-30: HTTP 200, fuentes cargadas, assets completos, sin overflow a 375 px, demo “Más real” adaptativa y consola limpia durante la carga.
 - Etapa 2: NO iniciada.
