@@ -338,10 +338,10 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 
 ## Supabase Auth + DB + RLS — 2026-09-30
 - Packages: `@supabase/ssr` y `@supabase/supabase-js` instalados. Clientes browser/server/admin separados; la clave secreta solo se referencia server-side.
-- Migración: `supabase/migrations/20260930_initial_mvp.sql`, con las cinco entidades MVP, timestamps, índices mínimos, constraints y RLS. `onboarding_drafts` no tiene policies públicas.
+- Migración sincronizada con Supabase: `20260930191704_initial_mvp.sql`, `20260930191817_secure_touch_updated_at_search_path.sql` y `20260930191940_index_subscriptions_user_id.sql`. Las cinco entidades MVP, timestamps, constraints, función segura e índice de suscripciones están alineados. `onboarding_drafts` no tiene policies públicas intencionalmente.
 - Auth: login, logout desde el shell, forgot password y reset password implementados; middleware SSR protege `/app` y sus subrutas.
 - API: endpoints server-side para profile, interactions, evidence y creación controlada de onboarding draft.
 - Persistencia: Home, perfil y evidencia comienzan a leer/escribir por API autenticada; `lib/mvp.ts` queda como contenido/motor y fallback de preview, no como autorización.
-- Verificación: typecheck PASS, lint PASS con 3 warnings heredados, build PASS. El Supabase remoto devolvió HTTP 404 para `profiles`, `onboarding_drafts`, `interactions`, `evidence_entries` y `subscriptions`; la migración no está aplicada todavía.
-- Estado: AUTH/DB/RLS = PREPARADO EN CÓDIGO, BLOQUEADO EN ENTORNO REMOTO. No deploy ni controlled users hasta aplicar la migración y probar aislamiento User A/User B.
-- Próximo paso único: aplicar `supabase/migrations/20260930_initial_mvp.sql` en el proyecto Supabase configurado y ejecutar las pruebas RLS.
+- Verificación DB/RLS remota: VERIFIED según pruebas del proyecto: A/B aislados en profiles, interactions y evidence; insert de interacción ajena bloqueado; mutation de subscriptions bloqueada; drafts anónimos bloqueados. El índice puede aparecer como unused_index hasta tener tráfico.
+- Estado: DB/RLS = VERIFIED. Auth UI y persistencia end-to-end de usuarios controlados = PENDING de validación en este entorno. No inventar que Auth está validado.
+- Próximo paso único: crear dos usuarios de testing mediante Supabase Auth y validar login, sesión y persistencia real desde la UI.

@@ -2,13 +2,13 @@
 
 Última actualización: 2026-09-30.
 
-## Supabase Auth + DB — implementación en curso
+## Supabase Auth + DB — LIVE / VERIFIED
 
-Se añadieron los clientes oficiales `@supabase/ssr` y `@supabase/supabase-js`, separados en browser, server y admin server-only. La migración trazable está en `supabase/migrations/20260930_initial_mvp.sql` y define `onboarding_drafts`, `profiles`, `interactions`, `evidence_entries` y `subscriptions`, con RLS por usuaria. Los drafts solo se escriben mediante `POST /api/onboarding-draft`; no existe lectura pública ni enumeración.
+Se añadieron los clientes oficiales `@supabase/ssr` y `@supabase/supabase-js`, separados en browser, server y admin server-only. El historial local está alineado con Supabase: `20260930191704_initial_mvp.sql`, `20260930191817_secure_touch_updated_at_search_path.sql` y `20260930191940_index_subscriptions_user_id.sql`. El proyecto remoto contiene `onboarding_drafts`, `profiles`, `interactions`, `evidence_entries` y `subscriptions`, con RLS verificado por usuaria. Los drafts solo se escriben mediante `POST /api/onboarding-draft`; no existe lectura pública ni enumeración.
 
 La protección de `/app`, `/app/punto`, `/app/evidencia` y `/app/tu` se hace mediante sesión SSR. `/login`, `/forgot-password` y `/reset-password` usan Supabase Auth real. Los endpoints de perfil, interacciones y evidencia validan sesión server-side. `SUPABASE_SECRET_KEY` solo se importa desde el cliente admin server.
 
-El código está preparado, pero el proyecto remoto devolvió `404` para las cinco tablas: la migración todavía no ha sido aplicada en Supabase. Hasta aplicarla y ejecutar pruebas de aislamiento con dos usuarios, Auth/DB/RLS no se consideran operativos ni se despliega a producción.
+La base remota está operativa. Las pruebas reportadas confirman aislamiento entre usuarios, inserción propia de interacciones, bloqueo de suscripciones desde cliente y bloqueo anónimo de drafts. `onboarding_drafts` mantiene RLS sin policies públicas de forma intencional; el aviso Security Advisor “RLS Enabled No Policy” es esperado. El índice de suscripciones se conserva aunque inicialmente aparezca como unused_index.
 
 Lifecycle previsto: `onboarding_draft → compra confirmada → auth.user → profile`. La activación Hotmart sigue pendiente y no se simula.
 
