@@ -360,3 +360,8 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - NIA no utiliza eyebrows, kickers, overlines, pretítulos ni etiquetas decorativas/programáticas encima de títulos principales o contenido real.
 - La regla aplica a todas las rutas, estados y componentes reutilizables. Se conservan únicamente labels funcionales o títulos que aportan contenido real, como etiquetas de formularios, fechas y campos de una demostración.
 - Auditoría global aplicada el 2026-09-30 sin cambios de lógica, navegación, autenticación ni identidad visual.
+
+## Home autenticada — simplificación de intervención
+- `/app` queda centrada en una sola intervención dinámica, una pregunta breve y el CTA `Volver a mí →`.
+- Se retiraron de Home el pretítulo, explicaciones repetidas, feedback diario, resumen de dirección y bloques vacíos de evidencia.
+- Se mantienen Supabase, daily NIA, autenticación, Punto NIA y navegación inferior sin cambios de producto.
