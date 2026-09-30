@@ -1,13 +1,13 @@
 # ESTADO — NIA
-Última actualización: 2026-09-29 | Sesión actual: 1
+Última actualización: 2026-09-30 | Sesión actual: 1.5
 
 ✅ CHECKPOINT — Última acción completada: Etapa 1 — página de ventas construida y verificada / Siguiente acción exacta: esperar aprobación antes de diseñar onboarding.
 
 ## Qué es esta app
-NIA Identity es una experiencia breve para mujeres profesionales que tienden a sobrepensar o dudar en momentos importantes. Les ayuda a actuar más como la persona que quieren ser, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
+NIA Identity es una experiencia breve para mujeres profesionales que normalmente saben qué quieren y cómo quieren actuar, pero bajo fricción pueden alejarse de su propio criterio. Les ayuda a reducir esa distancia en segundos y, con el tiempo, reconocer evidencia real de que están actuando diferente, sin journaling ni conversaciones largas. Monetización propuesta: suscripción.
 
-## Promesa central
-“NIA ayuda a mujeres profesionales que sobrepiensan en momentos importantes a actuar con más seguridad, sin journaling, frases genéricas ni largas conversaciones con una IA, mediante intervenciones breves que aprenden de su respuesta y se vuelven más relevantes.”
+## Tesis central de producto — no headline comercial final
+“NIA ayuda a reducir la distancia entre la mujer que Laura sabe que quiere ser y cómo termina actuando cuando aparece la duda, la presión o el piloto automático; con el tiempo también le devuelve pequeñas evidencias de que esa distancia se está cerrando.”
 
 ## Reporte de validación (Sesión 1 — contexto recibido)
 - Veredicto actual: viable con ajustes; 81/100. El documento indica que necesita una última validación antes de construir el producto completo.
@@ -22,7 +22,7 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 ## Avatar y venta (Sesión 1 — contexto recibido)
 - Avatar inicial: Laura, profesional de 30–42 años, con ingresos propios y familiarizada con crecimiento personal. El documento aclara que es un perfil de lanzamiento, no una afirmación demográfica general.
 - Dolor central: sabe cómo quiere reaccionar, pero bajo presión vuelve al diálogo interno de duda, exigencia o miedo; las frases genéricas dejan de servirle justo cuando más las necesita.
-- Deseo central: convertirse en alguien que confía en sí misma cuando importa, sin depender de motivación externa.
+- Deseo central: confiar progresivamente más en su propio criterio y lograr que cómo actúa se parezca cada vez más a cómo quiere vivir y presentarse; además, poder reconocer que sí está cambiando cuando existen pequeñas evidencias.
 - Deseos funcionales: palabras creíbles y específicas, ayuda en segundos, memoria sin exposición íntima y pequeñas acciones que demuestren cambio.
 - Objeciones/fricciones: “esto es otra app de frases bonitas”; puede usar ChatGPT gratis; no quiere calificar mensajes o llenar registros a diario; teme que la app almacene pensamientos íntimos y que la abandone como las anteriores.
 - Nivel inicial: consciente del problema y de las soluciones, pero escéptica.
@@ -33,24 +33,27 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 
 ## Propuesta de valor y posicionamiento
 - Versión elegida: “Ayudo a mujeres profesionales que sobrepiensan en momentos importantes a actuar con más seguridad, sin journaling, frases genéricas ni largas conversaciones con una IA.”
+- Esta versión sigue siendo una referencia comercial histórica; la tesis vigente de producto está en el reencuadre estratégico de Etapa 1.5 y no se convierte automáticamente en nuevo hero.
 - Razones de compra prioritarias: escapar del autosabotaje en el momento importante; trabajar en sí misma sin convertirlo en otra tarea; recibir ayuda sin tener que buscarla ni empezar de cero.
 - Tiempo de valor: 10–30 segundos.
 - Copy norte: “Sabes cómo quieres actuar. El problema es recordarlo justo cuando empiezas a dudar de ti.”
 - Diferencia frente a ChatGPT/journaling/podcasts: intervención ambiental, mínima y con continuidad; no exige construir un prompt ni contar toda la vida.
 
 ## Mecanismo y alcance actual
-- Mecanismo vigente: INTENCIÓN → INTERVENCIÓN → MICROSEÑAL → MEMORIA → ADAPTACIÓN → MICROACCIÓN CUANDO APLIQUE → EVIDENCIA.
+- Mecanismo vigente: INTENCIÓN → INTERVENCIÓN → MICROSEÑAL → MEMORIA → ADAPTACIÓN → MICROACCIÓN CUANDO APLIQUE → EVIDENCIA → RECONOCIMIENTO.
 - Nombre del mecanismo: “Punto NIA”. El diferencial no es generar mejores frases: lo que ocurre hoy modifica de forma perceptible lo que NIA hace después.
+- Punto NIA: pequeño momento en el que Laura puede volver a cómo quiere actuar antes de responder únicamente desde la duda, la presión o el piloto automático. Sigue siendo una intervención breve, no chat, coaching, sesión, journaling ni terapia.
+- Reconocimiento: solo cuando haya evidencia suficiente, NIA puede devolver diferencias, decisiones, acciones o patrones observables trazables a señales/acciones reales. No inventa progreso ni infiere estados psicológicos.
 - Test de falsabilidad: si se eliminan memoria, feedback y adaptación, NIA se convierte en otra biblioteca de afirmaciones.
 - La microacción no es obligatoria en cada intervención; aparece solo cuando aporta valor.
 - No construir ahora: NIA DEEP con memoria vital amplia, voz, recaps, múltiples intenciones o conversaciones profundas.
 
 ## Constitución del Producto (vigente y congelada — contrato de producto)
 1. Usuaria: Laura, profesional de 30–42 años, con ingresos propios y familiarizada con crecimiento personal. Tiende a dudar o sobrepensar en reuniones, decisiones, conversaciones, límites o situaciones de presión. No busca terapia ni un coach virtual; quiere una intervención breve que la ayude a volver a cómo quiere actuar.
-2. Problema: sabe racionalmente cómo quiere actuar, pero bajo presión vuelve al mismo diálogo interno de duda, exigencia o miedo. Las frases genéricas se convierten en ruido y las alternativas profundas exigen demasiado: journaling, prompts, conversaciones largas o repetir el contexto.
-3. Promesa: “NIA ayuda a mujeres profesionales que sobrepiensan en momentos importantes a actuar más como la persona que quieren ser, sin journaling, frases genéricas ni largas conversaciones con una IA.”
+2. Problema: Laura no está perdida: trabaja, cumple, tiene metas y normalmente sabe qué quiere. Pero la duda, la presión, el miedo a equivocarse, la necesidad de aprobación o un patrón anterior pueden alejarla de su propio criterio; termina actuando distinto de como quería actuar, se minimiza, evita, cede o se exige demasiado. El problema profundo es la distancia entre lo que sabe que quiere representar y lo que hace cuando aparece la fricción. Las frases genéricas se convierten en ruido y las alternativas profundas exigen demasiado: journaling, prompts, conversaciones largas o repetir el contexto.
+3. Promesa de producto: NIA ayuda a reducir esa distancia mediante intervenciones breves que aprenden de la respuesta de Laura y, cuando existe evidencia suficiente, le muestran pequeñas señales de que está actuando diferente. No es el headline comercial final.
 4. Primera victoria: durante el onboarding, en menos de cinco minutos, define una intención concreta que quiere reforzar y recibe una primera intervención breve y creíble. Responde con un solo toque y NIA usa esa señal para calibrar futuras intervenciones. La reacción buscada es: “Esto sí habla de lo que estoy trabajando.” La segunda victoria ocurre después: “Esto cambió porque NIA recordó cómo respondí.”
-4b. Mecanismo propio: “Punto NIA”. La microseñal calibra; la memoria conserva lo necesario; la adaptación cambia la siguiente intervención; la microacción y la evidencia aparecen cuando aplican.
+4b. Mecanismo propio: “Punto NIA”. La microseñal calibra; la memoria conserva lo necesario; la adaptación cambia la siguiente intervención; la microacción y la evidencia aparecen cuando aplican; el reconocimiento devuelve continuidad solo con base real.
 5. Tres flujos principales: (a) definir intención, que persiste y no se reescribe a diario; (b) ritual proactivo: intervención → microseñal de un toque → memoria → fin, ocasionalmente con microacción y evidencia; (c) Punto NIA on demand: “Necesito NIA ahora” → contexto mínimo de un toque → intervención adaptada → microseñal → posible microacción → fin.
 6. Modelo de interacción: híbrido. NIA viene a la usuaria con una intervención proactiva diaria en un momento acordado. La usuaria también puede ir a NIA on demand desde la app o WhatsApp mediante “Necesito NIA ahora”. En ambos casos NIA entrega una intervención, no abre un chat ni inicia coaching.
 7. Feedback: señales de un toque, no encuesta ni conversación. “Así sí” indica que funcionan dirección y lenguaje; “Más real” indica que aplica pero suena demasiado absoluto o poco creíble; “Otro enfoque” indica falta de relevancia. El fallback de botones en WhatsApp será texto simple.
@@ -83,8 +86,9 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - La taxonomía debe reconstruir el trial completo y medir adaptación percibida/uso → continuidad → pago, sin instrumentar eventos sin utilidad decisional.
 
 ## Retención
-- Loop: gatillo = intervención diaria acordada o necesidad imprevista → acción = leer y responder con un toque → recompensa = volver a la intención con un mensaje creíble → inversión = microseñal y contexto seleccionado que mejoran la próxima intervención.
-- Retención no basada en rachas: la razón para volver es que mañana NIA sepa un poco mejor qué ayuda hoy.
+- Loop: gatillo = intervención diaria acordada o necesidad imprevista → acción = leer y responder con un toque → recompensa = volver a la intención con un mensaje creíble → inversión = microseñal y contexto seleccionado que mejoran la próxima intervención → reconocimiento = evidencia narrativa de una diferencia real cuando existe base suficiente.
+- Retención no basada en rachas: la razón para volver es que mañana NIA sepa un poco mejor qué ayuda hoy y que, con el tiempo, ayude a Laura a ver cosas que normalmente no reconocería en sí misma.
+- La retención nunca debe crear dependencia: NIA no debe insinuar “me necesitas”, “sin mí volverás atrás” ni “yo te conozco mejor que tú”.
 - Frecuencia: una intervención proactiva diaria como base, con límite y momento elegido por la usuaria; el modo on demand ocurre cuando ella lo necesita.
 - Gamificación: no decidida; evitar presión por rachas salvo evidencia posterior.
 
@@ -141,6 +145,30 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
 - No pedir una batería de preguntas: la Constitución congelada es la versión entregada por el usuario y no debe reinterpretarse como app de apertura reactiva ni como coach conversacional.
 
+## Etapa 1.5 — Reencuadre estratégico de NIA Identity
+- Motivo: profundizar el problema y el valor longitudinal antes de volver a modificar la landing; la categoría no es simplemente overthinking, afirmaciones, autoestima o empowerment.
+- Nueva tesis: NIA reduce la distancia entre la mujer que Laura sabe que quiere ser y cómo termina actuando cuando aparece la duda, la presión o el piloto automático; con el tiempo también le devuelve pequeñas evidencias de que esa distancia se está cerrando.
+- Territorio emocional vigente: `VOLVER A TI`.
+- Movimientos: `RECORDARTE` = recordar intención, criterio y lo que importa; `ELEGIRTE` = actuar conscientemente de forma congruente con lo que Laura decidió que importa, sin que NIA defina por ella qué significa; `RECONOCERTE` = hacer visibles evidencias reales de que está actuando diferente.
+- Evidencia sube de importancia: sigue siendo narrativa personal, discreta, humana, no competitiva y trazable a acciones/señales; nunca puntos, badges, streaks, rankings, adulación ni progreso inventado.
+- Loop conceptual extendido: INTENCIÓN → INTERVENCIÓN → MICROSEÑAL → MEMORIA → ADAPTACIÓN → MICROACCIÓN CUANDO APLIQUE → EVIDENCIA → RECONOCIMIENTO.
+- Prohibición de marca: no convertir NIA en empowerment genérico ni usar “Elígete”, “Ámate primero”, “Eres suficiente”, “mejor versión” o variantes sin anclarlas a una situación, intención, elección, conducta, señal o evidencia real.
+- Qué no cambia: Laura, Punto NIA, segundos, microseñales, memoria mínima, adaptación, intervención proactiva, on demand, no chat/coaching/journaling/streaks, privacidad, canales, suscripción, trial, secuencia maestra, dirección visual, infraestructura y Etapa 1 en producción.
+- Landing: producción sin modificar. El brief conceptual queda actualizado abajo; antes de tocar código se revisará la historia sección por sección.
+- Etapa 2: bloqueada hasta revisar la landing bajo este posicionamiento; no iniciada.
+
+### Test de coherencia de Etapa 1.5
+1. PASS — Si se elimina “affirmations”, NIA conserva el problema, el mecanismo y el valor longitudinal.
+2. PASS — Sin “overthinking” en el headline, el problema sigue siendo comprensible como distancia entre criterio y conducta bajo fricción.
+3. PASS — `VOLVER A TI` es territorio emocional; no se registra como promesa vacía ni resultado garantizado.
+4. PASS — `ELEGIRTE` está definido como conducta congruente con lo que Laura decidió que importa; NIA no decide por ella.
+5. PASS — `RECONOCERTE` exige evidencia trazable; no es adulación ni inferencia psicológica.
+6. PASS — Punto NIA sigue siendo el mecanismo central y una intervención breve.
+7. PASS — La experiencia sigue diseñada para entregar valor en 10–30 segundos.
+8. PASS — El reconocimiento es una extensión conceptual del registro de evidencia; no obliga a crear infraestructura ni funcionalidades nuevas en esta etapa.
+9. PASS — Memoria mínima, privacidad y “recuerda dirección, no secretos” permanecen intactos.
+10. PASS — La diferencia frente a ChatGPT, journaling y apps de afirmaciones sigue siendo intervención breve, continuidad adaptativa y evidencia narrativa sin chat abierto.
+
 ## Brief operativo de página de ventas — B6
 
 ### Objetivo y promesa
@@ -149,10 +177,21 @@ NIA Identity es una experiencia breve para mujeres profesionales que tienden a s
 - Apoyo: “Sin frases genéricas. Sin journaling. Sin largas conversaciones con una IA.”
 - Big Idea: Laura no necesita otra frase para sentirse bien; necesita que algo recuerde qué le ayuda y ajuste lo siguiente cuando vuelva a dudar.
 
+### Reencuadre conceptual pendiente de implementación
+- Laura ya sabe bastante sobre cómo quiere actuar; la dificultad aparece cuando llega la fricción.
+- La historia debe mostrar la distancia entre su criterio y lo que termina haciendo bajo duda, presión, miedo, aprobación o piloto automático.
+- NIA interviene en segundos, aprende de cómo responde y hace que lo siguiente cambie.
+- Cuando existan señales suficientes, NIA también devuelve evidencia de cambio sin inventar progreso.
+- El resultado buscado no es sentirse bonita durante 30 segundos, sino actuar progresivamente de forma más congruente con lo que Laura misma decidió que importa.
+- No escribir todavía nuevo hero definitivo ni elegir slogan final. No publicar cambios.
+- La revisión previa a código será sección por sección: reconocimiento del problema → fricción → Punto NIA → adaptación → evidencia/reconocimiento → autonomía/privacidad → trial/CTA.
+
 ### Argumento y mecanismo
 - Problema: ya sabe cómo quiere actuar y ha probado crecimiento personal, frases, ChatGPT o journaling, pero el momento real la devuelve al mismo diálogo interno. Lo genérico empieza de cero cada día.
 - Enemigo comercial: genericidad y falta de continuidad; nunca “ser negativa” ni una condición clínica.
 - Punto NIA en lenguaje simple: NIA muestra una intervención → Laura responde con una microseñal → NIA recuerda → lo siguiente cambia.
+- Punto NIA en lenguaje conceptual: pequeño momento en el que Laura puede volver a cómo quiere actuar antes de responder únicamente desde la duda, la presión o el piloto automático.
+- Evidencia/reconocimiento: solo devolver diferencias observables sustentadas por señales o acciones reales; no usar adulación ni dependencia como retención.
 - Demostración obligatoria: intervención inicial → “Más real” → intervención futura menos absoluta y más creíble. La adaptación debe verse, no explicarse con arquitectura o machine learning.
 
 ### Claims y CTA

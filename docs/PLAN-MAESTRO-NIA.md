@@ -2,6 +2,7 @@
 
 Estado: APROBADO Y CONGELADO — 2026-09-29 · No se ha construido ninguna etapa de producto.
 Contratos: Constitución de Producto congelada · `FICHA-ARTE.md` aprobada · Punto NIA · interacción híbrida · App/Web hogar · WhatsApp presencia futura · Hotmart proveedor de pagos.
+Reencuadre estratégico 1.5: NIA reduce la distancia entre cómo Laura sabe que quiere actuar y cómo termina actuando bajo fricción; además puede devolver evidencia real de que esa distancia se está cerrando. Esto actualiza el territorio y la jerarquía del posicionamiento, no cambia el alcance ni autoriza modificar la landing todavía.
 
 Regla de avance: el gate comercial previo no bloquea la construcción. NIA se construirá como MVP real, se lanzará con tráfico real y se validará mediante uso durante 7 días y conversión posterior a suscripción.
 
@@ -13,7 +14,7 @@ Cerrar avatar, mercado, modelo de app, economía unitaria, precio candidato, eve
 La validación posterior comprobará si la usuaria vive durante 7 días la continuidad adaptativa —que lo ocurrido hoy cambie perceptiblemente lo que NIA hace después— y permite que comience el cobro.
 
 ### Etapa 1 — Página de ventas
-Vender el resultado: actuar más como la persona que Laura quiere ser. Mostrar Punto NIA en acción, no “IA” ni una biblioteca de frases. Instrumentar llegada, CTA y atribución. No publicar copy final hasta completar y aprobar `FICHA-AVATAR.md`.
+Vender el resultado: actuar de forma progresivamente más congruente con lo que Laura misma decidió que importa. Mostrar Punto NIA en acción, no “IA” ni una biblioteca de frases. Instrumentar llegada, CTA y atribución. La landing actual sigue sin modificarse; antes de tocar producción se hará una revisión sección por sección bajo el reencuadre 1.5. No publicar copy final hasta completar y aprobar `FICHA-AVATAR.md`.
 
 ### Etapa 2 — Recorrido de inicio
 Sin cuenta y antes del pago. Definir una intención persistente, calibrar el lenguaje con opciones de un toque y entregar la primera intervención. La primera victoria ocurre aquí. No será un tour de funciones ni un chat.
@@ -73,6 +74,7 @@ NIA nunca confiará en una señal del navegador para habilitar acceso. Ningún s
 6. Adaptación: hace perceptible el cambio en una intervención posterior.
 7. Microacción opcional: aparece solo cuando aporta valor.
 8. Evidencia: registro mínimo de lo realizado, expresado como narrativa personal.
+9. Reconocimiento: cuando existan señales suficientes, devuelve diferencias, decisiones, acciones o patrones positivos observables trazables a registros reales; nunca inventa progreso ni infiere estados psicológicos.
 
 ### Capas de producto
 - Hogar App/Web: intención, Punto NIA ahora, evidencia, memoria y ajustes.
@@ -108,8 +110,9 @@ Momento acordado → intervención breve → una microseñal → memoria silenci
 ### Punto NIA on demand
 “Necesito NIA ahora” → contexto de un toque: duda, decisión, conversación, algo inesperado o volver a la intención → intervención adaptada → microseñal → posible microacción → fin. Nunca se convierte en chat.
 
-### Evidencia
+### Evidencia y reconocimiento
 La usuaria puede registrar una pequeña acción o confirmar una microacción. NIA muestra una secuencia de momentos y aprendizajes, no gráficas de rendimiento ni una puntuación de hábito.
+El reconocimiento es la capacidad de devolver, cuando haya evidencia suficiente, que una conducta o decisión ya está ocurriendo de forma diferente. Es narrativo, discreto, humano, no competitivo y trazable a acciones o señales reales. La evidencia sigue siendo narrativa personal, no dashboard.
 
 ### Memoria y configuración
 La usuaria ve qué conserva NIA, puede editar su intención, cambiar momento/canal, borrar memoria y controlar privacidad. La memoria es visible y revocable.
@@ -119,9 +122,9 @@ Tres experiencias adaptativas → pantalla de planes → elección mensual/anual
 
 ## 5. Retención sin gamificación artificial
 
-La retención nace de una promesa verificable: mañana NIA debe saber un poco mejor qué ayuda hoy. El gatillo es una intervención diaria acordada o una necesidad imprevista; la recompensa es volver a la intención con palabras creíbles; la inversión es una microseñal que cambia el futuro.
+La retención nace de dos capas verificables: mañana NIA debe saber un poco mejor qué ayuda hoy; con el tiempo también debe ayudar a Laura a ver cosas que normalmente no reconocería en sí misma. El gatillo es una intervención diaria acordada o una necesidad imprevista; la recompensa es volver a la intención con palabras creíbles; la inversión es una microseñal que cambia el futuro y, cuando existe base suficiente, una evidencia que devuelve continuidad.
 
-No habrá rachas, puntos, rankings, mascotas, culpa, notificaciones indiscriminadas ni tareas diarias obligatorias. La base será una intervención proactiva diaria como máximo, en el momento elegido por la usuaria, más el modo on demand.
+No habrá rachas, puntos, rankings, mascotas, culpa, notificaciones indiscriminadas ni tareas diarias obligatorias. La base será una intervención proactiva diaria como máximo, en el momento elegido por la usuaria, más el modo on demand. El reconocimiento no puede crear dependencia ni insinuar “me necesitas”, “sin mí volverás atrás” o “yo te conozco mejor que tú”.
 
 ## 6. MVP real
 
@@ -179,6 +182,7 @@ La instrumentación debe permitir responder: si percibir adaptación mejora la c
 - **Precio:** US$6,99/US$39,99 es candidato heredado del contexto, no precio final. Falta mercado específico, costo de IA y margen.
 - **Límites de uso:** no fijar límites artificiales de Punto NIA antes de conocer costo, frecuencia y margen; tampoco prometer “ilimitado” sin esos datos.
 - **Adaptación invisible:** si el día siguiente no cambia de forma perceptible, NIA parece otra app de frases. El test de regresión debe demostrar adaptación con la misma intención y señales distintas.
+- **Reconocimiento sin base:** si la evidencia no está sustentada por acciones o señales reales, NIA no debe afirmar progreso ni convertir adulación en retención.
 - **Proactividad:** una intervención diaria requiere consentimiento, horario elegido, pausa y límite. No debe maximizar screen time.
 - **WhatsApp:** puede arrastrar el producto hacia chatbot. Se evita con adaptador separado, mensajes finitos y botones/texto de una acción.
 - **Privacidad:** la memoria puede sentirse invasiva. Debe ser explícita, mínima, visible, editable y borrable.
