@@ -292,3 +292,19 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Gates pendientes: `OFFER COMMERCIAL GATE: BLOCKED` por precio/plan/moneda/periodicidad/cancelación final no congelados; `LEGAL GATE: BLOCKED` porque `/privacidad`, `/terminos` y `/cancelacion` todavía no existen como textos aprobados; `FUNNEL GATE: BLOCKED` porque `/onboarding` no está construido.
 - Paid traffic: NO autorizado mientras exista cualquiera de esos gates críticos.
 - Etapa 2: NO iniciada.
+
+## Funnel de adquisición NIA — `/descubre`
+- Objetivo: crear una experiencia narrativa de adquisición independiente, sin alterar la landing V4 de `/`; primero reconocimiento, después nombre, dirección y demostración honesta de continuidad.
+- Ruta: `/descubre`, aislada de `/`; no redirige ni reemplaza el root.
+- Arquitectura: cuatro pantallas de reconocimiento y open loop → presentación de NIA y nombre → scroll editorial de reframe → elección de dirección → Punto NIA determinista → feedback humano → adaptación → memoria conceptual con control → payoff → continuación comercial.
+- Root preservado: `app/page.tsx` no fue modificado en esta tarea; smoke local conserva el H1, un solo H1, HTTP 200 y ausencia de errores.
+- Datos temporales: `firstName`, `chosenDirection`, `directionStatus`, `feedbackType`, `stage`; se conserva solo en `sessionStorage` para poder refrescar la experiencia, sin DB, auth ni servicios externos.
+- Personalización: el nombre y la dirección elegida se usan en los momentos relevantes; no se solicitan datos sensibles ni se hacen inferencias psicológicas.
+- Demo: intervención breve, feedback contextual, adaptación visible y memoria conceptual etiquetada como ejemplo; no se finge IA personalizada ni almacenamiento real.
+- Evidencia: sección preparada con `EVIDENCE CONTENT REQUIRED`; no se publican estadísticas, estudios ni claims psicológicos sin fuente documental aprobada.
+- Voz y límites: NIA es cercana, directa y tranquila; no es chat, terapia, coaching, companion ni herramienta de crisis.
+- Eventos separados: `discover_viewed`, `discover_first_tap`, `discover_open_loop_reached`, `discover_name_entered`, `discover_reveal_viewed`, `discover_direction_selected`, `discover_direction_confirmed`, `discover_first_point_viewed`, `discover_feedback_given`, `discover_adaptation_viewed`, `discover_product_explainer_reached`, `discover_primary_cta_clicked`.
+- QA local 2026-09-30: typecheck ✓ · lint sin errores, con 3 warnings heredados fuera de la ruta · build ✓ · Playwright sin errores de consola · sin overflow en 375, 390 y 430 px · root y `/descubre` HTTP 200 local.
+- Capturas: `output/playwright/discover-start-390.png`, `discover-name-390.png`, `discover-reveal-390.png`, `discover-direction-390.png`, `discover-point-390.png`, `discover-adaptation-390.png`, `discover-commercial-390.png`, `discover-desktop-1440.png`, `root-regression-390.png`.
+- Pendientes/gates: `OFFER COMMERCIAL GATE: BLOCKED` por términos comerciales finales no publicados; `LEGAL GATE: BLOCKED` porque privacidad, términos y cancelación aprobados siguen pendientes; `FUNNEL GATE: BLOCKED` porque `/onboarding` no existe.
+- Paid traffic: NO autorizado. Etapa 2/onboarding: NO iniciada.
