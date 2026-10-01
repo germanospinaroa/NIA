@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { resolveIntervention } from '@/lib/server/intervention';
+import { CalibrationRequiredError, resolveIntervention } from '@/lib/server/intervention';
+import { recordEvent, startExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
 
 function localDate(timezone: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -15,10 +16,25 @@ export async function GET() {
   const date = localDate(profile.timezone);
   const { data: existing } = await supabase.from('interactions').select('*').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', date).maybeSingle();
   if (existing) return NextResponse.json({ interaction: existing, local_date: date });
+  const idempotencyKey = `daily:${date}`;
+  let execution;
+  try { execution = await startExecutionRun(supabase, { userId: user.id, channel: 'web', triggerSource: 'daily', idempotencyKey }); } catch { return NextResponse.json({ error: 'daily_unavailable' }, { status: 500 }); }
   let result;
-  try { result = await resolveIntervention(supabase, user.id, 'intention'); } catch { return NextResponse.json({ error: 'daily_unavailable' }, { status: 500 }); }
+  try {
+    result = await resolveIntervention(supabase, user.id, 'intention', 'web', idempotencyKey, execution);
+  } catch (error) {
+    await updateExecutionRun(supabase, execution, { status: error instanceof CalibrationRequiredError ? 'failed' : error instanceof Error && error.message === 'no_approved_intervention' ? 'no_approved_intervention' : 'failed', failure: error });
+    if (error instanceof CalibrationRequiredError) {
+      await recordEvent(supabase, { userId: user.id, eventType: 'recalibration_started', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { reason: error.calibration.reason } });
+      return NextResponse.json({ status: 'calibration_required', calibration: error.calibration });
+    }
+    await recordEvent(supabase, { userId: user.id, eventType: 'intervention_failed', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { error: error instanceof Error ? error.message : String(error) } });
+    return NextResponse.json({ error: 'daily_unavailable' }, { status: 500 });
+  }
   const { data: created, error } = await supabase.from('interactions').insert({ user_id: user.id, interaction_type: 'daily_message', direction_key: profile.direction_key, content: result.intervention.text, local_date: date }).select('*').single();
   if (!error) return NextResponse.json({ interaction: created, local_date: date });
+  await updateExecutionRun(supabase, execution, { status: 'failed', interventionId: result.interventionId, failure: new Error('persistence_error') });
+  await recordEvent(supabase, { userId: user.id, eventType: 'intervention_failed', entityType: 'intervention', entityId: result.interventionId, executionRunId: execution.executionId, metadata: { error: 'interaction_persistence_failed' } });
   const { data: winner } = await supabase.from('interactions').select('*').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', date).single();
   if (winner) return NextResponse.json({ interaction: winner, local_date: date });
   return NextResponse.json({ error: 'daily_unavailable' }, { status: 500 });

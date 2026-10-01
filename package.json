@@ -8,7 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:intervention": "node --experimental-strip-types scripts/test-intervention-engine.mjs"
+    "test:intervention": "node --experimental-strip-types scripts/test-intervention-engine.mjs",
+    "test:operational": "node --experimental-strip-types scripts/test-operational-observability.mjs",
+    "test:dashboard": "node --experimental-strip-types scripts/test-admin-dashboard.mjs",
+    "test:user-detail": "node --experimental-strip-types scripts/test-user-detail.mjs",
+    "test:intervention-detail": "node --experimental-strip-types scripts/test-intervention-detail.mjs",
+    "test:cost-ledger": "node --experimental-strip-types scripts/test-cost-ledger.mjs",
+    "redteam": "node --experimental-strip-types scripts/redteam.mjs",
+    "redteam:analyze": "node scripts/analyze-redteam.mjs",
+    "semantic:replay": "node scripts/replay-semantic-calibration.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
