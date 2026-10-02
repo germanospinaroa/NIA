@@ -1,6 +1,15 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Funnel /descubre — experiencia conversacional final — 2026-10-02
+- Se reconstruyó el tramo público posterior al reconocimiento sin tocar `/`, el onboarding interno, auth, Supabase, el motor ni Hotmart.
+- `/descubre/entiende` ahora explica el fenómeno de volver a dudar de una dirección propia; `/descubre/base` presenta de forma breve el fundamento de implementation intentions y JITAI con enlaces a Gollwitzer & Sheeran (2006) y Hsu et al. (2025), sin claims clínicos.
+- `/descubre/nombre` conserva el nombre anónimo y `/descubre/dia` prepara la interacción sin copy técnico. `/descubre/prueba` muestra una situación, recoge tres respuestas semánticas y genera tres intervenciones determinísticas distintas.
+- Se añadió `/descubre/explica` para explicar qué acaba de ocurrir usando dinámicamente el nombre y la respuesta elegida; `/descubre/continuidad` proyecta el uso real y lleva a planes.
+- Se conservaron precios y bypass: mensual US$6.99, anual US$39.99, 7 días gratis; no se llama Hotmart ni se registran ventas ficticias. `/acceso` mantiene Magic Link/PKCE y suma eventos de acceso/email.
+- Eventos añadidos: `understand_viewed`, `evidence_viewed`, `name_submitted`, `demo_started`, `demo_situation_viewed`, `demo_response_selected`, `demo_intervention_viewed`, `demo_explanation_viewed`, `demo_value_acknowledged`, `continuity_viewed`, `plan_viewed`, `access_started`, `email_submitted`, `magic_link_requested`.
+- QA local Playwright: reconocimiento, entiende, fundamento, nombre dinámico, situación, ramas A/B/C, adaptación, explicación, continuidad, planes mensual/anual, acceso; 390×844 y 1440×900; sin errores de consola. Magic Link real sigue sin certificarse sin buzón controlado.
+
 ## Onboarding definitivo — revisión integral — 2026-10-02
 - `/onboarding` ahora sigue: nombre → conexión humana → explicación del fenómeno → evidencia → por qué existe NIA → explicación de la experiencia → situación → adaptación → explicación de lo vivido → personalización dinámica → mecanismo → onboarding funcional.
 - Elimina la pregunta emocional previa porque no alimentaba ninguna decisión real del sistema. La personalización demostrada usa nombre, respuesta de situación y respuesta adaptativa, y se conserva en el estado existente.

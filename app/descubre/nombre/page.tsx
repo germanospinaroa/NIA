@@ -15,7 +15,8 @@ export default function NamePage() {
     if (!firstName) return;
     saveFunnelState({ firstName });
     trackFunnel('discover_name_entered');
+    trackFunnel('name_submitted');
     router.push('/descubre/dia');
   }
-  return <FunnelFrame><section className="funnel-screen"><div className="funnel-content narrow"><p className="eyebrow">Y HAY ALGO IMPORTANTE</p><h1>NIA no debería hablarte como le habla a todo el mundo.</h1><p className="funnel-copy">Si vamos a acompañarte, queremos hacerlo contigo.</p><p className="funnel-copy">Por eso queremos empezar por conocerte.</p><label className="field-label" htmlFor="discover-name">¿Cómo te llamas?</label><input autoFocus id="discover-name" className="funnel-input" value={name} onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') continueNext(); }} placeholder="Tu nombre" autoComplete="given-name" /><button className="funnel-button" disabled={!name.trim()} onClick={continueNext}>Continuar <ArrowRight size={17} /></button></div></section></FunnelFrame>;
+  return <FunnelFrame><section className="funnel-screen"><div className="funnel-content narrow"><h1>Antes de seguir, quiero conocerte un poquito.</h1><p className="funnel-copy">Si voy a acompañarte en esto, quiero hacerlo contigo.</p><label className="field-label" htmlFor="discover-name">¿Cómo te llamas?</label><input autoFocus id="discover-name" className="funnel-input" value={name} onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') continueNext(); }} placeholder="Tu nombre" autoComplete="given-name" /><button className="funnel-button" disabled={!name.trim()} onClick={continueNext}>Continuar <ArrowRight size={17} /></button></div></section></FunnelFrame>;
 }

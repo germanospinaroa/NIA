@@ -4,9 +4,11 @@ import fs from 'node:fs';
 const files = [
   'app/descubre/page.tsx',
   'app/descubre/entiende/page.tsx',
+  'app/descubre/base/page.tsx',
   'app/descubre/nombre/page.tsx',
   'app/descubre/dia/page.tsx',
   'app/descubre/prueba/page.tsx',
+  'app/descubre/explica/page.tsx',
   'app/descubre/continuidad/page.tsx',
   'app/descubre/planes/page.tsx',
   'app/acceso/page.tsx',
@@ -19,10 +21,19 @@ const source = files.map(file => fs.readFileSync(file, 'utf8')).join('\\n');
 for (const event of ['recognition_1_completed', 'recognition_2_completed', 'recognition_3_completed', 'understand_nia_opened', 'microdemo_started', 'microdemo_feedback', 'microdemo_adapted', 'pricing_viewed', 'plan_selected', 'checkout_bypass_started', 'account_started', 'onboarding_started', 'onboarding_completed']) {
   assert.match(source, new RegExp(event), event + ' is tracked');
 }
+for (const event of ['understand_viewed', 'name_submitted', 'demo_started', 'demo_situation_viewed', 'demo_response_selected', 'demo_intervention_viewed', 'demo_value_acknowledged', 'continuity_viewed', 'plan_viewed', 'access_started', 'email_submitted', 'magic_link_requested']) {
+  assert.match(source, new RegExp(event), event + ' is tracked');
+}
 assert.match(source, /US\$6\.99/);
 assert.match(source, /US\$39\.99/);
 assert.doesNotMatch(source, /Continuar a Hotmart|Oferta bloqueada|Hotmart todavía no está conectado/);
 assert.doesNotMatch(source, /Sin pago real en esta fase de prueba/);
+assert.doesNotMatch(source, /Ahora imagina que pudieras empezar a actuar diferente|NIA no debería hablarte como le habla a todo el mundo|NIA RESPONDE|Esto cambiaría según lo que acabas de decir|Y esto es solo el comienzo|Así sí|Más real|Otro enfoque/);
+assert.match(source, /Gollwitzer &amp; Sheeran, 2006/);
+assert.match(source, /39542743/);
+assert.match(source, /Empiezo a dudar de mí\./);
+assert.match(source, /Me dejo llevar por lo que me dicen\./);
+assert.match(source, /Sigo con mi idea, pero me cuesta\./);
 assert.match(fs.readFileSync('lib/funnel.ts', 'utf8'), /checkoutMode.*bypass/);
 assert.match(fs.readFileSync('app/auth/callback/route.ts', 'utf8'), /exchangeCodeForSession/);
 assert.match(fs.readFileSync('app/acceso/page.tsx', 'utf8'), /auth\.signInWithOtp/);

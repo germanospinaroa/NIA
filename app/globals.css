@@ -81,6 +81,17 @@ a { text-decoration: none; }
 .quiet-lines p { margin: 0; color: var(--text-secondary); font-family: var(--font-display); font-size: 22px; line-height: 1.15; }
 .quiet-lines p + p { margin-top: 8px; }
 .small-copy { font-size: 15px; }
+.discover-understand .funnel-copy { margin-top: 16px; font-size: 17px; line-height: 1.38; }
+.evidence-note { margin-top: 24px; padding: 18px; border-left: 2px solid var(--accent); background: var(--surface); color: var(--text-secondary); font-size: 13px; line-height: 1.4; }
+.evidence-note p { margin: 0; }
+.evidence-note-title { color: var(--text-primary); font-family: var(--font-display); font-size: 21px; line-height: 1.05; }
+.evidence-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.evidence-links a { color: var(--text-primary); font-size: 12px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.evidence-disclaimer { margin-top: 14px !important; color: var(--text-tertiary); font-size: 11px; }
+.discover-demo .funnel-copy { margin-top: 16px; font-size: 17px; line-height: 1.35; }
+.story-card .story-quote { margin-top: 18px; color: var(--text-primary); }
+.discover-demo .adapted-card { display: grid; gap: 16px; }
+.discover-demo .adapted-card p + p { padding-top: 16px; border-top: 1px solid color-mix(in oklab, var(--bg) 18%, transparent); }
 .field-label { display: block; margin-top: 34px; color: var(--text-tertiary); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .story-screen { background: var(--surface); }
 .story-card, .question-card { margin-top: 28px; padding: 22px; border-radius: var(--radius-card); background: var(--bg); box-shadow: var(--shadow-1); }

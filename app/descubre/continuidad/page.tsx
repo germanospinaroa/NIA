@@ -2,7 +2,9 @@
 import { ArrowRight } from 'lucide-react';
 import { FunnelFrame } from '@/components/funnel/FunnelFrame';
 import { saveFunnelState, trackFunnel } from '@/lib/funnel';
+import { useEffect } from 'react';
 
 export default function ContinuityPage() {
-  return <FunnelFrame><section className="funnel-screen narrative-screen"><div className="funnel-content narrow"><h1>Y esto es solo el comienzo.</h1><p className="funnel-copy">Al principio NIA necesita conocerte. Por eso vas a responder algunas preguntas cuando entres.</p><p className="funnel-copy">Con el tiempo, tus respuestas, elecciones y feedback ayudan a que las intervenciones sean cada vez más relevantes para ti.</p><div className="quiet-lines"><p>Una intervención breve.</p><p>Un momento para volver a ti.</p><p>Una respuesta.</p></div><p className="funnel-copy">Y una experiencia que va entendiendo mejor qué te ayuda.</p><a className="funnel-button" href="/descubre/planes" onClick={() => { saveFunnelState({ microdemoComplete: true }); trackFunnel('discover_product_explainer_reached'); }}>Ver planes <ArrowRight size={17} /></a></div></section></FunnelFrame>;
+  useEffect(() => { trackFunnel('continuity_viewed'); }, []);
+  return <FunnelFrame><section className="funnel-screen narrative-screen"><div className="funnel-content narrow"><h1>Esto puede seguir contigo.</h1><p className="funnel-copy">Lo que acabas de vivir fue una pequeña muestra.</p><p className="funnel-copy">Con NIA recibes intervenciones breves, relacionadas con situaciones reales, y puedes dejar señales sobre lo que te sirve y lo que no.</p><div className="quiet-lines"><p>Una intervención breve.</p><p>Una respuesta sencilla.</p><p>Una adaptación con el tiempo.</p></div><p className="funnel-copy">No para decidir por ti, sino para ayudarte a volver a tu propia dirección cuando más fácil resulta perderla de vista.</p><a className="funnel-button" href="/descubre/planes" onClick={() => { saveFunnelState({ microdemoComplete: true }); trackFunnel('discover_product_explainer_reached'); }}>Quiero continuar <ArrowRight size={17} /></a></div></section></FunnelFrame>;
 }
