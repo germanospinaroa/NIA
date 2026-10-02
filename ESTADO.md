@@ -1,6 +1,15 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Funnel /descubre + onboarding — reconstrucción final implementada — 2026-10-02
+- La experiencia pública ahora sigue la secuencia aprobada: reconocimiento en tres pantallas aisladas → open loop → presentación humana de NIA → nombre → explicación → evidencia → qué vivirá la usuaria → elección de contexto → situación dinámica → respuesta de NIA → feedback semántico → respuesta adaptada → explicación → futuro → continuidad → planes → acceso.
+- Las rutas nuevas son `/descubre/presenta`, `/descubre/razon`, `/descubre/evidencia`, `/descubre/vivir`, `/descubre/contexto`, `/descubre/situacion`, `/descubre/respuesta`, `/descubre/feedback`, `/descubre/adaptacion` y `/descubre/futuro`. Las rutas legacy `/descubre/base`, `/descubre/dia` y `/descubre/prueba` redirigen al recorrido nuevo para no exponer copy técnico antiguo.
+- El nombre, el contexto elegido, el feedback y el plan se conservan mediante el estado funnel existente. La respuesta de NIA es determinística y cambia según la situación elegida y la respuesta de la usuaria; no se invoca el LLM para la experiencia pública.
+- `/onboarding` quedó como activación post-auth: intro breve → intención concreta → momento preferido → primera interacción real desde `/api/daily` → feedback de un toque → `/app`. No se inventa una intervención si faltan sesión, perfil o configuración.
+- Se mantienen precios, trial y bypass: mensual US$6.99, anual US$39.99, 7 días gratis; no se llama Hotmart, no se crean pagos ficticios y no se registra MRR ficticio. `/`, motor, Supabase schema, auth/PKCE, Cost Ledger, admin y app no se modificaron por esta fase.
+- Eventos nuevos/conservados: recognition viewed/continue, `understand_viewed`, `name_submitted`, `evidence_viewed`, `demo_viewed`, `context_selected`, `demo_feedback`, `demo_adaptation_viewed`, `future_experience_viewed`, `access_started`, `email_submitted`, `magic_link_requested`, `magic_link_sent`, `intention_submitted`, `timing_selected`, `first_intervention_received` y `first_intervention_feedback`.
+- Verificación local: funnel, intervention, operational, dashboard, user-detail, intervention-detail, cost-ledger, typecheck, lint y build PASS. QA visual local realizada en 390×844 y 1440×900; se conservaron capturas bajo `output/playwright/`. Magic Link real requiere un buzón/sesión controlados y no se certificó en esta fase.
+
 ## Funnel /descubre — experiencia conversacional final — 2026-10-02
 - Se reconstruyó el tramo público posterior al reconocimiento sin tocar `/`, el onboarding interno, auth, Supabase, el motor ni Hotmart.
 - `/descubre/entiende` ahora explica el fenómeno de volver a dudar de una dirección propia; `/descubre/base` presenta de forma breve el fundamento de implementation intentions y JITAI con enlaces a Gollwitzer & Sheeran (2006) y Hsu et al. (2025), sin claims clínicos.

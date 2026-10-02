@@ -32,6 +32,7 @@ a { text-decoration: none; }
 .funnel-button.full { width: 100%; }
 .funnel-button:disabled { opacity: .45; cursor: not-allowed; }
 .demo-screen, .plans-screen { background: var(--surface); }
+.plans-screen { align-items: flex-start; }
 .demo-title { font-size: clamp(36px, 8vw, 64px) !important; }
 .demo-card { margin-top: 32px; padding: 24px; border: 1px solid color-mix(in oklab, var(--text-primary) 12%, transparent); border-radius: var(--radius-card); background: var(--bg); box-shadow: var(--shadow-1); }
 .card-label { margin-bottom: 12px; color: var(--text-tertiary); }
@@ -49,7 +50,8 @@ a { text-decoration: none; }
 .funnel-note, .billing-note, .privacy-note { color: var(--text-tertiary); font-size: 12px; line-height: 1.5; }
 .funnel-note { margin: 16px 0 0; }
 .plans-screen .funnel-content h1 { font-size: clamp(38px, 8vw, 63px); }
-.trial-line { margin-top: 32px; color: var(--accent); font-family: var(--font-display); font-size: 25px; }
+.plans-screen .funnel-copy { margin-top: 14px; font-size: 16px; line-height: 1.3; }
+.trial-line { margin-top: 18px; color: var(--accent); font-family: var(--font-display); font-size: 21px; line-height: 1.05; }
 .plans-grid { display: grid; gap: 10px; margin-top: 20px; }
 .plan-card { display: block; width: 100%; padding: 20px; border: 1px solid color-mix(in oklab, var(--text-primary) 14%, transparent); border-radius: var(--radius-card); background: var(--bg); color: var(--text-primary); text-align: left; cursor: pointer; }
 .plan-card.selected { border: 2px solid var(--accent); padding: 19px; box-shadow: 0 8px 24px color-mix(in oklab, var(--accent) 13%, transparent); }
@@ -62,6 +64,11 @@ a { text-decoration: none; }
 .plan-price small { margin-left: 5px; color: var(--text-secondary); font-family: var(--font-body); font-size: 13px; letter-spacing: 0; }
 .plan-detail { display: block; margin-top: 12px; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
 .billing-note { margin: 18px 0 0; }
+.plans-screen .plan-card { padding: 14px; }
+.plans-screen .plan-card.selected { padding: 13px; }
+.plans-screen .plan-price { margin-top: 12px; font-size: 29px; }
+.plans-screen .plan-detail { margin-top: 7px; font-size: 10px; line-height: 1.3; }
+.plans-screen .billing-note { margin-top: 10px; font-size: 10px; line-height: 1.3; }
 .privacy-note { margin-top: 12px; text-align: center; }
 .funnel-input { display: block; width: 100%; min-height: 56px; margin-top: 34px; padding: 0 2px; border: 0; border-bottom: 2px solid color-mix(in oklab, var(--text-primary) 20%, transparent); background: transparent; color: var(--text-primary); font-family: var(--font-display); font-size: 28px; outline: none; }
 .funnel-input:focus { border-color: var(--accent); }
@@ -92,6 +99,10 @@ a { text-decoration: none; }
 .story-card .story-quote { margin-top: 18px; color: var(--text-primary); }
 .discover-demo .adapted-card { display: grid; gap: 16px; }
 .discover-demo .adapted-card p + p { padding-top: 16px; border-top: 1px solid color-mix(in oklab, var(--bg) 18%, transparent); }
+.discover-stage .funnel-copy { margin-top: 14px; font-size: 16px; line-height: 1.3; }
+.discover-stage .quiet-lines { margin-top: 18px; padding-top: 12px; padding-bottom: 12px; }
+.discover-stage .quiet-lines p { font-size: 19px; line-height: 1.1; }
+.discover-stage .funnel-button { margin-top: 22px; }
 .field-label { display: block; margin-top: 34px; color: var(--text-tertiary); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .story-screen { background: var(--surface); }
 .story-card, .question-card { margin-top: 28px; padding: 22px; border-radius: var(--radius-card); background: var(--bg); box-shadow: var(--shadow-1); }

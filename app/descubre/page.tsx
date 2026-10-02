@@ -6,9 +6,9 @@ import { motion, useReducedMotion } from 'motion/react';
 import { saveFunnelState, trackFunnel, type FunnelState } from '@/lib/funnel';
 
 const recognition = [
-  ['¿Te pasa que sabes cómo quieres actuar, pero cuando llega el momento te cuesta hacerlo?', 'Sí. Esto me pasa'],
-  ['¿Y que a veces basta con que alguien piense diferente para empezar a dudar de lo que tú querías?', 'Sí. Me pasa'],
-  ['¿Que terminas haciendo lo que la otra persona espera, aunque en el fondo querías otra cosa?', 'Sí. Quiero entenderlo'],
+  ['¿Te ha pasado que sabes lo que quieres… pero cuando llega el momento terminas cediendo, callándote o buscando otra opinión?', 'Sí. Me pasa'],
+  ['¿Que sabes lo que querías decir, pero en la conversación terminas suavizándolo para no incomodar?', 'Sí. También me pasa'],
+  ['¿Que estabas segura de una decisión y, después de escuchar a alguien, empiezas a preguntarte si de verdad estabas equivocada?', 'Sí. Me ha pasado'],
 ] as const;
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -22,11 +22,13 @@ function Step({ index, onNext }: { index: number; onNext: () => void }) {
 export default function DiscoverPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  useEffect(() => { trackFunnel('discover_started'); }, []);
+  useEffect(() => { trackFunnel('discover_started'); trackFunnel('recognition_started'); trackFunnel('recognition_1_viewed'); }, []);
   function next() {
     const event = ('recognition_' + (step + 1) + '_completed') as 'recognition_1_completed' | 'recognition_2_completed' | 'recognition_3_completed';
     trackFunnel(event);
-    if (step === 2) { saveFunnelState({ recognitionComplete: true } satisfies Partial<FunnelState>); router.push('/descubre/entiende'); return; }
+    trackFunnel(`recognition_${step + 1}_continue`);
+    if (step === 2) { saveFunnelState({ recognitionComplete: true } satisfies Partial<FunnelState>); trackFunnel('recognition_completed'); router.push('/descubre/entiende'); return; }
+    trackFunnel(`recognition_${step + 2}_viewed`);
     setStep(value => value + 1);
   }
   return <Step index={step} onNext={next} />;
