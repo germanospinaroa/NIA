@@ -77,6 +77,23 @@ a { text-decoration: none; }
 .email-field:focus-within { border-color: var(--accent); }
 .email-field input { width: 100%; height: 56px; border: 0; background: transparent; color: var(--text-primary); font-size: 20px; outline: none; }
 .funnel-error { margin-top: 14px; color: #9b3128; font-size: 13px; line-height: 1.4; }
+.quiet-lines { margin-top: 28px; padding: 18px 0 18px 18px; border-left: 2px solid var(--accent); }
+.quiet-lines p { margin: 0; color: var(--text-secondary); font-family: var(--font-display); font-size: 22px; line-height: 1.15; }
+.quiet-lines p + p { margin-top: 8px; }
+.small-copy { font-size: 15px; }
+.field-label { display: block; margin-top: 34px; color: var(--text-tertiary); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.story-screen { background: var(--surface); }
+.story-card, .question-card { margin-top: 28px; padding: 22px; border-radius: var(--radius-card); background: var(--bg); box-shadow: var(--shadow-1); }
+.story-card p { margin: 0; font-family: var(--font-display); font-size: 26px; line-height: 1.05; }
+.story-card .card-label { margin-bottom: 16px; font-family: var(--font-body); font-size: 11px; }
+.story-card .story-muted { margin-top: 18px; color: var(--text-secondary); font-size: 21px; }
+.question-card p { margin: 0; font-family: var(--font-display); font-size: 27px; line-height: 1.06; }
+.option-list { display: grid; gap: 9px; margin-top: 24px; }
+.option-button { display: flex; min-height: 56px; align-items: center; justify-content: space-between; gap: 14px; padding: 0 17px; border: 1px solid color-mix(in oklab, var(--text-primary) 16%, transparent); border-radius: 13px; background: var(--bg); color: var(--text-primary); font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; }
+.option-button:hover, .option-button:focus-visible { border-color: var(--accent); background: var(--chip-bg); }
+.option-button svg { color: var(--accent); }
+.story-screen .funnel-content h1 { font-size: clamp(37px, 8vw, 64px); }
+.story-screen .adapted-card { margin-top: 24px; }
 @media (min-width: 700px) { .funnel-header { padding: 0 42px; } .funnel-screen { padding-right: 42px; padding-left: 42px; } .feedback-grid { grid-template-columns: repeat(3, 1fr); } }
 
 #hero { overflow-x: clip; }

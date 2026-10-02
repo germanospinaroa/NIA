@@ -1,5 +1,6 @@
 export type FunnelFeedback = 'as_is' | 'grounded' | 'different';
 export type FunnelPlan = 'monthly' | 'annual';
+export type DemoChoice = 'new_information' | 'doubt' | 'unsure';
 export const checkoutMode: 'bypass' | 'hotmart' = 'bypass';
 export type FunnelState = {
   recognitionComplete: boolean;
@@ -11,6 +12,7 @@ export type FunnelState = {
   directionText?: string;
   contexts?: string[];
   voiceStyle?: 'direct' | 'warm' | 'thoughtful';
+  demoChoice?: DemoChoice;
 };
 const KEY = 'nia_funnel_state';
 export function readFunnelState(): FunnelState {

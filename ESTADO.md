@@ -1,5 +1,17 @@
 # ESTADO — NIA
-Última actualización: 2026-09-30 | Sesión actual: Landing 2.0
+Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
+
+## Funnel /descubre — reconstrucción definitiva — 2026-10-02
+- Reconocimiento conservado en tres pantallas aisladas con el copy aprobado; cada CTA reemplaza la pantalla anterior y no se pide email ni datos al inicio.
+- /descubre/entiende ahora abre una posibilidad de uso: intervención breve, lectura, pausa, respuesta y adaptación progresiva, sin claims científicos ni lenguaje técnico.
+- Añadidas /descubre/nombre y /descubre/dia: el nombre se guarda anónimamente antes de la demo y se usa dinámicamente para presentar un día de uso posible.
+- /descubre/prueba reconstruida como experiencia narrativa determinística: situación → intervención → elección semántica → respuesta adaptada. Las tres respuestas producen estados distintos y se registran feedback/adaptación/completado.
+- Añadida /descubre/continuidad para explicar capacidades reales, qué señales se conservan y por qué el onboarding posterior es corto; el CTA lleva claramente a Ver planes.
+- /descubre/planes mantiene mensual US$6.99 y anual US$39.99, 7 días gratis y selección persistente; el bypass sigue siendo interno y no registra pago, MRR ni venta.
+- Auth no se rehízo: /acceso sigue usando Magic Link Supabase PKCE con /auth/callback; /app permanece protegido. La prueba local llegó hasta email y validó persistencia/refresh del estado. El click real de correo no se certificó sin buzón controlado y sin crear usuarios artificiales.
+- QA visual local: capturas 390×844 de reconocimiento, entiende, nombre, día, intervención, pregunta, adaptación, continuidad, planes y acceso; capturas 375×812, 430×932 y 1440×900 para responsive. Consola: 0 errores en el recorrido probado.
+- Verificado: test:funnel, test:intervention, test:operational, test:dashboard, test:user-detail, test:intervention-detail, test:cost-ledger, typecheck y build PASS; lint PASS con 4 warnings heredados no relacionados.
+- `/` no fue modificado. No se tocaron motor de intervención, semantic judge, embeddings, thresholds, learning, Cost Ledger, admin, schema Supabase, WhatsApp ni Hotmart.
 
 ## Funnel /descubre corregido + auth PKCE — 2026-10-02
 - Reemplazado únicamente el funnel público: /descubre ahora usa tres pantallas de reconocimiento y navega a /descubre/entiende; la landing / no fue modificada.
