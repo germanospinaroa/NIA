@@ -12,6 +12,7 @@
 - QA visual local: capturas 390×844 de reconocimiento, entiende, nombre, día, intervención, pregunta, adaptación, continuidad, planes y acceso; capturas 375×812, 430×932 y 1440×900 para responsive. Consola: 0 errores en el recorrido probado.
 - Verificado: test:funnel, test:intervention, test:operational, test:dashboard, test:user-detail, test:intervention-detail, test:cost-ledger, typecheck y build PASS; lint PASS con 4 warnings heredados no relacionados.
 - `/` no fue modificado. No se tocaron motor de intervención, semantic judge, embeddings, thresholds, learning, Cost Ledger, admin, schema Supabase, WhatsApp ni Hotmart.
+- Deploy production completado en Vercel y aliasado a `https://nia.gritlab.pro`; producción responde con el nuevo `/descubre` sin errores de consola y `/` continúa mostrando la landing vieja.
 
 ## Funnel /descubre corregido + auth PKCE — 2026-10-02
 - Reemplazado únicamente el funnel público: /descubre ahora usa tres pantallas de reconocimiento y navega a /descubre/entiende; la landing / no fue modificada.
