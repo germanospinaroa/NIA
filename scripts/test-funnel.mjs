@@ -32,13 +32,16 @@ assert.match(source, /¿Y que a veces basta con que alguien piense diferente par
 assert.match(source, /¿Que terminas haciendo lo que la otra persona espera, aunque en el fondo querías otra cosa\?/);
 assert.doesNotMatch(source, /la neurociencia demuestra|científicamente probada|transformación garantizada/);
 const onboarding = fs.readFileSync('app/onboarding/page.tsx', 'utf8');
-for (const copy of ['Esto tiene una explicación.', 'Y ahí es donde entra NIA.', 'Ahora quiero conocerte un poquito.', 'Ahora sí. Te quiero mostrar cómo sería.', 'Imagina que hoy tienes algo muy claro.', 'Eso es NIA.']) {
+for (const copy of ['Esto tiene una explicación.', 'Y ahí es donde entra NIA.', 'Antes de seguir, quiero conocerte un poquito.', 'Ahora quiero que lo vivas.', 'Imagina que hoy tienes algo muy claro.', 'Eso es NIA.', 'Y esto es apenas el comienzo.']) {
   assert.match(onboarding, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), copy + ' onboarding copy');
 }
-assert.match(onboarding, /\{name\}, gracias\./, 'dynamic name onboarding copy');
+assert.match(onboarding, /\{name\}, gracias por estar aquí\./, 'dynamic name onboarding copy');
 assert.match(onboarding, /16536643/);
-assert.match(onboarding, /onboardingFeeling|feeling_selected/);
 assert.match(onboarding, /onboardingSituationChoice|demo_response_selected/);
 assert.match(onboarding, /onboardingFollowupChoice|demo_completed/);
+assert.match(onboarding, /Empiezo a dudar\./);
+assert.match(onboarding, /Me mantengo en lo que decidí\./);
+assert.match(onboarding, /Depende mucho de quién me lo diga\./);
+assert.doesNotMatch(onboarding, /Así sí|Más real|Otro enfoque/);
 assert.doesNotMatch(onboarding, /className="eyebrow"|className='eyebrow'/);
 console.log('funnel tests: PASS');

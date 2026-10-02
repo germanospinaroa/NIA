@@ -114,6 +114,11 @@ a { text-decoration: none; }
 .nia-response-card p { margin: 0; font-family: var(--font-display); font-size: 24px; line-height: 1.08; }
 .conversation-options { margin-top: 24px; }
 .onboarding-lines { margin-top: 32px; }
+.onboarding-story-screen .nia-response-card { margin-top: 20px; padding: 18px; }
+.onboarding-story-screen .nia-response-card p { font-size: 20px; line-height: 1.04; }
+.onboarding-story-screen .nia-response-card + .funnel-question { margin-top: 20px; font-size: 23px; }
+.onboarding-story-screen .conversation-options { gap: 8px; margin-top: 16px; }
+.onboarding-story-screen .conversation-options .option-button { min-height: 50px; }
 .onboarding-evidence-screen .funnel-content { max-width: 620px; }
 .onboarding-evidence-screen .funnel-content h1 { font-size: clamp(38px, 8vw, 62px); }
 .onboarding-evidence-screen .funnel-copy { margin-top: 16px; font-size: 16px; line-height: 1.4; }
@@ -123,6 +128,11 @@ a { text-decoration: none; }
 .onboarding-evidence-screen .evidence-link { margin-top: 16px; }
 .onboarding-evidence-screen .funnel-note { margin-top: 8px; font-size: 11px; line-height: 1.35; }
 .onboarding-evidence-screen .funnel-button { margin-top: 20px; }
+.onboarding-problem-screen .funnel-content h1 { font-size: clamp(38px, 8vw, 62px); }
+.onboarding-problem-screen .funnel-copy { margin-top: 16px; font-size: 16px; line-height: 1.4; }
+.onboarding-problem-screen .onboarding-lines { gap: 4px; margin-top: 20px; padding-top: 12px; padding-bottom: 12px; }
+.onboarding-problem-screen .quiet-lines p { font-size: 20px; }
+.onboarding-problem-screen .funnel-button { margin-top: 20px; }
 @keyframes onboarding-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes evidence-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @media (prefers-reduced-motion: reduce) { .onboarding-stage, .evidence-row b { animation: none; } }

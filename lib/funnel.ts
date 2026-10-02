@@ -1,10 +1,9 @@
 export type FunnelFeedback = 'as_is' | 'grounded' | 'different';
 export type FunnelPlan = 'monthly' | 'annual';
 export type DemoChoice = 'new_information' | 'doubt' | 'unsure';
-export type OnboardingFeeling = 'heavy' | 'uncertain' | 'ready';
-export type OnboardingSituationChoice = 'new_information' | 'self_doubt' | 'unsure';
-export type OnboardingFollowupChoice = 'yes' | 'no' | 'think' | 'new_information' | 'self_doubt' | 'unsure';
-export type OnboardingStage = 'name' | 'connection' | 'evidence' | 'nia' | 'feeling' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'direction' | 'contexts' | 'voice' | 'ready';
+export type OnboardingSituationChoice = 'doubt' | 'firm' | 'source_dependent';
+export type OnboardingFollowupChoice = 'new_information' | 'only_doubt' | 'unsure' | 'yes' | 'no' | 'think' | 'decision_changed' | 'confidence_changed';
+export type OnboardingStage = 'name' | 'connection' | 'problem' | 'evidence' | 'nia' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'personalization' | 'mechanism' | 'direction' | 'contexts' | 'voice' | 'ready';
 export const checkoutMode: 'bypass' | 'hotmart' = 'bypass';
 export type FunnelState = {
   recognitionComplete: boolean;
@@ -18,7 +17,6 @@ export type FunnelState = {
   voiceStyle?: 'direct' | 'warm' | 'thoughtful';
   demoChoice?: DemoChoice;
   onboardingStage?: OnboardingStage;
-  onboardingFeeling?: OnboardingFeeling;
   onboardingSituationChoice?: OnboardingSituationChoice;
   onboardingFollowupChoice?: OnboardingFollowupChoice;
 };

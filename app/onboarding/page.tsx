@@ -5,26 +5,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Check, ExternalLink } from 'lucide-react';
 import { FunnelFrame } from '@/components/funnel/FunnelFrame';
-import { readFunnelState, saveFunnelState, trackFunnel, type FunnelState, type OnboardingFollowupChoice, type OnboardingFeeling, type OnboardingSituationChoice, type OnboardingStage } from '@/lib/funnel';
+import { readFunnelState, saveFunnelState, trackFunnel, type FunnelState, type OnboardingFollowupChoice, type OnboardingSituationChoice, type OnboardingStage } from '@/lib/funnel';
 import { defaultMvpState, saveMvpState, trackMvp } from '@/lib/mvp';
 
 const contextOptions = ['Conversaciones difíciles', 'Poner límites', 'Tomar decisiones', 'Cuando empiezo a dudar de mí'];
 const voices = [['direct', 'Directa'], ['warm', 'Cálida'], ['thoughtful', 'Que me haga pensar']] as const;
-const stages: OnboardingStage[] = ['name', 'connection', 'evidence', 'nia', 'feeling', 'demo_intro', 'situation', 'response', 'explain', 'direction', 'contexts', 'voice', 'ready'];
+const stages: OnboardingStage[] = ['name', 'connection', 'problem', 'evidence', 'nia', 'demo_intro', 'situation', 'response', 'explain', 'personalization', 'mechanism', 'direction', 'contexts', 'voice', 'ready'];
 const situationOptions: Array<{ value: OnboardingSituationChoice; label: string }> = [
-  { value: 'new_information', label: 'Me hizo ver algo que no había considerado.' },
-  { value: 'self_doubt', label: 'Me hizo empezar a dudar de mí.' },
-  { value: 'unsure', label: 'Todavía no sé.' },
+  { value: 'doubt', label: 'Empiezo a dudar.' },
+  { value: 'firm', label: 'Me mantengo en lo que decidí.' },
+  { value: 'source_dependent', label: 'Depende mucho de quién me lo diga.' },
 ];
 const followupOptions: Array<{ value: OnboardingFollowupChoice; label: string }> = [
-  { value: 'yes', label: 'Sí.' },
-  { value: 'no', label: 'No.' },
-  { value: 'think', label: 'Necesito pensarlo.' },
-];
-const feelingOptions: Array<{ value: OnboardingFeeling; label: string }> = [
-  { value: 'heavy', label: 'Me pasa y me pesa.' },
-  { value: 'uncertain', label: 'Me pasa, pero todavía no sé cómo cambiarlo.' },
-  { value: 'ready', label: 'Quiero empezar a hacerlo diferente.' },
+  { value: 'new_information', label: 'Algo nuevo.' },
+  { value: 'only_doubt', label: 'Solo empecé a dudar.' },
+  { value: 'unsure', label: 'No estoy segura.' },
 ];
 
 function isStage(value: unknown): value is OnboardingStage {
@@ -39,7 +34,6 @@ export default function OnboardingPage() {
   const [direction, setDirection] = useState('');
   const [contexts, setContexts] = useState<string[]>([]);
   const [voice, setVoice] = useState<'direct' | 'warm' | 'thoughtful'>('direct');
-  const [feeling, setFeeling] = useState<OnboardingFeeling>();
   const [situationChoice, setSituationChoice] = useState<OnboardingSituationChoice>();
 
   useEffect(() => {
@@ -55,7 +49,6 @@ export default function OnboardingPage() {
     setDirection(funnel.directionText || '');
     setContexts(funnel.contexts || []);
     if (funnel.voiceStyle) setVoice(funnel.voiceStyle);
-    setFeeling(funnel.onboardingFeeling);
     setSituationChoice(funnel.onboardingSituationChoice);
     saveFunnelState({ onboardingStage: initialStage });
     trackFunnel('onboarding_started');
@@ -70,13 +63,6 @@ export default function OnboardingPage() {
     persist({ onboardingStage: next });
     trackFunnel('onboarding_step_completed', { from: stage, to: next, ...properties });
     setStage(next);
-  }
-
-  function chooseFeeling(value: OnboardingFeeling) {
-    setFeeling(value);
-    persist({ onboardingFeeling: value });
-    trackFunnel('feeling_selected', { feeling: value });
-    go('demo_intro');
   }
 
   function chooseSituation(value: OnboardingSituationChoice) {
@@ -107,27 +93,44 @@ export default function OnboardingPage() {
   }
 
   const stepNumber = useMemo(() => ({ direction: 1, contexts: 2, voice: 3, ready: 4 }[stage as 'direction' | 'contexts' | 'voice' | 'ready']), [stage]);
-  const responseCopy = situationChoice === 'new_information'
-    ? <>Entonces quizá sí apareció información nueva.<br /><br />No tienes que defender tu decisión solo porque ya la habías tomado. Puedes revisarla. Pero revisarla porque tú quieres, no simplemente porque alguien dudó de ella.</>
-    : situationChoice === 'self_doubt'
-      ? <>Entonces no necesitas tomar una nueva decisión todavía.<br /><br />Vuelve un segundo a la razón por la que habías decidido decir que no.</>
-      : <>Está bien.<br /><br />No todo tiene que resolverse en el mismo momento. Antes de cambiar de opinión, intenta separar dos cosas:<br /><br />¿Apareció algo nuevo... o simplemente apareció la duda?</>;
+  const responseCopy = situationChoice === 'doubt'
+    ? <>Espera un segundo.<br /><br />Que ahora estés dudando no significa necesariamente que tu decisión haya cambiado.<br /><br />Puede haber aparecido información nueva. O puede haber aparecido simplemente la duda.<br /><br />Vamos a separar una cosa de la otra.</>
+    : situationChoice === 'firm'
+      ? <>Eso también es información.<br /><br />No necesitas defender tu decisión solo porque alguien la cuestionó. Pero tampoco tienes que aferrarte a ella.<br /><br />La pregunta es: ¿sigues eligiéndola porque tiene sentido para ti?</>
+      : <>Eso también dice algo.<br /><br />La persona que tienes delante puede cambiar cuánto dudas de lo que tú misma habías decidido.<br /><br />Vamos a mirar una cosa: ¿cambió tu decisión... o cambió la confianza que tienes en ella?</>;
+  const personalizationCopy = situationChoice === 'doubt'
+    ? <>Acabas de decirme que cuando alguien cuestiona una decisión, empiezas a dudar.</>
+    : situationChoice === 'firm'
+      ? <>Acabas de decirme que puedes mantenerte en lo que decidiste aunque alguien lo cuestione.</>
+      : <>Acabas de decirme que cuánto dudas puede depender de quién tienes delante.</>;
 
   return <FunnelFrame>
-    <section className={'funnel-screen onboarding-story-screen ' + (stage === 'evidence' ? 'onboarding-evidence-screen' : '')}>
+    <section className={'funnel-screen onboarding-story-screen ' + (stage === 'evidence' ? 'onboarding-evidence-screen' : stage === 'problem' ? 'onboarding-problem-screen' : '')}>
       <div className="funnel-content narrow onboarding-stage" key={stage}>
         {stage === 'name' && <>
-          <h1>¿Cómo quieres que te llame?</h1>
+          <h1>Antes de seguir, quiero conocerte un poquito.</h1>
+          <p className="funnel-copy">Si voy a acompañarte en esto, quiero hacerlo contigo.</p>
+          <p className="funnel-question">¿Cómo te llamas?</p>
           <input autoFocus className="funnel-input" value={name} onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && name.trim()) { persist({ firstName: name.trim() }); trackFunnel('onboarding_name_completed'); go('connection'); } }} placeholder="Tu nombre" autoComplete="given-name" />
           <button className="funnel-button" disabled={!name.trim()} onClick={() => { persist({ firstName: name.trim() }); trackFunnel('onboarding_name_completed'); go('connection'); }}>Continuar <ArrowRight size={17} /></button>
         </>}
 
         {stage === 'connection' && <>
-          <h1>{name}, gracias.</h1>
+          <h1>{name}, gracias por estar aquí.</h1>
           <p className="funnel-copy strong">Y antes de enseñarte NIA, quiero contarte algo.</p>
           <p className="funnel-copy">Lo que acabas de reconocer no significa que no sepas lo que quieres.<br /><br />Muchas veces lo sabemos.<br /><br />Lo difícil aparece cuando llega el momento de actuar.</p>
           <p className="funnel-note onboarding-note">No voy a pedirte que me cuentes toda tu vida. Solo quiero mostrarte por qué NIA funciona de la forma en que funciona.</p>
-          <button className="funnel-button" onClick={() => go('evidence')}>Quiero entender <ArrowRight size={17} /></button>
+          <button className="funnel-button" onClick={() => go('problem')}>Quiero entender <ArrowRight size={17} /></button>
+        </>}
+
+        {stage === 'problem' && <>
+          <h1>{name}, hay algo importante que quiero que entiendas.</h1>
+          <p className="funnel-copy">A veces sabes perfectamente qué quieres hacer.</p>
+          <p className="funnel-copy">Incluso puedes haberlo decidido.</p>
+          <p className="funnel-copy">Y aun así, cuando llega el momento, algo cambia.</p>
+          <div className="quiet-lines onboarding-lines"><p>Una opinión.</p><p>Una reacción.</p><p>Un comentario.</p><p>Una duda.</p></div>
+          <p className="funnel-copy">Y empiezas a preguntarte si realmente deberías hacer eso que tú habías decidido.</p>
+          <button className="funnel-button" onClick={() => go('evidence')}>Quiero entenderlo <ArrowRight size={17} /></button>
         </>}
 
         {stage === 'evidence' && <>
@@ -148,31 +151,24 @@ export default function OnboardingPage() {
           <h1>Y ahí es donde entra NIA.</h1>
           <p className="funnel-copy">No quiero decirte qué hacer.</p>
           <p className="funnel-copy">Tampoco quiero convencerte de que siempre tienes razón.</p>
-          <p className="funnel-copy">Quiero ayudarte a volver a escucharte cuando algo o alguien empieza a hacerte dudar de ti.</p>
-          <p className="funnel-copy strong">Y hacerlo en el momento en que realmente importa.</p>
-          <button className="funnel-button" onClick={() => { trackFunnel('nia_intro_viewed'); go('feeling'); }}>Quiero verlo <ArrowRight size={17} /></button>
-        </>}
-
-        {stage === 'feeling' && <>
-          <h1>Ahora quiero conocerte un poquito.</h1>
-          <p className="funnel-copy">No necesito que me cuentes toda tu historia.</p>
-          <p className="funnel-copy strong">Solo dime algo.</p>
-          <p className="funnel-question">¿Cómo te sientes hoy con eso que acabamos de hablar?</p>
-          <div className="choice-list conversation-options">{feelingOptions.map(option => <button key={option.value} type="button" className={'choice-card ' + (feeling === option.value ? 'selected' : '')} aria-pressed={feeling === option.value} onClick={() => chooseFeeling(option.value)}><span>{option.label}</span>{feeling === option.value && <Check size={17} />}</button>)}</div>
+          <p className="funnel-copy">Está para ayudarte a volver a tu propio criterio cuando algo empieza a moverlo.</p>
+          <p className="funnel-copy">No quiere darte consejos que podrían servirle a cualquiera.</p>
+          <p className="funnel-copy strong">Quiere entender lo que estás viviendo y hacerlo cerca del momento en que realmente lo necesitas.</p>
+          <button className="funnel-button" onClick={() => { trackFunnel('nia_intro_viewed'); go('demo_intro'); }}>Quiero verlo <ArrowRight size={17} /></button>
         </>}
 
         {stage === 'demo_intro' && <>
-          <h1>Ahora sí. Te quiero mostrar cómo sería.</h1>
-          <p className="funnel-copy">No es una frase bonita.</p>
-          <p className="funnel-copy">No es un consejo.</p>
-          <p className="funnel-copy">Es una situación, una intervención y una respuesta tuya.</p>
-          <p className="funnel-copy strong">Y según lo que respondas, NIA cambia lo que viene después.</p>
-          <button className="funnel-button" onClick={() => { trackFunnel('demo_started'); trackFunnel('demo_situation_viewed'); go('situation'); }}>Muéstramelo <ArrowRight size={17} /></button>
+          <h1>Ahora quiero que lo vivas.</h1>
+          <p className="funnel-copy">Te voy a mostrar una situación sencilla.</p>
+          <p className="funnel-copy">Tú vas a responder como responderías normalmente.</p>
+          <p className="funnel-copy">Después voy a enseñarte qué haría NIA con lo que acabas de decir.</p>
+          <p className="funnel-copy strong">Así vas a entenderlo mucho mejor que si simplemente te lo explicara.</p>
+          <button className="funnel-button" onClick={() => { trackFunnel('demo_started'); trackFunnel('demo_situation_viewed'); go('situation'); }}>Quiero verlo <ArrowRight size={17} /></button>
         </>}
 
         {stage === 'situation' && <>
           <h1>Imagina que hoy tienes algo muy claro.</h1>
-          <div className="onboarding-situation"><p>Decidiste que esta vez vas a decir que no.</p><p>No quieres hacerlo. No porque alguien te haya dicho que está mal, sino porque tú sabes que no quieres.</p><p className="situation-quote">Y justo antes de hacerlo, alguien te dice:<br /><strong>“¿Segura? Yo creo que deberías pensarlo mejor.”</strong></p></div>
+          <div className="onboarding-situation"><p>Has decidido decir que no.</p><p>Lo pensaste. Sabes por qué quieres hacerlo. Incluso sabes que probablemente sea lo mejor para ti.</p><p className="situation-quote">Pero cuando finalmente lo dices, la otra persona responde:<br /><strong>“¿Segura? Yo pensé que tú sí querías hacerlo.”</strong></p></div>
           <p className="funnel-question">¿Qué pasa contigo en ese momento?</p>
           <div className="option-list conversation-options">{situationOptions.map(option => <button key={option.value} className="option-button" onClick={() => chooseSituation(option.value)}>{option.label}<ArrowRight size={16} /></button>)}</div>
         </>}
@@ -180,18 +176,33 @@ export default function OnboardingPage() {
         {stage === 'response' && <>
           <h1>NIA responde a lo que acabas de decir.</h1>
           <div className="nia-response-card"><p>{responseCopy}</p></div>
-          <p className="funnel-question">{situationChoice === 'unsure' ? '¿Qué te parece más cercano ahora?' : '¿Sigue teniendo sentido para ti?'}</p>
-          <div className="option-list conversation-options">{(situationChoice === 'unsure' ? [{ value: 'new_information' as const, label: 'Algo nuevo.' }, { value: 'self_doubt' as const, label: 'Solo duda.' }, { value: 'unsure' as const, label: 'No lo sé todavía.' }] : followupOptions).map(option => <button key={option.value} className="option-button" onClick={() => chooseFollowup(option.value as OnboardingFollowupChoice)}>{option.label}<ArrowRight size={16} /></button>)}</div>
+          <p className="funnel-question">{situationChoice === 'doubt' ? '¿Qué cambió realmente?' : situationChoice === 'firm' ? '¿Sigues eligiéndola porque tiene sentido para ti?' : '¿Qué cambió más: tu decisión o la confianza que tienes en ella?'}</p>
+          <div className="option-list conversation-options">{(situationChoice === 'doubt' ? followupOptions : situationChoice === 'firm' ? [{ value: 'yes' as const, label: 'Sí.' }, { value: 'no' as const, label: 'No.' }, { value: 'think' as const, label: 'Necesito pensarlo.' }] : [{ value: 'decision_changed' as const, label: 'Mi decisión cambió.' }, { value: 'confidence_changed' as const, label: 'Solo cambió mi confianza.' }, { value: 'unsure' as const, label: 'No lo sé.' }]).map(option => <button key={option.value} className="option-button" onClick={() => chooseFollowup(option.value)}>{option.label}<ArrowRight size={16} /></button>)}</div>
         </>}
 
         {stage === 'explain' && <>
           <h1>Eso es NIA.</h1>
           <p className="funnel-copy">NIA no decide por ti.</p>
           <p className="funnel-copy">No intenta convencerte.</p>
-          <p className="funnel-copy">Te ayuda a separar lo que realmente cambió de aquello que simplemente hizo que empezaras a dudar de ti.</p>
-          <p className="funnel-copy">Y cuanto más interactúas con ella, más puede ajustar qué tipo de apoyo tiene sentido para ti.</p>
-          <div className="quiet-lines onboarding-lines"><p>Tu intención importa.</p><p>Pero también importa el momento en que aparece la situación.</p><p>Por eso NIA quiere aparecer cerca del momento en que algo cambia.</p></div>
-          <button className="funnel-button" onClick={() => go('direction')}>Continuar <ArrowRight size={17} /></button>
+          <p className="funnel-copy">Tomó lo que acababas de decir y te ayudó a mirar la situación desde otro lugar.</p>
+          <p className="funnel-copy">Y si mañana te ocurre algo parecido, NIA no tendría que empezar desde cero.</p>
+          <button className="funnel-button" onClick={() => go('personalization')}>Continuar <ArrowRight size={17} /></button>
+        </>}
+
+        {stage === 'personalization' && <>
+          <h1>{name}, fíjate en algo.</h1>
+          <p className="funnel-copy">{personalizationCopy}</p>
+          <p className="funnel-copy">Por eso NIA no debería responderte igual que a alguien que acaba de decir otra cosa.</p>
+          <p className="funnel-copy strong">Tu respuesta cambia lo que viene después.</p>
+          <button className="funnel-button" onClick={() => go('mechanism')}>Quiero entenderlo <ArrowRight size={17} /></button>
+        </>}
+
+        {stage === 'mechanism' && <>
+          <h1>Y esto es apenas el comienzo.</h1>
+          <p className="funnel-copy">Con el tiempo, NIA puede conocer mejor qué quieres cambiar, qué situaciones te cuestan y qué tipo de intervención te ayuda más.</p>
+          <p className="funnel-copy">Así, cuando aparezca una situación importante, no recibes una frase genérica.</p>
+          <p className="funnel-copy strong">Recibes algo construido alrededor de lo que tú estás viviendo.</p>
+          <button className="funnel-button" onClick={() => { trackFunnel('onboarding_deep_started'); go('direction'); }}>Continuar <ArrowRight size={17} /></button>
         </>}
 
         {stage === 'direction' && <>

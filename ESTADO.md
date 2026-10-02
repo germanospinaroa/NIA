@@ -1,6 +1,16 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Onboarding definitivo — revisión integral — 2026-10-02
+- `/onboarding` ahora sigue: nombre → conexión humana → explicación del fenómeno → evidencia → por qué existe NIA → explicación de la experiencia → situación → adaptación → explicación de lo vivido → personalización dinámica → mecanismo → onboarding funcional.
+- Elimina la pregunta emocional previa porque no alimentaba ninguna decisión real del sistema. La personalización demostrada usa nombre, respuesta de situación y respuesta adaptativa, y se conserva en el estado existente.
+- La demo usa las tres respuestas solicitadas: `Empiezo a dudar`, `Me mantengo en lo que decidí` y `Depende mucho de quién me lo diga`; cada una produce una intervención y una segunda pregunta diferentes.
+- La evidencia usa exclusivamente `docs/EVIDENCE-NIA.md` y PubMed 16536643: Webb & Sheeran (2006), 47 pruebas, `d = 0.66` para intención y `d = 0.36` para conducta. No se incorporó la segunda cifra sobre influencia del consejo porque no está respaldada en la documentación local disponible.
+- No se tocaron auth, Magic Link/PKCE, Supabase, `/api/profile`, selección de plan, bypass, motor de intervención, semantic judge, learning, Cost Ledger, dashboard ni `/`.
+- QA Playwright local: flujo completo del onboarding, refresh en respuesta adaptativa, ramas `doubt` y `firm`, 390×844 y 1440×900; sin errores de consola. Capturas en `output/playwright/onboarding-v2-*.png`.
+- Tests PASS: funnel, intervention, operational, dashboard, user-detail, intervention-detail, cost-ledger, `npx tsc --noEmit`, lint (4 warnings heredados) y build.
+- QA visual ajustada: la pantalla de explicación del fenómeno y la respuesta adaptativa mantienen CTA/opciones visibles en 390×844 tras compactar únicamente esas variantes.
+
 ## Onboarding conversacional — reconstrucción — 2026-10-02
 - `/onboarding` conserva la misma ruta, autenticación, persistencia anónima, sincronización con `/api/profile`, preguntas funcionales y salida a `/app`; se reconstruyó la experiencia anterior a esas preguntas.
 - Nueva secuencia: conexión con nombre dinámico → explicación de la brecha intención/conducta → evidencia Webb & Sheeran con disclosure y enlace PubMed → presentación de NIA → sentimiento conversacional → introducción de la experiencia → situación concreta → respuesta adaptativa → explicación del mecanismo → onboarding funcional existente.
