@@ -9,7 +9,7 @@
 - Acceso usa el sistema Supabase existente mediante magic link; no se creó auth paralelo. Home sigue protegida por sesión real.
 - QA Playwright local completada en 390 y 375 px; captura de reconocimiento desktop en 1440 px. Refresh de planes sin error de hidratación y consola sin errores en el caso probado.
 - Verificado: npm run test:funnel, typecheck, lint, build y tests existentes de intervention/operational/dashboard/user-detail/intervention-detail/cost-ledger.
-- Pendiente: deploy/push de este cambio y validación end-to-end con una sesión real de Supabase para completar acceso → onboarding → /app; Hotmart sigue fuera de alcance.
+- Push completado en commit 42cd94a y producción verificada: /, /descubre, /descubre/entiende, /descubre/prueba, /descubre/planes, /acceso y /onboarding devuelven HTTP 200. Falta únicamente validar end-to-end con una sesión real de Supabase para completar acceso → onboarding → /app; Hotmart sigue fuera de alcance.
 
 ## Fase 4A — Operational Data Foundation
 - Implementado y reconciliado con Supabase remoto: `execution_runs`, `generation_attempts`, `execution_provider_calls`, `event_log` y `admin_audit_log` en `supabase/migrations/20261001042354_operational_data_foundation.sql`. La migration remota figura aplicada como `20261001042354_operational_data_foundation`.
