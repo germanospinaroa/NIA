@@ -1,6 +1,16 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Onboarding conversacional — reconstrucción — 2026-10-02
+- `/onboarding` conserva la misma ruta, autenticación, persistencia anónima, sincronización con `/api/profile`, preguntas funcionales y salida a `/app`; se reconstruyó la experiencia anterior a esas preguntas.
+- Nueva secuencia: conexión con nombre dinámico → explicación de la brecha intención/conducta → evidencia Webb & Sheeran con disclosure y enlace PubMed → presentación de NIA → sentimiento conversacional → introducción de la experiencia → situación concreta → respuesta adaptativa → explicación del mecanismo → onboarding funcional existente.
+- La evidencia usa únicamente `docs/EVIDENCE-NIA.md`: 47 pruebas, `d = 0.66` para intención y `d = 0.36` para conducta; se aclara que no son porcentajes ni miden NIA.
+- Se añadieron al estado funnel `onboardingStage`, `onboardingFeeling`, `onboardingSituationChoice` y `onboardingFollowupChoice`; se reutilizan `sessionStorage`/`localStorage` y `trackFunnel`, sin tablas ni sistemas paralelos.
+- La situación tiene tres respuestas determinísticas y cada una cambia la intervención mostrada; la respuesta y la continuación se persisten antes de seguir.
+- Se eliminaron eyebrows de programación del onboarding. La identidad visual se mantuvo: marfil, serif editorial, sans, coral y transiciones suaves.
+- QA Playwright local: conexión, evidencia, NIA, sentimiento, introducción, situación, respuesta para información nueva y duda personal, explicación, refresh intermedio, dirección, contextos, voz y resumen final; 390×844 y 1440×900, consola sin errores.
+- Verificado: `npm run test:funnel`, `npm run typecheck`, `npm run lint` y `npm run build` PASS. Lint conserva 4 warnings heredados fuera de onboarding.
+
 ## Funnel /descubre — reconstrucción definitiva — 2026-10-02
 - Reconocimiento conservado en tres pantallas aisladas con el copy aprobado; cada CTA reemplaza la pantalla anterior y no se pide email ni datos al inicio.
 - /descubre/entiende ahora abre una posibilidad de uso: intervención breve, lectura, pausa, respuesta y adaptación progresiva, sin claims científicos ni lenguaje técnico.

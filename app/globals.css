@@ -94,6 +94,38 @@ a { text-decoration: none; }
 .option-button svg { color: var(--accent); }
 .story-screen .funnel-content h1 { font-size: clamp(37px, 8vw, 64px); }
 .story-screen .adapted-card { margin-top: 24px; }
+.onboarding-story-screen { background: var(--bg); }
+.onboarding-stage { animation: onboarding-enter 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+.onboarding-note { max-width: 480px; margin-top: 32px; }
+.evidence-card { display: grid; gap: 24px; margin-top: 32px; padding: 24px 20px; border: 1px solid color-mix(in oklab, var(--text-primary) 12%, transparent); border-radius: var(--radius-card); background: var(--surface); }
+.evidence-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; }
+.evidence-row span { color: var(--text-tertiary); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.evidence-row strong { font-family: var(--font-display); font-size: 22px; font-weight: 500; }
+.evidence-row i { display: block; grid-column: 1 / -1; height: 8px; overflow: hidden; border-radius: 999px; background: color-mix(in oklab, var(--text-primary) 10%, transparent); }
+.evidence-row b { display: block; height: 100%; border-radius: inherit; background: var(--accent); animation: evidence-grow 650ms cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left; }
+.evidence-simple { color: var(--text-primary); }
+.evidence-simple strong { font-family: var(--font-display); font-size: 24px; font-weight: 500; line-height: 1.08; }
+.evidence-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; color: var(--text-primary); font-size: 13px; font-weight: 750; text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--accent) 65%, transparent); text-underline-offset: 4px; }
+.onboarding-situation { margin-top: 32px; padding: 24px; border-left: 2px solid var(--accent); background: var(--surface); color: var(--text-secondary); font-family: var(--font-display); font-size: 22px; line-height: 1.12; }
+.onboarding-situation p { margin: 0; }
+.onboarding-situation p + p { margin-top: 16px; }
+.onboarding-situation .situation-quote { color: var(--text-primary); }
+.nia-response-card { margin-top: 32px; padding: 24px; border-radius: var(--radius-card); background: var(--text-primary); color: var(--bg); box-shadow: var(--shadow-1); }
+.nia-response-card p { margin: 0; font-family: var(--font-display); font-size: 24px; line-height: 1.08; }
+.conversation-options { margin-top: 24px; }
+.onboarding-lines { margin-top: 32px; }
+.onboarding-evidence-screen .funnel-content { max-width: 620px; }
+.onboarding-evidence-screen .funnel-content h1 { font-size: clamp(38px, 8vw, 62px); }
+.onboarding-evidence-screen .funnel-copy { margin-top: 16px; font-size: 16px; line-height: 1.4; }
+.onboarding-evidence-screen .evidence-card { gap: 16px; margin-top: 24px; padding: 16px; }
+.onboarding-evidence-screen .evidence-simple { margin-top: 16px; }
+.onboarding-evidence-screen .evidence-simple strong { font-size: 21px; }
+.onboarding-evidence-screen .evidence-link { margin-top: 16px; }
+.onboarding-evidence-screen .funnel-note { margin-top: 8px; font-size: 11px; line-height: 1.35; }
+.onboarding-evidence-screen .funnel-button { margin-top: 20px; }
+@keyframes onboarding-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes evidence-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .onboarding-stage, .evidence-row b { animation: none; } }
 @media (min-width: 700px) { .funnel-header { padding: 0 42px; } .funnel-screen { padding-right: 42px; padding-left: 42px; } .feedback-grid { grid-template-columns: repeat(3, 1fr); } }
 
 #hero { overflow-x: clip; }

@@ -1,6 +1,10 @@
 export type FunnelFeedback = 'as_is' | 'grounded' | 'different';
 export type FunnelPlan = 'monthly' | 'annual';
 export type DemoChoice = 'new_information' | 'doubt' | 'unsure';
+export type OnboardingFeeling = 'heavy' | 'uncertain' | 'ready';
+export type OnboardingSituationChoice = 'new_information' | 'self_doubt' | 'unsure';
+export type OnboardingFollowupChoice = 'yes' | 'no' | 'think' | 'new_information' | 'self_doubt' | 'unsure';
+export type OnboardingStage = 'name' | 'connection' | 'evidence' | 'nia' | 'feeling' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'direction' | 'contexts' | 'voice' | 'ready';
 export const checkoutMode: 'bypass' | 'hotmart' = 'bypass';
 export type FunnelState = {
   recognitionComplete: boolean;
@@ -13,6 +17,10 @@ export type FunnelState = {
   contexts?: string[];
   voiceStyle?: 'direct' | 'warm' | 'thoughtful';
   demoChoice?: DemoChoice;
+  onboardingStage?: OnboardingStage;
+  onboardingFeeling?: OnboardingFeeling;
+  onboardingSituationChoice?: OnboardingSituationChoice;
+  onboardingFollowupChoice?: OnboardingFollowupChoice;
 };
 const KEY = 'nia_funnel_state';
 export function readFunnelState(): FunnelState {
