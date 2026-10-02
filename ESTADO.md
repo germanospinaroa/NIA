@@ -1,7 +1,7 @@
 # ESTADO — NIA
 Última actualización: 2026-09-30 | Sesión actual: Landing 2.0
 
-## Funnel /descubre reconstruido — 2026-10-02
+## Funnel /descubre corregido + auth PKCE — 2026-10-02
 - Reemplazado únicamente el funnel público: /descubre ahora usa tres pantallas de reconocimiento y navega a /descubre/entiende; la landing / no fue modificada.
 - Añadidas pantallas aisladas /descubre/entiende, /descubre/prueba y /descubre/planes, además de /acceso; la microdemo tiene tres respuestas con adaptación visible y eventos microdemo_feedback/microdemo_adapted.
 - Planes funcionales en modo checkoutMode = bypass: mensual US$6.99 y anual US$39.99, ambos con 7 días gratis, selección persistente en sessionStorage, sin Hotmart, pagos ficticios ni MRR.
@@ -10,6 +10,11 @@
 - QA Playwright local completada en 390 y 375 px; captura de reconocimiento desktop en 1440 px. Refresh de planes sin error de hidratación y consola sin errores en el caso probado.
 - Verificado: npm run test:funnel, typecheck, lint, build y tests existentes de intervention/operational/dashboard/user-detail/intervention-detail/cost-ledger.
 - Push completado en commit 42cd94a y producción verificada: /, /descubre, /descubre/entiende, /descubre/prueba, /descubre/planes, /acceso y /onboarding devuelven HTTP 200. Falta únicamente validar end-to-end con una sesión real de Supabase para completar acceso → onboarding → /app; Hotmart sigue fuera de alcance.
+- Corrección definitiva: las tres pantallas iniciales usan exactamente el copy de reconocimiento aprobado, sin eyebrow, contador ni preguntas secundarias; cada CTA reemplaza la pantalla actual.
+- /descubre/entiende reescrito desde la influencia externa y la dirección propia; /descubre/planes ya no muestra lenguaje interno de bypass. El estado anónimo se duplica en sessionStorage/localStorage para conservar plan, feedback y progreso.
+- Magic Link endurecido con Supabase PKCE explícito y /auth/callback: exchangeCodeForSession valida el code, escribe cookies SSR y redirige solo a una ruta local segura. Supabase remoto reporta email habilitado y autoconfirmación desactivada.
+- Guards verificados localmente: /app anónimo → 307 /login; /api/profile anónimo → 401; /auth/callback sin code → 307 /acceso?error=missing_code. La apertura de un correo real no se ejecutó sin una cuenta/buzón controlado, para no crear usuarios artificiales ni enviar correo no autorizado.
+- QA Playwright v2: 390×844, 375×812, 430×932 y 1440×900; reconocimiento, transición, microdemo, plan mensual persistente tras refresh y consola sin errores.
 
 ## Fase 4A — Operational Data Foundation
 - Implementado y reconciliado con Supabase remoto: `execution_runs`, `generation_attempts`, `execution_provider_calls`, `event_log` y `admin_audit_log` en `supabase/migrations/20261001042354_operational_data_foundation.sql`. La migration remota figura aplicada como `20261001042354_operational_data_foundation`.

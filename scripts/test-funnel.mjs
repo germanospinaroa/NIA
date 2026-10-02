@@ -7,6 +7,7 @@ const files = [
   'app/descubre/prueba/page.tsx',
   'app/descubre/planes/page.tsx',
   'app/acceso/page.tsx',
+  'app/auth/callback/route.ts',
   'app/onboarding/page.tsx',
   'app/paywall/page.tsx',
 ];
@@ -18,5 +19,9 @@ for (const event of ['recognition_1_completed', 'recognition_2_completed', 'reco
 assert.match(source, /US\$6\.99/);
 assert.match(source, /US\$39\.99/);
 assert.doesNotMatch(source, /Continuar a Hotmart|Oferta bloqueada|Hotmart todavía no está conectado/);
+assert.doesNotMatch(source, /Sin pago real en esta fase de prueba/);
 assert.match(fs.readFileSync('lib/funnel.ts', 'utf8'), /checkoutMode.*bypass/);
+assert.match(fs.readFileSync('app/auth/callback/route.ts', 'utf8'), /exchangeCodeForSession/);
+assert.match(fs.readFileSync('app/acceso/page.tsx', 'utf8'), /auth\.signInWithOtp/);
+assert.match(fs.readFileSync('app/acceso/page.tsx', 'utf8'), /auth\/callback\?next=\/onboarding/);
 console.log('funnel tests: PASS');

@@ -15,11 +15,16 @@ export type FunnelState = {
 const KEY = 'nia_funnel_state';
 export function readFunnelState(): FunnelState {
   if (typeof window === 'undefined') return { recognitionComplete: false };
-  try { return { recognitionComplete: false, ...JSON.parse(sessionStorage.getItem(KEY) || '{}') }; } catch { return { recognitionComplete: false }; }
+  try {
+    const raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || '{}';
+    return { recognitionComplete: false, ...JSON.parse(raw) };
+  } catch { return { recognitionComplete: false }; }
 }
 export function saveFunnelState(patch: Partial<FunnelState>) {
   if (typeof window === 'undefined') return;
-  sessionStorage.setItem(KEY, JSON.stringify({ ...readFunnelState(), ...patch }));
+  const next = JSON.stringify({ ...readFunnelState(), ...patch });
+  sessionStorage.setItem(KEY, next);
+  localStorage.setItem(KEY, next);
 }
 export function trackFunnel(name: string, properties: Record<string, string | number | boolean> = {}) {
   if (typeof window === 'undefined') return;

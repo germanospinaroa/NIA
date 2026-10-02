@@ -6,18 +6,18 @@ import { motion, useReducedMotion } from 'motion/react';
 import { saveFunnelState, trackFunnel, type FunnelState } from '@/lib/funnel';
 
 const recognition = [
-  ['Antes de una conversación que llevas días evitando.', '¿Te pasa?', 'Sí, me pasa'],
-  ['Cuando buscas otra opinión aunque ya sabes qué piensas.', '¿También te pasa?', 'Sí, me pasa'],
-  ['Después de ceder o minimizarte y empezar a castigarte.', '¿Te reconoces aquí?', 'Sí. Quiero entenderlo mejor'],
+  ['¿Te pasa que sabes cómo quieres actuar, pero cuando llega el momento te cuesta hacerlo?', 'Sí. Esto me pasa'],
+  ['¿Y que a veces basta con que alguien piense diferente para empezar a dudar de lo que tú querías?', 'Sí. Me pasa'],
+  ['¿Que terminas haciendo lo que la otra persona espera, aunque en el fondo querías otra cosa?', 'Sí. Quiero entenderlo'],
 ] as const;
 
-function Shell({ children, progress }: { children: React.ReactNode; progress?: string }) {
-  return <main className="funnel-shell"><header className="funnel-header"><a href="/descubre" className="nia-mark"><span />NIA</a>{progress && <span className="funnel-progress">{progress}</span>}</header>{children}</main>;
+function Shell({ children }: { children: React.ReactNode }) {
+  return <main className="funnel-shell"><header className="funnel-header"><a href="/descubre" className="nia-mark"><span />NIA</a></header>{children}</main>;
 }
 function Step({ index, onNext }: { index: number; onNext: () => void }) {
   const reduce = useReducedMotion();
-  const [title, question, cta] = recognition[index];
-  return <Shell progress={(index + 1) + ' / 3'}><section className="funnel-screen recognition-screen"><motion.div initial={reduce ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} className="funnel-content"><p className="eyebrow">RECONOCERME</p><h1>{title}</h1><p className="funnel-question">{question}</p><button className="funnel-button" onClick={onNext}>{cta}<ArrowRight size={17} /></button></motion.div></section></Shell>;
+  const [title, cta] = recognition[index];
+  return <Shell><section className="funnel-screen recognition-screen"><motion.div initial={reduce ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} className="funnel-content recognition-copy"><h1>{title}</h1><button className="funnel-button" onClick={onNext}>{cta}<ArrowRight size={17} /></button></motion.div></section></Shell>;
 }
 export default function DiscoverPage() {
   const router = useRouter();

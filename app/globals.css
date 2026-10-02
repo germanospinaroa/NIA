@@ -76,6 +76,7 @@ a { text-decoration: none; }
 .email-field { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid color-mix(in oklab, var(--text-primary) 20%, transparent); }
 .email-field:focus-within { border-color: var(--accent); }
 .email-field input { width: 100%; height: 56px; border: 0; background: transparent; color: var(--text-primary); font-size: 20px; outline: none; }
+.funnel-error { margin-top: 14px; color: #9b3128; font-size: 13px; line-height: 1.4; }
 @media (min-width: 700px) { .funnel-header { padding: 0 42px; } .funnel-screen { padding-right: 42px; padding-left: 42px; } .feedback-grid { grid-template-columns: repeat(3, 1fr); } }
 
 #hero { overflow-x: clip; }
