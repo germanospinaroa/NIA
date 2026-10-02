@@ -10,6 +10,7 @@
 - Se eliminaron eyebrows de programación del onboarding. La identidad visual se mantuvo: marfil, serif editorial, sans, coral y transiciones suaves.
 - QA Playwright local: conexión, evidencia, NIA, sentimiento, introducción, situación, respuesta para información nueva y duda personal, explicación, refresh intermedio, dirección, contextos, voz y resumen final; 390×844 y 1440×900, consola sin errores.
 - Verificado: `npm run test:funnel`, `npm run typecheck`, `npm run lint` y `npm run build` PASS. Lint conserva 4 warnings heredados fuera de onboarding.
+- Deploy production completado y aliasado a `https://nia.gritlab.pro`; `/onboarding` responde en producción sin errores de consola.
 
 ## Funnel /descubre — reconstrucción definitiva — 2026-10-02
 - Reconocimiento conservado en tres pantallas aisladas con el copy aprobado; cada CTA reemplaza la pantalla anterior y no se pide email ni datos al inicio.
