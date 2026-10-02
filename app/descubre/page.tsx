@@ -1,15 +1,17 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
-import { saveFunnelState, trackFunnel, type FunnelState } from '@/lib/funnel';
+import { readFunnelState, saveFunnelState, trackFunnel, type FunnelState } from '@/lib/funnel';
 
 const recognition = [
-  ['¿Te ha pasado que sabes lo que quieres… pero cuando llega el momento terminas cediendo, callándote o buscando otra opinión?', 'Sí. Me pasa'],
-  ['¿Que sabes lo que querías decir, pero en la conversación terminas suavizándolo para no incomodar?', 'Sí. También me pasa'],
-  ['¿Que estabas segura de una decisión y, después de escuchar a alguien, empiezas a preguntarte si de verdad estabas equivocada?', 'Sí. Me ha pasado'],
+  ['¿Te ha pasado que estabas segura de una decisión y, después de escuchar a alguien, empezaste a dudar?', 'Sí, me ha pasado →'],
+  ['¿Y luego te quedas pensando: «¿Será que de verdad estaba equivocada?»', 'Sí, también →'],
+  ['¿Y alguna vez terminas cambiando de idea, cediendo o haciendo algo distinto a lo que tú querías?', 'Sí, me pasa →'],
 ] as const;
+const viewedEvents = ['recognition_1_viewed', 'recognition_2_viewed', 'recognition_3_viewed'] as const;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return <main className="funnel-shell"><header className="funnel-header"><a href="/descubre" className="nia-mark"><span />NIA</a></header>{children}</main>;
@@ -22,12 +24,24 @@ function Step({ index, onNext }: { index: number; onNext: () => void }) {
 export default function DiscoverPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  useEffect(() => { trackFunnel('discover_started'); trackFunnel('recognition_started'); trackFunnel('recognition_1_viewed'); }, []);
+  useEffect(() => {
+    const state = readFunnelState();
+    if (state.recognitionStep) setStep(Math.min(state.recognitionStep, 3) - 1);
+    trackFunnel('discover_started');
+    trackFunnel('recognition_started');
+    trackFunnel(viewedEvents[(state.recognitionStep || 1) - 1]);
+  }, []);
   function next() {
     const event = ('recognition_' + (step + 1) + '_completed') as 'recognition_1_completed' | 'recognition_2_completed' | 'recognition_3_completed';
     trackFunnel(event);
     trackFunnel(`recognition_${step + 1}_continue`);
-    if (step === 2) { saveFunnelState({ recognitionComplete: true } satisfies Partial<FunnelState>); trackFunnel('recognition_completed'); router.push('/descubre/entiende'); return; }
+    if (step === 2) {
+      saveFunnelState({ recognitionComplete: true, recognitionStep: 3, recognitionContext: 'decision_doubt' } satisfies Partial<FunnelState>);
+      trackFunnel('recognition_completed');
+      router.push('/descubre/evidencia');
+      return;
+    }
+    saveFunnelState({ recognitionStep: (step + 2) as 1 | 2 | 3 });
     trackFunnel(`recognition_${step + 2}_viewed`);
     setStep(value => value + 1);
   }

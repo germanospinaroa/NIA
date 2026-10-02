@@ -1,6 +1,15 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Funnel /descubre — 11 etapas pre-pago + WhatsApp visual — 2026-10-02
+- El flujo pre-pago quedó reducido a: tres pantallas de reconocimiento → evidencia en dos bloques → presentación de NIA → nombre → agradecimiento → conversación visual de WhatsApp → cómo funciona → primera victoria/futuro → planes.
+- `/descubre` guarda `recognitionStep`, `recognitionComplete`, `recognitionContext`, `firstName` y `plan` con el sistema funnel existente. El contexto de la conversación se deriva del reconocimiento; no se pide texto abierto ni se llama al LLM.
+- Se añadió `components/funnel/WhatsAppDemo.tsx`, reutilizable con `name`, `context` y `message`. Es una representación determinística: no envía WhatsApp ni pide teléfono durante el funnel.
+- `/descubre/evidencia` usa las fuentes Santoro & Markus (2024) y Harkin et al. (2016), verificadas en PubMed; distingue explícitamente fundamento del fenómeno frente a eficacia de NIA. `/descubre/presenta`, `/descubre/nombre`, `/descubre/agradecimiento`, `/descubre/vivir`, `/descubre/funciona`, `/descubre/futuro` y `/descubre/planes` contienen las etapas aprobadas.
+- Las rutas legacy fuera del recorrido redirigen a la etapa equivalente; no se muestran como pantallas del flujo. Se mantienen planes mensual US$6.99 y anual US$39.99, 7 días gratis y bypass interno, sin Hotmart ni pagos ficticios.
+- QA local Playwright: capturas de reconocimiento, evidencia, agradecimiento, WhatsApp, cómo funciona, futuro y planes en 375×812, 390×844, 430×932 y 1440×900; persistencia de refresh, selección mensual/anual y acceso verificados. `/` verificada sin cambios. Sin errores de hidratación tras corregir la restauración de estado.
+- Tests PASS: funnel, intervention, operational, dashboard, user-detail, intervention-detail, cost-ledger, `npx tsc --noEmit` y build. Lint PASS con cuatro warnings heredados fuera del cambio. Pendiente: deploy de esta versión y Magic Link real requiere buzón controlado.
+
 ## Funnel /descubre + onboarding — reconstrucción final implementada — 2026-10-02
 - La experiencia pública ahora sigue la secuencia aprobada: reconocimiento en tres pantallas aisladas → open loop → presentación humana de NIA → nombre → explicación → evidencia → qué vivirá la usuaria → elección de contexto → situación dinámica → respuesta de NIA → feedback semántico → respuesta adaptada → explicación → futuro → continuidad → planes → acceso.
 - Las rutas nuevas son `/descubre/presenta`, `/descubre/razon`, `/descubre/evidencia`, `/descubre/vivir`, `/descubre/contexto`, `/descubre/situacion`, `/descubre/respuesta`, `/descubre/feedback`, `/descubre/adaptacion` y `/descubre/futuro`. Las rutas legacy `/descubre/base`, `/descubre/dia` y `/descubre/prueba` redirigen al recorrido nuevo para no exponer copy técnico antiguo.
