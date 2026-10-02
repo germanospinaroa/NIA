@@ -10,6 +10,7 @@
 - QA Playwright local: flujo completo del onboarding, refresh en respuesta adaptativa, ramas `doubt` y `firm`, 390×844 y 1440×900; sin errores de consola. Capturas en `output/playwright/onboarding-v2-*.png`.
 - Tests PASS: funnel, intervention, operational, dashboard, user-detail, intervention-detail, cost-ledger, `npx tsc --noEmit`, lint (4 warnings heredados) y build.
 - QA visual ajustada: la pantalla de explicación del fenómeno y la respuesta adaptativa mantienen CTA/opciones visibles en 390×844 tras compactar únicamente esas variantes.
+- Producción desplegada en Vercel y aliasada a `https://nia.gritlab.pro`; `/onboarding` carga la nueva primera pantalla sin errores de consola y `/` conserva la landing anterior.
 
 ## Onboarding conversacional — reconstrucción — 2026-10-02
 - `/onboarding` conserva la misma ruta, autenticación, persistencia anónima, sincronización con `/api/profile`, preguntas funcionales y salida a `/app`; se reconstruyó la experiencia anterior a esas preguntas.
