@@ -15,6 +15,7 @@
     "test:intervention-detail": "node --experimental-strip-types scripts/test-intervention-detail.mjs",
     "test:cost-ledger": "node --experimental-strip-types scripts/test-cost-ledger.mjs",
     "test:funnel": "node scripts/test-funnel.mjs",
+    "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",
     "semantic:replay": "node scripts/replay-semantic-calibration.mjs"

@@ -8,7 +8,7 @@ export type FunnelTiming = 'morning' | 'midday' | 'afternoon' | 'night';
 export type RecognitionContext = 'decision_doubt';
 export type OnboardingSituationChoice = 'doubt' | 'firm' | 'source_dependent';
 export type OnboardingFollowupChoice = 'new_information' | 'only_doubt' | 'unsure' | 'yes' | 'no' | 'think' | 'decision_changed' | 'confidence_changed';
-export type OnboardingStage = 'name' | 'connection' | 'problem' | 'evidence' | 'nia' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'personalization' | 'mechanism' | 'direction' | 'contexts' | 'voice' | 'ready' | 'intro' | 'timing' | 'first_intervention';
+export type OnboardingStage = 'name' | 'connection' | 'problem' | 'evidence' | 'nia' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'personalization' | 'mechanism' | 'direction' | 'contexts' | 'voice' | 'ready' | 'intro' | 'timing' | 'calibration' | 'first_intervention';
 export const checkoutMode: 'bypass' | 'hotmart' = 'bypass';
 export type FunnelState = {
   recognitionComplete: boolean;

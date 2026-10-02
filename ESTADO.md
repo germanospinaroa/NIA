@@ -1,6 +1,11 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Onboarding — horario y primera interacción — 2026-10-02
+- Causa reproducida: la selección de horario sí se enviaba a `/api/profile`, pero `/onboarding` trataba la respuesta válida `status: calibration_required` de `/api/daily` como un fallo genérico porque esperaba siempre una interacción inmediata. En la sesión sin Magic Link usada para reproducir también se confirmó un `401 unauthorized`, por ausencia de sesión Supabase real.
+- Corrección: se confirma primero el guardado de `profiles.message_time_1` y `timezone`, se conserva el horario en el estado funnel solo después de un PATCH exitoso, y se continúa por la calibración existente (`/api/calibration`) cuando el motor la solicita. Se eliminó el copy de “primer momento” y se usa “mensaje de NIA”. No se cambió el esquema.
+- Verificación: test específico cubre morning/midday/afternoon/night, typecheck, funnel, lint y build pasan. El E2E autenticado hasta Supabase no pudo repetirse sin abrir un Magic Link en un buzón controlado.
+
 ## Auth — corrección del loop de Magic Link — 2026-10-02
 - Causa confirmada: `/acceso` había usado un endpoint propio basado en `auth.admin.generateLink`; ese enlace devolvía sesión implícita en `#access_token`, mientras `/auth/callback` esperaba `?code=` PKCE. Supabase validaba el enlace, pero la aplicación no establecía la sesión y regresaba a `/acceso`.
 - Corrección: `/acceso` vuelve a `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo, shouldCreateUser: true } })`; el callback único usa `exchangeCodeForSession(code)`, escribe las cookies SSR y redirige a `/onboarding`. No se usa recovery ni `admin.generateLink` para login normal.
