@@ -1,6 +1,13 @@
 # ESTADO — NIA
 Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
 
+## Auth — corrección del loop de Magic Link — 2026-10-02
+- Causa confirmada: `/acceso` había usado un endpoint propio basado en `auth.admin.generateLink`; ese enlace devolvía sesión implícita en `#access_token`, mientras `/auth/callback` esperaba `?code=` PKCE. Supabase validaba el enlace, pero la aplicación no establecía la sesión y regresaba a `/acceso`.
+- Corrección: `/acceso` vuelve a `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo, shouldCreateUser: true } })`; el callback único usa `exchangeCodeForSession(code)`, escribe las cookies SSR y redirige a `/onboarding`. No se usa recovery ni `admin.generateLink` para login normal.
+- Errores de callback no reenvían correo: enlaces usados/expirados muestran error y permiten solicitar otro manualmente. `/app` sin sesión redirige a `/acceso`.
+- Producción comprobada: `POST /auth/v1/otp` respondió `200` para `germanospinaroa@gmail.com`; callback de enlace expirado/usado responde `307` a `/acceso?error=link_used`; `/app` anónimo responde `307` a `/acceso`; `/` y `/descubre` responden `200`.
+- Pendiente de certificación externa: abrir el correo real y completar el clic en Gmail requiere acceso al buzón; el runner no tiene esa sesión. La respuesta 200 confirma aceptación del envío por Supabase, no la lectura de bandeja.
+
 ## Funnel /descubre — 11 etapas pre-pago + WhatsApp visual — 2026-10-02
 - El flujo pre-pago quedó reducido a: tres pantallas de reconocimiento → evidencia en dos bloques → presentación de NIA → nombre → agradecimiento → conversación visual de WhatsApp → cómo funciona → primera victoria/futuro → planes.
 - `/descubre` guarda `recognitionStep`, `recognitionComplete`, `recognitionContext`, `firstName` y `plan` con el sistema funnel existente. El contexto de la conversación se deriva del reconocimiento; no se pide texto abierto ni se llama al LLM.
