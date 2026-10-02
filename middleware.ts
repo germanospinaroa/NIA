@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
     cookies: { getAll: () => request.cookies.getAll(), setAll: (items) => { items.forEach(({ name, value }) => request.cookies.set(name, value)); response = NextResponse.next({ request }); items.forEach(({ name, value, options }) => response.cookies.set(name, value, options)); } },
   });
   const { data: { user } } = await supabase.auth.getUser();
-  if (request.nextUrl.pathname.startsWith('/app') && !user) return NextResponse.redirect(new URL('/acceso', request.url));
+  if ((request.nextUrl.pathname.startsWith('/app') || request.nextUrl.pathname.startsWith('/onboarding')) && !user) return NextResponse.redirect(new URL('/acceso?error=auth_failed', request.url));
   if (request.nextUrl.pathname.startsWith('/admin')) {
     const allowed = (process.env.NIA_ADMIN_EMAILS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
     if (!user || !user.email || !allowed.includes(user.email.toLowerCase())) return NextResponse.redirect(new URL('/login', request.url));
@@ -16,4 +16,4 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ['/app/:path*', '/admin/:path*', '/login'] };
+export const config = { matcher: ['/app/:path*', '/admin/:path*', '/login', '/onboarding/:path*'] };

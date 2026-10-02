@@ -6,6 +6,11 @@
 - Corrección: se confirma primero el guardado de `profiles.message_time_1` y `timezone`, se conserva el horario en el estado funnel solo después de un PATCH exitoso, y se continúa por la calibración existente (`/api/calibration`) cuando el motor la solicita. Se eliminó el copy de “primer momento” y se usa “mensaje de NIA”. No se cambió el esquema.
 - Verificación: test específico cubre morning/midday/afternoon/night, typecheck, funnel, lint y build pasan. El E2E autenticado hasta Supabase no pudo repetirse sin abrir un Magic Link en un buzón controlado.
 
+## Onboarding — 401 en guardado de horario — 2026-10-02
+- Reproducción en producción: click en “Por la mañana” → `PATCH /api/profile` → `401` → `{"error":"unauthorized"}`; no se ejecutaban `/api/daily` ni `/api/calibration`.
+- Corrección: `/auth/callback` ahora captura y escribe explícitamente en la respuesta de redirección las cookies emitidas por `exchangeCodeForSession`; `/onboarding` queda protegido por sesión real y redirige a acceso si no existe usuario autenticado. No se usa almacenamiento local como sustituto de autenticación.
+- Pendiente de certificación: el buzón/Magic Link del usuario real no está disponible en este entorno, por lo que el clic real del correo y el PATCH autenticado no se pueden marcar como PASS aquí.
+
 ## Auth — corrección del loop de Magic Link — 2026-10-02
 - Causa confirmada: `/acceso` había usado un endpoint propio basado en `auth.admin.generateLink`; ese enlace devolvía sesión implícita en `#access_token`, mientras `/auth/callback` esperaba `?code=` PKCE. Supabase validaba el enlace, pero la aplicación no establecía la sesión y regresaba a `/acceso`.
 - Corrección: `/acceso` vuelve a `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo, shouldCreateUser: true } })`; el callback único usa `exchangeCodeForSession(code)`, escribe las cookies SSR y redirige a `/onboarding`. No se usa recovery ni `admin.generateLink` para login normal.
