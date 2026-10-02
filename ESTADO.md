@@ -1,6 +1,42 @@
 # ESTADO — NIA
 Última actualización: 2026-09-30 | Sesión actual: Landing 2.0
 
+## Funnel /descubre reconstruido — 2026-10-02
+- Reemplazado únicamente el funnel público: /descubre ahora usa tres pantallas de reconocimiento y navega a /descubre/entiende; la landing / no fue modificada.
+- Añadidas pantallas aisladas /descubre/entiende, /descubre/prueba y /descubre/planes, además de /acceso; la microdemo tiene tres respuestas con adaptación visible y eventos microdemo_feedback/microdemo_adapted.
+- Planes funcionales en modo checkoutMode = bypass: mensual US$6.99 y anual US$39.99, ambos con 7 días gratis, selección persistente en sessionStorage, sin Hotmart, pagos ficticios ni MRR.
+- /onboarding reemplazado por cuatro decisiones cortas + resumen: nombre, dirección, situaciones (máximo 2) y voz; conserva estado anónimo y sincroniza con /api/profile si ya existe sesión.
+- Acceso usa el sistema Supabase existente mediante magic link; no se creó auth paralelo. Home sigue protegida por sesión real.
+- QA Playwright local completada en 390 y 375 px; captura de reconocimiento desktop en 1440 px. Refresh de planes sin error de hidratación y consola sin errores en el caso probado.
+- Verificado: npm run test:funnel, typecheck, lint, build y tests existentes de intervention/operational/dashboard/user-detail/intervention-detail/cost-ledger.
+- Pendiente: deploy/push de este cambio y validación end-to-end con una sesión real de Supabase para completar acceso → onboarding → /app; Hotmart sigue fuera de alcance.
+
+## Fase 4A — Operational Data Foundation
+- Implementado y reconciliado con Supabase remoto: `execution_runs`, `generation_attempts`, `execution_provider_calls`, `event_log` y `admin_audit_log` en `supabase/migrations/20261001042354_operational_data_foundation.sql`. La migration remota figura aplicada como `20261001042354_operational_data_foundation`.
+- Integrado el tracking con `/api/daily`, `/api/interactions`, feedback, learning, recalibración y generación/auditoría del motor mediante `lib/server/operational-observability.ts`.
+- Añadida `/api/admin/operations` con autorización server-side, paginación y filtros básicos.
+- El email administrativo se obtiene desde Auth; no se duplicó en `profiles`.
+- Añadidos tests deterministas en `scripts/test-operational-observability.mjs` y script `test:operational`.
+- Verificado: test de intervención, test operacional, typecheck, lint, build y `git diff --check`. Lint mantiene 4 warnings heredados.
+- Pendiente: aplicar la migration remotamente con autorización; no se hizo en esta fase. Dashboard, cost ledger, billing y WhatsApp quedan fuera.
+
+## Fase 4E — Cost Ledger
+- Creada localmente `supabase/migrations/20261001060000_cost_ledger.sql` con `provider_pricing` versionado y `provider_call_costs` auditable. Incluye pricing inicial únicamente para `openai/gpt-6-luna` y `openai/text-embedding-3-small`, con fuente/fecha declaradas. No fue aplicada remotamente.
+- Creado `lib/server/cost-ledger.ts`: resolución histórica de pricing, cálculo por llamada, persistencia, agregación por ejecución/usuario/dashboard, desglose por operación/modelo y estado `NOT AVAILABLE` para usage/pricing desconocido. Los retries se contabilizan como llamadas reales; no se ejecutó backfill.
+- `recordProviderCall` intenta persistir el snapshot de costo después de guardar usage. El motor de decisión no fue modificado.
+- Dashboard, listado de usuarios, User Detail e Intervention Detail muestran AI cost cuando existe ledger calculado; incluyen promedios, desglose por operación/modelo y tendencia diaria, y no muestran cero ante datos faltantes. Infraestructura, WhatsApp y billing siguen fuera.
+- Añadidos `scripts/test-cost-ledger.mjs` y `scripts/backfill-provider-call-costs.mjs` (el backfill exige confirmación explícita y no fue ejecutado). QA visual de costos quedó bloqueada por falta de sesión admin: las capturas guardadas muestran la redirección protegida a `/login`.
+- Verificado localmente: `test:cost-ledger`, `test:intervention`, `test:operational`, `test:dashboard`, `test:user-detail`, `test:intervention-detail`, typecheck, lint (4 warnings heredados), build y `git diff --check`.
+
+## Fase 4E.2 — Instrumentación real de costos
+- Añadido `supabase/migrations/20261001070000_provider_call_cache_usage.sql` para `cached_input_tokens` y `cache_write_tokens`. No aplicada remotamente.
+- `lib/server/llm-intervention.ts` normaliza usage de entrada/salida y detalles de caché; `operational-observability.ts` persiste esos campos cuando el schema remoto los soporte.
+- `lib/server/intervention.ts` registra usage por llamada individual para generación, embedding, semantic judge, LLM audit y retries técnicos exitosos. El motor de decisión no cambió.
+- `cost-ledger.ts` calcula input ordinario, cached input, cache write y output; usage o pricing faltante queda `unavailable`, no cero.
+- Auditoría remota read-only: Cost Ledger existe y el pricing remoto tiene tarifas de caché para `gpt-6-luna`, pero la columna cache todavía no existe. `execution_runs`, `generation_attempts`, `execution_provider_calls`, `provider_call_costs` y `event_log` permanecen en 0; existen 7 interventions históricas sin execution asociada.
+- La validación real quedó detenida antes de generar porque no hay Supabase CLI ni `SUPABASE_ACCESS_TOKEN`; no se ejecutó backfill ni se crearon datos.
+- Preview read-only guardado en `output/cost-ledger/backfill-preview.json` y `.md`: 0 provider calls históricos, 0 elegibles, 0 snapshots pendientes de insertar.
+
 ✅ CHECKPOINT — Última acción completada: Etapa 1 — página de ventas construida y verificada / Siguiente acción exacta: esperar aprobación antes de diseñar onboarding.
 
 ## Qué es esta app
@@ -144,6 +180,52 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 ## Notas para la próxima sesión
 - La dirección elegida es NIA Identity. Mantener la experiencia extremadamente breve y centrada en actuar con más seguridad, no en coleccionar frases.
 - No pedir una batería de preguntas: la Constitución congelada es la versión entregada por el usuario y no debe reinterpretarse como app de apertura reactiva ni como coach conversacional.
+
+## Fase 3.2 — Contrato LLM y calibración semántica
+- Verificado 2026-09-30: OpenAI `gpt-6-luna` devuelve 3 candidatos mediante Structured Outputs; `function` y `structure` son enums internos; `concept` y `angle` son texto semántico libre.
+- Smoke real: 5 generaciones contra OpenAI, 3 candidatos válidos en cada una; sin `llm_candidate_schema_invalid`.
+- Embeddings: se usa `text-embedding-3-small`, 1536 dimensiones. El embedding de la intervención aprobada ahora se persiste en el mismo insert y no se ignoran errores de persistencia.
+- Calibración local real: 40 pares. Duplicados 0.677–0.936 (mediana 0.791); mismo concepto 0.388–0.585 (mediana 0.455); mismo tema/concepto distinto 0.311–0.541 (mediana 0.437); no relacionados 0.137–0.269 (mediana 0.224).
+- Thresholds centrales calibrados provisionalmente con este dataset: review 0.58 y duplicate 0.63. Son valores iniciales, no una garantía universal.
+- `concept_key` se calcula internamente sin nueva migración; permite separar saturación conceptual de duplicado semántico.
+- E2E remoto sintético: `/api/daily` 200, 3 candidatos persistidos, intervención aprobada y embedding persistido. La segunda generación también pasó; la respuesta RPC no expuso matches en ese recorrido y queda pendiente de diagnóstico remoto específico.
+- Feedback remoto vía `PATCH /api/interactions` devolvió 400 `feedback_save_failed`; no se corrigió en esta fase porque queda fuera del contrato LLM/calibración y requiere revisar la policy de actualización remota.
+- Suite final: test de intervención, typecheck y build PASS; lint PASS con 4 warnings heredados. No deploy, commit ni push.
+
+## Fase 3.3 — Diagnóstico feedback y RPC remoto
+- Diagnóstico 2026-09-30: `PATCH /api/interactions` actualiza primero `public.interactions`; el rol es `authenticated`, el `user_id` coincide con `auth.uid()`, y Supabase devuelve `PGRST116` con 0 filas. La tabla legacy tenía SELECT/INSERT, pero no UPDATE policy.
+- Corrección local preparada en `supabase/migrations/20260930212000_feedback_interactions_update_policy.sql`: policy UPDATE con `USING` y `WITH CHECK` limitados al usuario autenticado.
+- Prueba directa autenticada: `intervention_feedback` y `learning_signals` sí aceptan inserts propios; el UPDATE de `interactions` es el único bloqueo confirmado.
+- RPC remoto: llamada directa autenticada con embedding idéntico devuelve similarity `1.0`; paráfrasis real devuelve `0.935492`; mismo concepto devuelve `0.396025`; diferente devuelve `0.242834`. Aislamiento por usuario PASS. Llamada con service role devuelve 0 filas porque `auth.uid()` es NULL, como exige el diseño.
+- La RPC actual no recibe `match_threshold`; recibe `p_user_id`, `p_query_embedding` y `p_limit`, y devuelve resultados ordenados sin filtrar threshold. La aplicación aplica review/duplicate después.
+- Aplicación remota de la nueva migration quedó BLOCKED: `npx supabase db push --dry-run` devuelve `ProjectRefNotLinkedError`; no hay project ref enlazado ni credencial de base/CLI disponible. No se alteró el remoto.
+
+## Fase 3.5 — Feedback remoto y E2E de aprendizaje
+- Reconciliado el filename local con la versión remota: `20261001012236_feedback_interactions_update_policy.sql`. No se ejecutó CLI ni se reaplicó SQL.
+- Suite local: test de intervención, typecheck y build PASS; lint PASS con 4 warnings heredados.
+- E2E remoto: PATCH de feedback ahora devuelve HTTP 200; `interactions` se actualiza y se insertan `intervention_feedback` y `learning_signals` con el mismo `user_id`.
+- `wording_off`: PASS; la segunda generación cambió formulación/estructura y conservó el territorio conceptual (`self_trust`).
+- `too_general`: FAIL en la siguiente generación; `/api/interactions` devuelve 503 y el error interno capturado fue `no_approved_intervention`. No se hicieron correcciones especulativas ni se continuaron las pruebas de angle/context.
+- No deploy, commit ni push. Los usuarios sintéticos de esta corrida no fueron eliminados porque la sesión prohibió ejecutar DELETE remoto; deben limpiarse mediante el procedimiento administrativo autorizado antes de usar el proyecto para pruebas posteriores.
+
+## Fase 3.6 — Diagnóstico `too_general`
+- Diagnóstico 2026-09-30: el signal se almacena como `specificity` con `value: low`, queda activo sin expiry y `applyLearningSignals` cambia `feedbackGoal` a `specific_context`; no genera una restricción textual específica para el prompt.
+- Brief real: desired change `Quiero confiar más en mis decisiones.`, current context `Trabajo`, `relevantSituations: []`, `userLanguage: []`. El brief no tenía una situación concreta que pudiera usar sin inventarla.
+- Prompt real: recibe el JSON completo del brief y la instrucción general de ser específico, pero no una instrucción cause-specific derivada de `specificity=low`.
+- Causa final: combinación de generación insuficientemente anclada y falta de retry cause-specific. En la ejecución fallida, candidatos fueron rechazados por `generic_or_missing_user_context`/`low_specificity` en auditoría determinista, o por el auditor LLM por abstracción/coaching. No hubo candidato aprobado.
+- `resolveIntervention` genera una sola tanda de 3 candidatos; `maxGenerationRounds` existe en configuración pero no se utiliza. `withJsonRetry` solo reintenta JSON inválido, no calidad.
+- No se modificó el motor ni se añadieron retries en esta fase. Suite local final PASS; lint conserva 4 warnings heredados.
+
+## Fase 3.7 — Especificidad y micro-calibración
+- Implementado `hasSufficientContext()` y regla `unsupported_personal_context`; NIA no puede introducir personas, relaciones, lugares o situaciones no confirmadas.
+- `specificity=low` ahora agrega restricciones de generación y activa hasta 3 tandas cause-specific cuando existe contexto suficiente. `wording_off` conserva su comportamiento.
+- Sin contexto suficiente, la resolución no genera candidatos: guarda estado `calibration_required` en `profiles.learning_profile` y devuelve una respuesta estructurada, no un 503.
+- Añadidos Structured Outputs para `CalibrationPrompt` y endpoint `/api/calibration`; las opciones se generan dinámicamente, son 2–4 y permiten texto libre.
+- Contexto confirmado por calibración se guarda en `context_history` y pasa a ser el contexto activo sin borrar historial.
+- E2E remoto sintético: sin contexto → calibration_required PASS; texto libre → contexto confirmado PASS; specificity low + contexto confirmado → retry aprobado PASS con intervención anclada a proyecto nuevo.
+- No se ejecutaron todavía los tests completos de `context_changed`; quedan para la siguiente fase después de cerrar esta ruta.
+- El feedback `too_general` por endpoint se probó sobre una intervención aprobada; el signal se persistió y el retry produjo una intervención específica sobre proyectos nuevos. Se bloqueó la reutilización de fallback cuando hay `specific_context`, `new_wording` o `new_angle`, para no devolver silenciosamente una intervención que la usuaria acaba de rechazar.
+- Durante una corrida el proveedor devolvió `llm_empty_response`; se capturó sin secretos. El sistema ya no reutiliza fallback previo bajo una restricción correctiva activa.
 
 ## Etapa 1.5 — Reencuadre estratégico de NIA Identity
 - Motivo: profundizar el problema y el valor longitudinal antes de volver a modificar la landing; la categoría no es simplemente overthinking, afirmaciones, autoestima o empowerment.
@@ -367,14 +449,78 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Se mantienen Supabase, daily NIA, autenticación, Punto NIA y navegación inferior sin cambios de producto.
 
 ## Evolución del motor de personalización — 2026-09-30
-- Estado: BUILT LOCAL / MIGRATION PENDING REMOTE VERIFICATION. Se sustituyó la generación directa de una frase por un motor único server-side con brief, tres candidatos, auditoría determinista, selección, persistencia y feedback contextual.
+- Estado: BUILT LOCAL / MIGRATION PENDING REMOTE VERIFICATION. El motor único server-side ahora exige generación LLM de tres candidatos, auditoría determinista, búsqueda semántica vectorial, auditoría LLM, selección por AND estricto, persistencia y feedback contextual.
 - Modelo: `desired_change_original`, `current_context_original`, historial de contextos y `learning_profile`; se conserva el lenguaje original de la usuaria y no se crea expediente psicológico.
 - Onboarding: ahora pregunta en lenguaje abierto qué quiere cambiar o vivir diferente, en qué situaciones le cuesta actuar como quiere y, opcionalmente, qué tendría que decir NIA para sentirse propia. No muestra `desired change`, `learning profile` ni taxonomía interna.
 - Auditoría: revisa contexto, especificidad, longitud, una idea, clichés, coaching/chatbot, lenguaje prohibido, duplicado literal/conceptual y repetición de concepto/ángulo/estructura. El motor no envía candidatos sin auditoría.
 - Aprendizaje: feedback contextual según función; `context_changed`, `wording_off`, `too_general` y `angle_change` producen señales estructuradas. La recalibración se expone mediante `/api/recalibration`, con primera revisión prevista a siete días y contextos históricos conservados.
 - Punto NIA: usa el mismo motor que Daily NIA; recibe un contexto cerrado, obtiene una intervención breve, muestra una sola pregunta contextual y termina. El navegador ya no envía el texto de la intervención.
 - Datos/migración: `supabase/migrations/20260930210000_personalization_audit_learning.sql` añade campos y tablas RLS para `context_history`, `interventions`, `intervention_candidates`, `intervention_feedback` y `learning_signals`. No se aplicó remotamente desde este entorno por no existir CLI/configuración de Supabase disponible; debe verificarse antes de deploy.
-- Semántica: hay similitud local léxica/conceptual configurable, no embeddings reales. No existe proveedor de embeddings ni LLM en el repo; quedan pendientes y no se simulan.
+- IA real: proveedor OpenAI por HTTP server-side; `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_EMBEDDING_MODEL` y opcionalmente `OPENAI_API_BASE_URL`. La prueba real local confirmó 3 candidatos JSON y embeddings de 1536 dimensiones con el modelo configurado en `.env.local`; la clave no se expone.
+- Semántica: cada candidato aprobado por la auditoría determinista obtiene embedding, consulta `match_intervention_embeddings` por `user_id` y pasa por thresholds centralizados (`0.65` review, `0.78` duplicate). Se distinguen duplicado semántico, revisión, saturación de concepto y candidato nuevo. La migración sigue pendiente de aplicación/verificación remota.
+- Aprobación: deterministic PASS AND semantic PASS AND LLM approved. Si el LLM o embeddings fallan, se registra el error y solo se reutiliza una intervención aprobada relevante; no se fabrica una frase genérica.
+- Learning: el brief consulta señales activas, usa contexto específico, cambia wording/estructura o ángulo según feedback, y aplica expiración de 30 días para wording/angle. Context change bloquea generación hasta recalibración; desired changes anteriores quedan en `desired_change_history`.
 - WhatsApp: preparado arquitectónicamente porque el resultado del motor es independiente del canal (`intervention`, feedback y channel), pero la integración continúa PENDING.
-- Tests: `npm run test:intervention` cubre genérica, cliché, duplicado semántico, contexto específico, aprendizaje y feedback. Typecheck/build pasan; lint pasa con warnings heredados.
-- Riesgos: aplicar la migración y validar RLS remoto; resolver concurrencia de intervenciones auditables si se habilitan dos pestañas; decidir proveedor/modelo de embeddings y auditoría LLM antes de afirmar similitud semántica profunda.
+- Tests: `npm run test:intervention`, typecheck y build pasan; lint pasa con cuatro warnings heredados. Smoke real de OpenAI pasa generación estructurada de 3 candidatos y embeddings. Persistencia vectorial/RPC, RLS remoto y concurrencia multi-instancia siguen pendientes de verificación sin aplicar migraciones remotas.
+- Panel: `/admin/interventions` y `/api/admin/interventions` muestran intervención, tres candidatos, auditorías, razones, similitudes, feedback, learning signals e historial; mantienen allowlist de email y acceso privilegiado exclusivamente server-side.
+- Riesgos: aplicar y validar las migraciones en Supabase; probar RPC vectorial, RLS, concurrencia simultánea y flujo end-to-end con una usuaria de prueba real antes de declarar COMPLETE remoto.
+
+## Fase 3.8 — Cambio de contexto y recalibración — 2026-10-01
+- Context change: `context_changed` conserva el objetivo, bloquea la generación y devuelve `calibration_required` estructurado; la respuesta confirmada crea un nuevo contexto activo sin borrar el historial anterior.
+- Desired change change: `desired_change_changed` conserva `desired_change_history`, marca el objetivo anterior como ended y el nuevo como active; exige nueva calibración antes de generar.
+- Brief operativo: solo usa el contexto activo y filtra patrones/intervenciones del contexto anterior para la generación y auditoría; el historial completo sigue persistido.
+- Calibración: usa el mismo `/api/calibration` para missing context, context change y desired change change; pregunta y opciones son Structured Outputs dinámicos, con texto libre siempre disponible. El campo se normaliza server-side a `active_context` o `desired_change` según el motivo solicitado.
+- Señales: las señales de transición permanecen como historial; cuando la calibración queda `resolved`, el brief las trata como inactivas sin requerir UPDATE de señales (compatible con RLS actual).
+- Diversidad post-recalibración: durante 24 horas después de confirmar un cambio, el brief pide priorizar el contexto/objetivo nuevo y evitar repetir concepto, ángulo o estructura anteriores; mantiene los mismos thresholds y RPC.
+- Feedback: los botones incluyen `context_changed` y `desired_change_changed` además de las señales de wording, especificidad y ángulo; cada opción tiene mapeo explícito.
+- LLM vacío: `llm_empty_response` corresponde a una respuesta del proveedor sin `message.content`; se mantiene como fallo técnico con 2 intentos técnicos separados de los retries de calidad. No hay fallback genérico.
+- E2E remoto sintético: trabajo → pareja → familia y objetivo “confiar” → “poner límites” verificados; las intervenciones muestran snapshots distintos y el historial conserva los estados anteriores. No se usaron usuarios reales, deploy, commit ni push.
+- QA final local: `npm run test:intervention` ✓ · `npm run typecheck` ✓ · `npm run lint` ✓ con 4 warnings heredados · `npm run build` ✓.
+
+## Fase 3.9D — Semantic judge — 2026-09-30
+- La similitud vectorial dejó de ser veredicto: recupera hasta 3 matches y solo activa el juez semántico desde `0.58`; `0.63` queda como banda metadata, no como rechazo automático.
+- Añadido `lib/server/semantic-judge.ts` con Structured Outputs: `duplicate`, `same_theme_different_angle` o `distinct`. Solo `duplicate` bloquea; saturación de concepto y auditoría LLM permanecen separadas.
+- El audit trail conserva similarity, similarity band, matches del juez y razones dentro de `audit_results` JSONB; no requiere migration.
+- Replay local de los 12 casos existentes: 0 llamadas nuevas; los 12 requieren juez porque están sobre `0.58`. Tests, typecheck y build PASS; lint PASS con 4 warnings heredados. No deploy, commit ni push.
+
+## Fase 3.9E — Calibración real del semantic judge — 2026-09-30
+- Se ejecutaron únicamente los 12 casos existentes del replay, sin Red Team nuevo. Resultado real: 5 `duplicate`, 7 `same_theme_different_angle`, 0 `distinct`.
+- Usage devuelto: 12 llamadas, 4,594 input tokens, 2,875 output tokens, 7,469 total tokens; no se calculó USD por falta de pricing configurado. Latencia total: 39,578 ms.
+- Resultados detallados: `output/red-team/semantic-judge-results.json` y `.md`. No se cambiaron thresholds, prompts, embeddings, Supabase ni producción.
+- Suite: test de intervención, typecheck y build PASS; lint PASS con 4 warnings heredados.
+
+## Fase 3.9F — Integración final del semantic judge — 2026-09-30
+- Flujo productivo verificado: deterministic → retrieval de hasta 3 matches → semantic judge desde `0.58` → LLM audit → selección.
+- `0.63` solo determina `similarityBand=high_similarity`; no rechaza automáticamente. `semantic_review` queda como warning/metadata.
+- `duplicate` falla; `same_theme_different_angle` y `distinct` pasan la capa semántica. El audit trail conserva band, judge matches, relación, flags y razón en el JSONB existente.
+- Suite final: test de intervención, typecheck y build PASS; lint PASS con 4 warnings heredados. No deploy, commit ni push.
+
+## Fase 4B — NIA Control operacional — 2026-09-30
+- Backoffice implementado sobre la protección existente `requireAdmin`/`NIA_ADMIN_EMAILS`, sin segundo sistema de autenticación y con service role únicamente server-side.
+- Dashboard `/admin`: periodos today/7d/30d/custom, usuarios activos por actividad operacional, requests/aprobaciones/no approved, approval rate por ejecuciones completadas, feedback, learning, recalibraciones, retries, capas de rechazo, uso de proveedor, errores y actividad reciente.
+- Vistas: `/admin/users`, `/admin/users/[id]`, `/admin/interventions`, `/admin/interventions/[id]`, `/admin/operations` y `/admin/errors`; incluyen paginación, filtros y detalle operacional. El email se obtiene desde Auth; WhatsApp, costos, MRR, churn y conversión de trial muestran `NOT AVAILABLE`.
+- APIs nuevas/extendidas: dashboard, users, user detail, intervention detail; operations e interventions existentes ampliadas con filtros, periodos, límites y auditoría administrativa.
+- Validación: `npm run test:intervention`, `npm run test:operational`, typecheck, lint y build PASS; lint mantiene 4 warnings heredados; `git diff --check` PASS.
+- QA visual: `/admin` redirige a `/login` sin sesión, confirmando deny-by-default. No se pudo revisar el interior del backoffice sin una sesión admin real; evidencia en `output/playwright/admin-auth-check.png`.
+- Pendiente: aplicar migration operacional remotamente y hacer QA visual autenticada con datos reales; no se hicieron cambios remotos, deploy, commit ni push.
+
+## Fase 4B — Dashboard operacional — 2026-09-30
+- `/admin` consume una única agregación server-side para usuarios, ejecuciones, intervenciones, generación, errores, performance, feedback/learning, provider usage y eventos.
+- Periodos soportados: today, 7 days, 30 days y custom mediante `date_from`/`date_to`; las fechas usan UTC y se aplican consistentemente a las consultas.
+- Métricas sin fuente confiable se muestran como `NOT AVAILABLE`: costo AI, WhatsApp, infraestructura, MRR, churn y trial conversion.
+- Añadido `lib/server/admin-dashboard.ts` como agregador puro y `npm run test:dashboard` para probar rangos, approval rate, no double count, errores y estados vacíos sin Supabase ni OpenAI.
+- Dashboard actualizado con execution health diario, failure breakdown, generation funnel, provider usage, latencias por operación, feedback/learning, eventos y disponibilidad de datos.
+
+## Fase 4C — User Detail — 2026-09-30
+- `/admin/users/[id]` es read-only y muestra identidad desde Auth, estado actual, learning profile, context history, desired change history, usage, timeline, intervenciones, feedback, learning signals, ejecuciones limitadas y provider usage por operación.
+- La API devuelve conteos separados de listas limitadas; no presenta una muestra parcial como total. Registra `view_user` con user_id y ruta.
+- Onboarding por usuario queda `NOT AVAILABLE` porque `onboarding_drafts` no tiene `user_id` y el evento actual no conserva relación confiable; WhatsApp y Cost Ledger también quedan `NOT AVAILABLE`.
+- Helpers puros y test: `lib/server/admin-user-detail.ts`, `scripts/test-user-detail.mjs`, `npm run test:user-detail` PASS.
+- QA visual autenticada pendiente por falta de sesión admin; las capturas generadas muestran el redireccionamiento seguro a `/login`: `output/playwright/admin-user-detail-1440.png` y `admin-user-detail-390.png`.
+
+## Fase 4D — Intervention Observability — 2026-10-01
+- `/admin/interventions/[id]` queda como vista read-only de trazabilidad: intervención final, usuario, snapshots de contexto/objetivo al generar, execution, attempts, candidatos y auditorías por capa.
+- Añadida `lib/server/admin-intervention-detail.ts` para derivar capas de rechazo, selección, agrupación de provider usage, timeline y sanitización de datos técnicos sin cambiar la decisión del motor.
+- `app/api/admin/interventions/[id]/route.ts` devuelve expediente estructurado, obtiene email desde Auth, registra `view_intervention`, valida el ID y no expone prompts, credenciales ni headers. `learning_signals` se muestra como historial del usuario porque el schema no tiene `intervention_id`; no se atribuye causalidad individual.
+- Test nuevo: `npm run test:intervention-detail`; suite, typecheck y build PASS; lint PASS con 4 warnings heredados; `git diff --check` PASS.
+- QA autenticada pendiente: no había sesión admin en el entorno. Playwright confirmó redirect seguro a `/login`; capturas de ese estado en `output/playwright/admin-intervention-detail-1440.png` y `admin-intervention-detail-390.png`.
