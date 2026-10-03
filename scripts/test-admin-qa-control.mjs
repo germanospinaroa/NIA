@@ -10,6 +10,11 @@ assert.ok(component.includes('if (running || result) return'));
 assert.ok(component.includes('Esta prueba generará una intervención real'));
 assert.ok(component.includes('Evolution accepted'));
 assert.ok(component.includes('WhatsApp delivery'));
+assert.ok(component.includes('Prueba de botones WhatsApp'));
+assert.ok(component.includes("fetch('/api/admin/qa/whatsapp-buttons'"));
+assert.ok(component.includes('No generará una intervención ni consumirá OpenAI'));
+assert.ok(component.includes('if (buttonsRunning || buttonsResult) return'));
+assert.ok(component.includes('Revisa tu WhatsApp. Los botones deberían aparecer en el mensaje.'));
 assert.ok(detail.includes('QaRealControl'));
 assert.ok(detail.includes('data.user.id'));
 

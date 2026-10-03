@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: connection } = await admin.from('whatsapp_connections').select('wa_id,status').eq('user_id', userId).eq('status', 'connected').maybeSingle();
   if (!connection?.wa_id) return NextResponse.json({ error: 'whatsapp_not_connected' }, { status: 422 });
-  const delivery = await sendWhatsAppReplyButtons(connection.wa_id, '¿Cómo te pareció esta prueba?', [{ id: 'liked', title: 'Me gustó' }, { id: 'mixed', title: 'Más o menos' }, { id: 'not_useful', title: 'No me funcionó' }]);
+  const delivery = await sendWhatsAppReplyButtons(connection.wa_id, 'Quiero probar algo contigo. ¿Cómo te pareció esta prueba?', [{ id: 'liked', title: 'Me gustó' }, { id: 'mixed', title: 'Más o menos' }, { id: 'not_useful', title: 'No me funcionó' }]);
   if (!delivery.ok) return NextResponse.json({ status: 'failed', reason: delivery.reason }, { status: 502 });
   return NextResponse.json({ status: 'accepted', provider_message_id_present: Boolean(delivery.providerMessageId), provider_message_id: delivery.providerMessageId });
 }

@@ -1,5 +1,11 @@
 # ESTADO — NIA
-Última actualización: 2026-10-03 | Sesión actual: editorial rhythm + diversidad de experiencia — validación offline completada, migración y despliegue pendientes
+Última actualización: 2026-10-03 | Sesión actual: control admin para botones WhatsApp — implementación offline validada, despliegue pendiente
+
+## Control admin de botones WhatsApp — 2026-10-03
+- Añadido dentro de la QA interna de `/admin/users/[id]` un segundo control independiente: `Prueba de botones WhatsApp`. Mantiene separado `Ejecutar prueba real`, exige confirmación y bloquea doble clic/reintentos.
+- El control llama únicamente a `POST /api/admin/qa/whatsapp-buttons` con la sesión administrativa existente. No ejecuta generación, planner, auditorías, cron ni delivery diario.
+- El endpoint envía exactamente un mensaje de prueba con tres botones reply y muestra en UI el estado de Evolution y el `provider_message_id`, sin afirmar que WhatsApp lo mostró.
+- Prueba real de botones todavía no ejecutada; no se envió ningún mensaje durante esta implementación.
 
 ## Editorial rhythm, diversidad y feedback — 2026-10-03
 - La memoria editorial deriva de `public.interventions` y ahora resume ventanas de 3/5/7 días y hasta 10 intervenciones: topics, `editorial_take`, `experience_type`, formatos, profundidad, ejercicios, preguntas, feedback solicitado, concentración y territorios repetidos. No se creó una tabla paralela.
