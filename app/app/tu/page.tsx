@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { MvpShell } from '@/components/app/MvpShell';
 import { WhatsAppConnectionPanel, type WhatsAppConnectionState } from '@/components/app/WhatsAppConnectionPanel';
 import { guidedSuggestions, intentionLabel, intentionOptions, type IntentionKey, unclearGuidanceOptions, validCustomIntention } from '@/lib/intention';
@@ -40,6 +41,7 @@ export default function TuPage() {
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
   const [error, setError] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function fetchWhatsApp() {
     const response = await fetch('/api/whatsapp/connection');
@@ -48,13 +50,13 @@ export default function TuPage() {
   }
 
   useEffect(() => {
-    Promise.all([fetch('/api/profile'), fetchWhatsApp(), fetch('/api/subscription')]).then(async ([profileResponse, whatsappState, subscriptionResponse]) => {
+    Promise.all([fetch('/api/profile'), fetchWhatsApp(), fetch('/api/subscription'), fetch('/api/admin/access')]).then(async ([profileResponse, whatsappState, subscriptionResponse, adminResponse]) => {
       const result = await profileResponse.json().catch(() => ({}));
       const subscriptionResult = await subscriptionResponse.json().catch(() => ({}));
       if (!profileResponse.ok || !result.profile) throw new Error('profile');
       const next = result.profile as Profile;
       const initial = profileDraft(next);
-      setProfile(next); setEmail(result.email ?? ''); setDraft(initial); setSavedDraft(initial); setWhatsapp(whatsappState as WhatsAppConnectionState); setSubscription(subscriptionResult.subscription ?? null);
+      setProfile(next); setEmail(result.email ?? ''); setDraft(initial); setSavedDraft(initial); setWhatsapp(whatsappState as WhatsAppConnectionState); setSubscription(subscriptionResult.subscription ?? null); setIsAdmin(adminResponse.ok);
     }).catch(() => setError('No pudimos cargar tu configuración. Vuelve a intentarlo.')).finally(() => setLoading(false));
     return undefined;
   }, []);
@@ -116,7 +118,7 @@ export default function TuPage() {
   const plan = subscriptionCopy();
   return <MvpShell><section className="pt-8 pb-12 sm:pt-12"><h1 className="max-w-[720px] text-[clamp(39px,7vw,76px)] leading-[.94] tracking-[-.06em] [font-family:var(--font-display)]">Lo esencial para que NIA trabaje contigo.</h1>
     {error && <p role="alert" className="mt-6 border-l-2 border-red-700 pl-4 text-[14px] text-red-800">{error}</p>}
-    <section className="mt-12 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Tu cuenta</h2><div className="mt-5 border-l-2 border-[var(--accent)] pl-5"><p className="text-[21px] [font-family:var(--font-display)]">{profile?.first_name || 'Tu cuenta'}</p><p className="mt-2 text-[15px] text-[var(--text-secondary)]">{email}</p></div></section>
+    <section className="mt-12 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Tu cuenta</h2><div className="mt-5 border-l-2 border-[var(--accent)] pl-5"><p className="text-[21px] [font-family:var(--font-display)]">{profile?.first_name || 'Tu cuenta'}</p><p className="mt-2 text-[15px] text-[var(--text-secondary)]">{email}</p>{isAdmin && <Link href="/admin" className="mt-5 inline-flex min-h-11 items-center rounded-[var(--radius-button)] bg-[var(--text-primary)] px-4 py-3 text-[13px] font-semibold text-[var(--bg)]">Administración</Link>}</div></section>
     <section className="mt-12 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Tu plan</h2><div className="mt-5 max-w-[620px] border-l-2 border-[var(--accent)] pl-5"><p className="text-[21px] [font-family:var(--font-display)]">{subscription?.plan_name || subscription?.plan_key || 'Plan no disponible'}</p><p className="mt-2 text-[14px] font-semibold text-[var(--accent)]">{plan.label}</p><p className="mt-2 text-[14px] text-[var(--text-secondary)]">{plan.detail}</p>{plan.billing && <p className="mt-2 text-[14px] text-[var(--text-secondary)]">{plan.billing}</p>}{subscription && !['canceled','cancelled','overdue','past_due'].includes(subscription.status || '') && !subscription.cancel_requested_at && <button type="button" onClick={cancelSubscription} className="mt-5 min-h-11 rounded-[var(--radius-button)] border border-black/15 px-4 text-[13px] font-semibold">Cancelar suscripción</button>}</div></section>
     <section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">¿Qué te gustaría empezar a cambiar en ti?</h2><p className="mt-3 max-w-[620px] text-[15px] text-[var(--text-secondary)]">Elige aquello en lo que quieres que NIA te apoye.</p><div className="mt-6 grid gap-2">{intentionOptions.map(option => <button key={option.key} type="button" onClick={() => chooseIntention(option.key)} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[15px] transition-colors ${draft.directionKey === option.key ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)] hover:border-[var(--accent)]/60'}`}>{option.label}</button>)}<button type="button" onClick={() => chooseIntention('custom')} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[15px] ${draft.directionKey === 'custom' ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)]'}`}>Hay algo más que quiero trabajar.</button><button type="button" onClick={() => chooseIntention('intention_unclear')} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[15px] ${draft.directionKey === 'intention_unclear' ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)]'}`}>Todavía no sé qué quiero trabajar.</button></div>
       {customOpen && <div className="mt-6 rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] p-5"><h3 className="text-[22px] [font-family:var(--font-display)]">Cuéntame qué quieres trabajar.</h3><p className="mt-2 text-[14px] text-[var(--text-secondary)]">No tienes que explicarlo perfecto. Escríbelo como se lo contarías a una amiga.</p><textarea value={draft.customText} onChange={event => setDraft(current => ({ ...current, directionKey: 'custom', customText: event.target.value }))} placeholder="Quiero empezar a..." className="mt-4 min-h-28 w-full resize-none rounded-[var(--radius-card)] border border-black/10 bg-[var(--bg)] p-4 text-[16px] outline-none focus:border-[var(--accent)]" /><p className="mt-4 text-[12px] text-[var(--text-secondary)]">Guarda los cambios cuando estés lista.</p></div>}

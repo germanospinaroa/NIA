@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { isAdminEmail } from '@/lib/admin-allowlist';
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -17,8 +18,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if ((request.nextUrl.pathname.startsWith('/app') || request.nextUrl.pathname.startsWith('/onboarding')) && !user) return NextResponse.redirect(new URL('/acceso?error=auth_failed', request.url));
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    const allowed = (process.env.NIA_ADMIN_EMAILS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
-    if (!user || !user.email || !allowed.includes(user.email.toLowerCase())) return NextResponse.redirect(new URL('/login', request.url));
+    if (!user) return NextResponse.redirect(new URL('/login?next=/admin', request.url));
+    if (!isAdminEmail(user.email)) return new NextResponse('Forbidden', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   }
   if (request.nextUrl.pathname === '/login' && user) return NextResponse.redirect(new URL('/app', request.url));
   return supabaseResponse;

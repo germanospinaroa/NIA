@@ -7,6 +7,11 @@
 - La ficha administrativa ahora lee el estado real de profiles.whatsapp_enabled y whatsapp_connections; no inventa que WhatsApp está conectado.
 - Tests, typecheck, lint y build pasan. La prueba real NO fue ejecutada desde Codex; queda para el administrador desde su navegador autenticado.
 
+## Acceso real al backoffice — 2026-10-03
+- Causa corregida: middleware redirigía a todo email no autorizado a /login; una sesión ya autenticada era redirigida inmediatamente por /login a /app, ocultando el acceso denegado y haciendo parecer que el admin volvía a la aplicación.
+- Ahora /admin redirige al login solo sin sesión y devuelve 403 explícito a una sesión autenticada no autorizada. La autorización sigue siendo sesión Supabase + NIA_ADMIN_EMAILS mediante un helper compartido.
+- Añadido /api/admin/access para que /app/tú muestre "Administración" únicamente a administradores. El endpoint QA y todas las APIs admin siguen usando requireAdmin.
+
 ## Auditoría editorial — 2026-10-03
 
 EDITORIAL_AUDIT_COMPLETED=yes
