@@ -19,6 +19,7 @@
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
     "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",
     "test:message-composer": "node --experimental-strip-types scripts/test-message-composer.mjs",
+    "test:next-message": "node --experimental-strip-types scripts/test-next-message.mjs",
     "test:daily-whatsapp": "node --experimental-strip-types scripts/test-daily-whatsapp.mjs",
     "test:profile-settings": "node scripts/test-profile-settings.mjs",
     "test:intention-value": "node --experimental-strip-types scripts/test-intention-value.mjs",

@@ -1,6 +1,12 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Home, próximo mensaje y acceso — 2026-10-03
+- `/app` quedó reducido a saludo, mensaje completo almacenado y una línea secundaria con próximo envío y estado de WhatsApp; se eliminaron el pretítulo `HOY`, “Último mensaje disponible” y las tres tarjetas de dashboard.
+- `lib/next-message.ts` calcula determinísticamente el siguiente horario usando la frecuencia, ambas franjas y el timezone del perfil. Un slot exactamente en el minuto actual se considera ya procesado de forma conservadora y se toma el siguiente futuro o el primer slot del día siguiente.
+- `/login` utiliza Magic Link con `shouldCreateUser: false`; conserva las rutas de contraseña sin usarlas para el acceso normal.
+- `test:next-message`, tests existentes, typecheck, lint y build pasan. QA local de login realizada a 390×844 y 1440×900; la home autenticada no pudo abrirse sin una sesión controlada. No hubo llamadas API de IA, WhatsApp, cron ni deployment.
+
 ## Calidad del generador y auditor — 2026-10-03
 - Ajustadas offline las instrucciones de generación para que recognition entre directamente en la situación, cada campo aporte una función distinta, action no repita steps y closing exprese una consecuencia práctica.
 - El auditor LLM ahora distingue reconocimiento contextual natural de voz de chatbot y evalúa explícitamente la repetición interna frente a la repetición histórica.
