@@ -1,5 +1,12 @@
 # ESTADO — NIA
-Última actualización: 2026-10-03 | Sesión actual: simplificación app + conexión WhatsApp — implementación lista, activación externa pendiente
+Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
+
+## Intención y mensajes — 2026-10-03
+- `/app/tú` ya no usa textarea ni autosave para la intención principal. Ofrece exactamente ocho intenciones estructuradas, una opción personalizada y un estado `intention_unclear` guiado en dos preguntas. `Guardar cambios` persiste intención, frecuencia, horario y timezone en una sola operación.
+- `/api/profile` rechaza `no se`, `no sé`, vacío, `null`, `undefined` y claves de intención desconocidas; las intenciones estructuradas se normalizan en servidor. `/app` no muestra mensajes ni datos de intención inválidos.
+- `/api/daily` no devuelve intervenciones si falta una intención válida. Los mensajes generados deben tener reconocimiento, explicación, insight, herramienta y acción; se excluyen mensajes legacy de una sola frase en Hoy y como fallback.
+- Se añadió feedback funcional para el primer mensaje con `¿Esto se acerca a lo que necesitas?`; la opción negativa permite una nota corta y se añadió `feedback_note` a `interactions`.
+- WhatsApp admite proveedor `evolution` además de Meta: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE` y `EVOLUTION_WEBHOOK_TOKEN`; el webhook procesa `messages.upsert`/`remoteJid`, vincula por código de un solo uso y envía por `/message/sendText/{instance}`. La activación real requiere VPS/Evolution configurado y migraciones aplicadas.
 
 ## App autenticada — simplificación y WhatsApp — 2026-10-03
 - La navegación de `/app` quedó reducida a `Hoy` y `Tú`; `Punto NIA` y `Evidencia` redirigen a `/app` y no forman parte de la experiencia autenticada. No se modificaron `/` ni `/descubre`.

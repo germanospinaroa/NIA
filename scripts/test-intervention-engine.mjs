@@ -10,7 +10,7 @@ const duplicate = { text: 'No necesitas aprobación para decidir.', function: 'd
 const duplicateAudit = auditCandidate(duplicate, { ...base, recentInterventions: ['Confía en tu criterio.'] });
 assert.equal(duplicateAudit.status, 'rejected');
 assert(duplicateAudit.reasons.includes('semantic_duplicate'));
-const contextual = { text: 'Que tu jefe cuestione una decisión no significa que tengas que volver a tomarla.', function: 'anticipate', concept: 'self_trust', angle: 'context_without_abandonment', structure: 'context_does_not_mean' };
+const contextual = { text: 'Cuando tu jefe cuestione una decisión, es fácil confundir una opinión con un dato nuevo.\n\nAntes de tomarla otra vez, anota qué pensabas antes, revisa qué cambió realmente y espera si no cambió ningún hecho. Hoy prueba responder después de esa pausa para seguir decidiendo tú.', function: 'anticipate', concept: 'self_trust', angle: 'context_without_abandonment', structure: 'context_does_not_mean' };
 assert.equal(auditCandidate(contextual, base).status, 'approved');
 assert.equal(learningFromFeedback('context', 'context_changed').triggerRecalibration, true);
 assert.equal(learningFromFeedback('relevance', 'desired_change_changed').signal, 'desired_change_status');
@@ -61,7 +61,7 @@ const expiredBrief = applyLearningSignals(base, [{ signal: 'specificity', value:
 assert.equal(expiredBrief.feedbackGoal, undefined);
 const decayedBrief = applyLearningSignals(base, [{ signal: 'specificity', value: { value: 'low' }, confidence: 1, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), expires_at: null }]);
 assert(decayedBrief.learningSignals[0].decayWeight < 0.5 && decayedBrief.learningSignals[0].decayWeight > 0.2);
-assert.equal(validateLlmCandidate({ text: 'Puedo esperar antes de responder.', function: 'anticipate', concept: 'aprobación externa', angle: 'ganar espacio antes de responder', structure: 'before_then' }), true);
+assert.equal(validateLlmCandidate({ text: 'Puedo esperar antes de responder. Primero anoto qué ocurrió, separo un dato nuevo de una opinión y elijo una respuesta pequeña para hoy. Así no tengo que decidir desde la urgencia.', function: 'anticipate', concept: 'aprobación externa', angle: 'ganar espacio antes de responder', structure: 'before_then' }), true);
 assert.equal(validateLlmCandidate({ text: 'Puedo esperar antes de responder.', function: 'Interrumpir el sí automático', concept: 'pausa', angle: 'ganar espacio', structure: 'before_then' }), false);
-assert.equal(validateLlmCandidate({ text: 'No tienes que aceptar para evitar incomodidad.', function: 'anticipate', concept: 'miedo a decepcionar a la familia', angle: 'decir sí para evitar incomodidad', structure: 'context_does_not_mean' }), true);
+assert.equal(validateLlmCandidate({ text: 'No tienes que aceptar para evitar incomodidad. Puedes esperar, revisar qué necesitas y responder después. Prueba escribir una frase breve antes de contestar para que tu decisión no dependa solo de la reacción que imaginas.', function: 'anticipate', concept: 'miedo a decepcionar a la familia', angle: 'decir sí para evitar incomodidad', structure: 'context_does_not_mean' }), true);
 console.log('intervention-engine tests: PASS');

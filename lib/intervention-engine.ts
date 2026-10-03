@@ -217,10 +217,11 @@ function chooseFunction(brief: InterventionBrief, index: number): InterventionFu
 export function generateCandidates(brief: InterventionBrief): InterventionCandidate[] {
   const clause = situationClause(brief.currentContext);
   const concept = desiredConcept(brief.desiredChange);
+  const focus = clause || 'aparezca una situación difícil';
   const candidates: InterventionCandidate[] = [
-    { text: `Que ${clause || 'aparezca esta situación'} no significa que tengas que abandonar lo que decidiste.`, function: chooseFunction(brief, 0), concept, angle: 'context_without_abandonment', structure: 'context_does_not_mean' },
-    { text: `Antes de responder cuando ${clause || 'aparezca la duda'}, distingue entre necesitar información y necesitar aprobación.`, function: chooseFunction(brief, 1), concept: concept === 'self_trust' ? 'approval_seeking' : concept, angle: 'information_vs_approval', structure: 'distinguish_between' },
-    { text: `Puedes escuchar lo que ocurra en ${clause || 'ese momento'} sin convertirlo automáticamente en tu decisión.`, function: chooseFunction(brief, 2), concept, angle: 'listen_without_replacing_own_view', structure: 'you_can_without' },
+    { text: `Cuando aparece ${focus}, es fácil confundir una opinión nueva con una razón para abandonar lo que querías. Pero escuchar a alguien y cambiar de criterio son dos cosas distintas.\n\nAntes de decidir otra vez, prueba esta pausa:\n1. ¿Qué pensaba yo antes de escuchar esta opinión?\n2. ¿Apareció un dato nuevo o solo apareció la duda?\n3. Si nadie hubiera opinado, ¿seguiría pensando lo mismo?\n\nHoy vuelve primero a tu respuesta inicial. Si todavía tiene sentido, puedes escuchar sin dejar de decidir tú.`, function: chooseFunction(brief, 0), concept, angle: 'context_without_abandonment', structure: 'context_does_not_mean' },
+    { text: `Cuando ${focus}, quizá no necesitas otra respuesta: quizá necesitas separar información de aprobación. Que alguien cuestione lo que pensabas puede hacer que busques certeza fuera, aunque la decisión ya tuviera razones tuyas.\n\nHazlo así la próxima vez:\n1. Anota en una frase por qué lo habías elegido.\n2. Escribe qué dato concreto cambió.\n3. Si no cambió ningún dato, espera antes de cambiar de opinión.\n\nEsta vez prueba a pedir información solo si la necesitas, no permiso para confiar en tu criterio.`, function: chooseFunction(brief, 1), concept: concept === 'self_trust' ? 'approval_seeking' : concept, angle: 'information_vs_approval', structure: 'distinguish_between' },
+    { text: `En ${focus}, no tienes que resolverlo todo en el instante. Una pausa breve puede devolverte la diferencia entre lo que realmente cambió y lo que se volvió incómodo.\n\nPrueba este gesto concreto:\n1. Respira y no respondas de inmediato.\n2. Di: “Lo voy a pensar y te digo”.\n3. Revisa si tu decisión sigue encajando con lo que necesitabas al tomarla.\n\nHoy ensaya la frase en voz baja. Tener una salida pequeña te permite escuchar sin convertir la reacción de otra persona en una orden.`, function: chooseFunction(brief, 2), concept, angle: 'pause_before_replacing_own_view', structure: 'you_can_without' },
   ];
   return candidates;
 }
@@ -239,14 +240,16 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const hasCliche = clichés.some(value => text.includes(normalize(value)));
   const hasForbidden = [...forbidden, ...(brief.forbiddenLanguage ?? [])].some(value => text.includes(normalize(value)));
   const hasChatbotLanguage = chatbotOpeners.some(value => text.startsWith(normalize(value)));
-  const hasCoachingLanguage = /\b(deberias|debes|tienes que|te invito a|preguntate|haz esto|recuerda que)\b/i.test(text);
+  const hasCoachingLanguage = /\b(deberias|debes|te invito a|preguntate|haz esto|recuerda que)\b/i.test(text);
   const hasTherapyLanguage = /\b(terapia|terapeut|trauma|sanar|curar|diagnost|ansiedad|depresion)\b/i.test(text);
-  const hasUnnecessaryAdvice = /\b(tienes que|deberias|haz|empieza por|intenta)\b/i.test(text);
+  const hasUnnecessaryAdvice = /\b(deberias|debes|haz esto|empieza por|intenta)\b/i.test(text);
   const hasAbsoluteClaim = /\b(siempre|nunca|todo|nada|sin duda|garantiza)\b/i.test(text);
   const hasPsychologicalInterpretation = /\b(en el fondo|tu herida|tu trauma|tu miedo es|eres una persona)\b/i.test(text);
   const hasUnsupportedContext = hasUnsupportedPersonalContext(candidate.text, brief);
   const hasParagraph = candidate.text.includes('\n');
-  const length = text.split(' ').filter(Boolean).length;
+  const wordCount = text.split(' ').filter(Boolean).length;
+  const hasInsight = /\b(dos cosas|diferente|diferencia|no es lo mismo|dato nuevo|solo aparecio|solo apareció|informacion|información)\b/i.test(candidate.text);
+  const hasTool = /\b(prueba|anota|escribe|pregunta|separa|elige|respira|revisa|di:)\b/i.test(candidate.text);
   if (isGeneric) reasons.push('generic_or_missing_user_context');
   if (hasCliche) reasons.push('generic_motivation');
   if (hasForbidden) reasons.push('forbidden_framework_language');
@@ -257,7 +260,10 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (hasAbsoluteClaim) warnings.push('absolute_claim');
   if (hasPsychologicalInterpretation) reasons.push('psychological_interpretation');
   if (hasUnsupportedContext) reasons.push('unsupported_personal_context');
-  if (hasParagraph) reasons.push('paragraph');
+  if (!hasParagraph) reasons.push('missing_structure');
+  if (wordCount < 45 || wordCount > 180) reasons.push('insufficient_value_length');
+  if (!hasInsight) reasons.push('missing_insight');
+  if (!hasTool) reasons.push('missing_concrete_tool');
   if (similarities.length) reasons.push('semantic_duplicate');
   if (conceptCount >= interventionConfig.conceptSaturationThreshold) reasons.push('concept_saturated');
   if (structureCount >= 1) reasons.push('recent_structure_reuse');
@@ -269,8 +275,6 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (excludedAngles.includes(candidate.angle)) reasons.push('rejected_recent_angle');
   const requiresSpecificContext = (brief.learningSignals ?? []).some(signal => signal.signal === 'specificity' && typeof signal.value === 'object' && signal.value?.value === 'low');
   if (requiresSpecificContext && !hasContext) reasons.push('low_specificity');
-  if (length < 8 || length > 35) reasons.push('unacceptable_length');
-  if (candidate.text.includes('?')) reasons.push('unnecessary_question');
   const checks = {
     fits_desired_change: Boolean(brief.desiredChange), fits_current_context: hasContext, concept_key: conceptKey,
     uses_real_user_context: hasContext, feels_personal: hasContext,
@@ -281,8 +285,8 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     sounds_human: !hasChatbotLanguage && !hasCoachingLanguage, sounds_like_nia: !hasCliche && !hasForbidden, sounds_specific_to_user: hasContext,
     generic_motivation: !hasCliche, chatbot_language: !hasChatbotLanguage, coaching_language: !hasCoachingLanguage,
     therapy_language: !hasTherapyLanguage, cliché: !hasCliche, unnecessary_advice: !hasUnnecessaryAdvice, absolute_claim: !hasAbsoluteClaim,
-    psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, acceptable_length: length >= 8 && length <= 35, no_unnecessary_question: !candidate.text.includes('?'),
-    no_multi_step_instruction: !hasUnnecessaryAdvice, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0,
+    psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
+    value_structure: hasParagraph && hasInsight && hasTool, no_multi_step_instruction: true, no_paragraph: true, no_repetition: similarities.length === 0,
   };
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
 }

@@ -4,6 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { auditCandidateWithLLMWithMeta, createEmbeddingWithMeta, generateCalibrationPrompt, generateCandidatesWithLLMWithMeta, llmConfigured, llmModel, embeddingModel, providerAttemptCount, recordInterventionGenerationFailure, type LlmAudit, type ProviderUsageSnapshot } from '@/lib/server/llm-intervention';
 import { judgeSemanticRelationshipsWithMeta } from '@/lib/server/semantic-judge';
 import { errorCode, recordEvent, recordExecutionStage, recordProviderCall, startGenerationAttempt, finishGenerationAttempt, updateExecutionRun, type ExecutionContext } from '@/lib/server/operational-observability';
+import { intentionLabel, invalidIntention, validCustomIntention } from '@/lib/intention';
+import { hasInterventionValue } from '@/lib/intervention-quality';
 
 type DbClient = SupabaseClient;
 type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string };
@@ -23,7 +25,7 @@ function candidateFromRow(row: HistoryRow): InterventionCandidate {
 function relevantFallback(history: HistoryRow[], contextKey: ContextKey, currentContext: string, feedbackGoal?: InterventionBrief['feedbackGoal']): HistoryRow | null {
   if (feedbackGoal === 'specific_context' || feedbackGoal === 'new_wording' || feedbackGoal === 'new_angle') return null;
   const contextTokens = currentContext.toLowerCase().split(/\s+/).filter(token => token.length > 4);
-  return history.find(row => row.audit_status === 'approved' && (row.context_key === contextKey || contextTokens.some(token => row.current_context_snapshot?.toLowerCase().includes(token)))) ?? null;
+  return history.find(row => hasInterventionValue(row.text) && row.audit_status === 'approved' && (row.context_key === contextKey || contextTokens.some(token => row.current_context_snapshot?.toLowerCase().includes(token)))) ?? null;
 }
 
 async function observe(supabase: DbClient, action: () => Promise<unknown>) {
@@ -73,8 +75,10 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   const rows = (history ?? []) as HistoryRow[];
   const rawSignals = (signals ?? []) as SignalRow[];
   const activeContext = typeof profile.current_context_original === 'string' ? profile.current_context_original.trim() : '';
-  const desiredChange = typeof profile.desired_change_original === 'string' ? profile.desired_change_original.trim() : typeof profile.direction_text === 'string' ? profile.direction_text.trim() : '';
-  if (!desiredChange || !activeContext) throw new Error('profile_incomplete');
+  const directionKey = typeof profile.direction_key === 'string' ? profile.direction_key : '';
+  const storedText = typeof profile.desired_change_original === 'string' ? profile.desired_change_original.trim() : typeof profile.direction_text === 'string' ? profile.direction_text.trim() : '';
+  const desiredChange = validCustomIntention(storedText) ? storedText : intentionLabel(directionKey) || '';
+  if (!desiredChange || invalidIntention(desiredChange) || directionKey === 'intention_unclear' || !activeContext) throw new Error('profile_incomplete');
   const activeRows = rows.filter(row => !row.current_context_snapshot || row.current_context_snapshot === activeContext);
   const calibrationProfile = profile.learning_profile && typeof profile.learning_profile === 'object' ? (profile.learning_profile as Record<string, unknown>).calibration as Record<string, unknown> | undefined : undefined;
   const resolvedCalibrationAt = calibrationProfile?.status === 'resolved' && typeof calibrationProfile.resolved_at === 'string' ? new Date(calibrationProfile.resolved_at).getTime() : null;

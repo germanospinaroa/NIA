@@ -18,7 +18,7 @@ const contextOptions = [
   ['opinion', 'Cuando alguien cuestiona lo que decidí.'],
   ['conversation', 'Cuando tengo que expresar lo que pienso.'],
 ] as const;
-type Stage = 'name' | 'intro' | 'direction' | 'context' | 'timing' | 'calibration' | 'first_intervention' | 'ready';
+type Stage = 'name' | 'intro' | 'direction' | 'context' | 'timing' | 'generating' | 'calibration' | 'first_intervention' | 'ready';
 type CalibrationOption = { id: string; label: string; context_value: string };
 type CalibrationPrompt = { question: string; options: CalibrationOption[] };
 
@@ -46,6 +46,8 @@ export default function OnboardingPage() {
   const [editingDirection, setEditingDirection] = useState(false);
   const [intervention, setIntervention] = useState('');
   const [interactionId, setInteractionId] = useState<string | null>(null);
+  const [feedbackNote, setFeedbackNote] = useState('');
+  const [feedbackChoice, setFeedbackChoice] = useState<'not_me' | null>(null);
   const [calibration, setCalibration] = useState<CalibrationPrompt | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -121,6 +123,7 @@ export default function OnboardingPage() {
   async function loadDaily() {
     let response: Response;
     let result: { status?: string; calibration?: CalibrationPrompt; interaction?: { id: string; content: string }; error?: string };
+    go('generating');
     try {
       response = await fetch('/api/daily');
       result = await response.json().catch(() => ({}));
@@ -198,7 +201,7 @@ export default function OnboardingPage() {
     setLoading(true); setError('');
     try {
       if (interactionId) {
-        const response = await fetch('/api/daily', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ feedback_type: feedback }) });
+        const response = await fetch('/api/daily', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ feedback_type: feedback, feedback_note: feedback === 'not_me' ? feedbackNote : undefined }) });
         if (!response.ok) throw new Error('FEEDBACK_SAVE_ERROR');
       }
       saveFunnelState({ firstInterventionFeedback: feedback, onboardingStage: 'ready' });
@@ -216,8 +219,9 @@ export default function OnboardingPage() {
     {stage === 'direction' && <>{direction && !editingDirection ? <><h1>Por lo que me contaste, creo que hay algo que quieres trabajar:</h1><div className="nia-response-card"><p>{direction}</p></div><p className="funnel-copy">¿Sí va por ahí?</p><div className="option-list"><button className="option-button" onClick={() => submitDirection()}>Sí, eso es <ArrowRight size={16} /></button><button className="option-button" onClick={() => setEditingDirection(true)}>Quiero decirlo de otra manera <ArrowRight size={16} /></button></div></> : <><h1>¿Qué quieres trabajar?</h1><p className="funnel-copy">Escríbelo con tus palabras.</p><textarea autoFocus className="funnel-input textarea" value={direction} onChange={event => setDirection(event.target.value)} placeholder="Quiero..." maxLength={180} /><button className="funnel-button" disabled={!direction.trim()} onClick={() => submitDirection()}>Guardar lo que quiero trabajar <ArrowRight size={17} /></button></>}</>}
     {stage === 'context' && <><h1>Perfecto.</h1><p className="funnel-copy">Ahora quiero ubicar un poquito mejor dónde te pasa.</p><p className="funnel-copy">¿Dónde notas más esa duda?</p><div className="option-list">{contextOptions.map(([value, label]) => <button key={value} className="option-button" onClick={() => submitContext(value)}>{label}<ArrowRight size={16} /></button>)}<button className="option-button" onClick={() => submitContext('other')}>En otra situación <ArrowRight size={16} /></button></div>{context === 'other' && <><input autoFocus className="funnel-input" value={customContext} onChange={event => setCustomContext(event.target.value)} placeholder="Cuéntame brevemente dónde te pasa" maxLength={180} /><button className="funnel-button" disabled={!customContext.trim()} onClick={submitCustomContext}>Guardar esta situación <ArrowRight size={17} /></button></>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
     {stage === 'timing' && <><p className="funnel-eyebrow">PARA EMPEZAR</p><h1>¿En qué momento del día te gustaría recibir tu mensaje de NIA?</h1><p className="funnel-copy">Elige el momento del día en el que te resultaría más fácil leerlo y tomarte unos minutos para ti.</p><div className="option-list">{timingOptions.map(([value, label]) => <button key={value} className="option-button" disabled={loading} onClick={() => submitTiming(value)}>{label}<ArrowRight size={16} /></button>)}</div>{loading && <p className="funnel-note">Guardando tu elección…</p>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'generating' && <><p className="funnel-eyebrow">PARA TI</p><h1>Estoy preparando algo para ti.</h1><p className="funnel-copy">Estoy tomando en cuenta lo que quieres trabajar para que este mensaje tenga sentido para ti.</p><div className="funnel-progress" aria-label="Preparando tu mensaje"><span /></div><p className="funnel-note">Revisando lo que quieres trabajar · preparando tu mensaje · dejándolo listo para ti.</p>{error && <p className="funnel-error" role="alert">{error}</p>}</>}
     {stage === 'calibration' && calibration && <><p className="funnel-eyebrow">PARA SEGUIR</p><h1>{calibration.question}</h1><div className="option-list">{calibration.options.map(option => <button key={option.id} className="option-button" disabled={loading} onClick={() => submitCalibration(option)}>{option.label}<ArrowRight size={16} /></button>)}</div>{loading && <p className="funnel-note">Guardando tu elección…</p>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
-    {stage === 'first_intervention' && <><h1>{name}, aquí empieza tu experiencia con NIA.</h1><div className="nia-response-card"><p>{intervention}</p></div><p className="funnel-copy">¿Esto se acerca a lo que quieres trabajar?</p><div className="option-list"><button className="option-button" disabled={loading} onClick={() => giveFeedback('serves')}>Sí, bastante. <ArrowRight size={16} /></button><button className="option-button" disabled={loading} onClick={() => giveFeedback('different')}>Más o menos. <ArrowRight size={16} /></button><button className="option-button" disabled={loading} onClick={() => giveFeedback('not_me')}>No, todavía no. <ArrowRight size={16} /></button></div>{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'first_intervention' && <><p className="funnel-eyebrow">YA ESTÁ LISTO</p><h1>{name ? `${name}, aquí empieza tu experiencia con NIA.` : 'Aquí empieza tu experiencia con NIA.'}</h1><div className="nia-response-card"><p className="whitespace-pre-line">{intervention}</p></div><p className="funnel-copy">¿Esto se acerca a lo que necesitas?</p><div className="option-list"><button className="option-button" disabled={loading} onClick={() => giveFeedback('serves')}>Sí, bastante. <ArrowRight size={16} /></button><button className="option-button" disabled={loading} onClick={() => giveFeedback('different')}>Más o menos. <ArrowRight size={16} /></button><button className="option-button" disabled={loading} onClick={() => setFeedbackChoice('not_me')}>No, todavía no. <ArrowRight size={16} /></button></div>{feedbackChoice === 'not_me' && <div className="mt-4"><label className="funnel-copy" htmlFor="feedback-note">¿Qué faltó? <span className="text-[12px]">(opcional)</span></label><textarea id="feedback-note" className="funnel-input textarea" value={feedbackNote} onChange={event => setFeedbackNote(event.target.value)} placeholder="Cuéntamelo brevemente" maxLength={500} /><button className="funnel-button" disabled={loading} onClick={() => giveFeedback('not_me')}>Enviar respuesta <ArrowRight size={17} /></button></div>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
     {stage === 'ready' && <><h1>Tu configuración está guardada.</h1><p className="funnel-copy">Conecta WhatsApp en Tú para recibir los mensajes de NIA donde ya estás.</p><button className="funnel-button" onClick={() => router.push('/app/tu')}>Configurar WhatsApp <ArrowRight size={17} /></button></>}
   </div></section></FunnelFrame>;
 }
