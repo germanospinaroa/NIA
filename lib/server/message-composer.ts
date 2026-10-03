@@ -71,7 +71,7 @@ export function closingFor(content: string, now = new Date(), timezone?: string 
 }
 
 export function recentClosings(contents: string[]) {
-  return contents.map(closingFrom).filter((value): value is string => Boolean(value));
+  return contents.map(closingFrom).filter((value): value is NonNullable<typeof value> => value !== null);
 }
 
 export function composeNiaMessage(input: { content: string; firstName?: string | null; timezone?: string | null; userKey?: string; now?: Date; recentContents?: string[] }) {
