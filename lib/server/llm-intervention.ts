@@ -1,13 +1,17 @@
 import { formatCandidateText } from '../intervention-engine.ts';
-import type { CalibrationPrompt, InterventionBrief, InterventionCandidate, InterventionFunction, InterventionStructure, SemanticMatch } from '../intervention-engine.ts';
+import type { CalibrationPrompt, EditorialBlock, EditorialBlockType, EditorialDepth, EditorialInterventionType, InterventionBrief, InterventionCandidate, InterventionFunction, InterventionStructure, SemanticMatch } from '../intervention-engine.ts';
 
 export type LlmCandidate = {
-  recognition: string;
-  explanation: string;
-  insight: string;
-  steps: string[];
-  action: string;
-  closing: string;
+  topic: string;
+  intervention_type: EditorialInterventionType;
+  depth: EditorialDepth;
+  blocks: EditorialBlock[];
+  recognition?: string;
+  explanation?: string;
+  insight?: string;
+  steps?: string[];
+  action?: string;
+  closing?: string;
   function: InterventionFunction;
   concept: string;
   angle: string;
@@ -20,6 +24,7 @@ export type LlmAudit = {
 const OPENAI_URL = process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1/chat/completions';
 export const candidateFunctions = ['remind', 'anticipate', 'reframe', 'distinguish', 'interrupt', 'permit', 'anchor', 'redirect'] as const;
 export const candidateStructures = ['context_does_not_mean', 'before_then', 'you_can_without', 'distinguish_between', 'when_then', 'specific_permission'] as const;
+export const candidateBlockTypes: EditorialBlockType[] = ['idea', 'recognition', 'explanation', 'insight', 'question', 'tool', 'step', 'example', 'action', 'closing'];
 
 export function llmConfigured() { return Boolean(process.env.OPENAI_API_KEY); }
 export function embeddingsConfigured() { return Boolean(process.env.OPENAI_API_KEY); }
@@ -149,27 +154,40 @@ function addUsage(target: StructuredUsage, source?: StructuredUsage) {
   for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens', 'cached_input_tokens', 'cache_write_tokens'] as const) target[key] = (target[key] ?? 0) + (source?.[key] ?? 0);
 }
 
-export const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['recognition', 'explanation', 'insight', 'steps', 'action', 'closing', 'function', 'concept', 'angle', 'structure'], properties: { recognition: { type: 'string', minLength: 1, maxLength: 300 }, explanation: { type: 'string', minLength: 1, maxLength: 300 }, insight: { type: 'string', minLength: 1, maxLength: 300 }, steps: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' } }, action: { type: 'string', minLength: 1, maxLength: 240 }, closing: { type: 'string', minLength: 1, maxLength: 160 }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
+export const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['topic', 'intervention_type', 'depth', 'blocks', 'function', 'concept', 'angle', 'structure'], properties: { topic: { type: 'string', minLength: 1, maxLength: 160 }, intervention_type: { type: 'string', enum: ['brief_insight', 'reflection', 'practical_guidance', 'tool', 'step_by_step', 'example', 'deep_dive'] }, depth: { type: 'string', enum: ['brief', 'medium', 'deep'] }, blocks: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'object', additionalProperties: false, required: ['type', 'text'], properties: { type: { type: 'string', enum: candidateBlockTypes }, text: { type: 'string', minLength: 1, maxLength: 420 } } } }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
 const auditSchema = { type: 'object', additionalProperties: false, required: ['context_fit', 'specificity', 'generic_motivation', 'chatbot_language', 'coaching_language', 'therapy_language', 'cliché', 'semantic_repetition', 'concept_repetition', 'structure_repetition', 'single_idea', 'natural_voice', 'unnecessary_advice', 'approved', 'reasons'], properties: { context_fit: { type: 'boolean' }, specificity: { type: 'boolean' }, generic_motivation: { type: 'boolean' }, chatbot_language: { type: 'boolean' }, coaching_language: { type: 'boolean' }, therapy_language: { type: 'boolean' }, 'cliché': { type: 'boolean' }, semantic_repetition: { type: 'boolean' }, concept_repetition: { type: 'boolean' }, structure_repetition: { type: 'boolean' }, single_idea: { type: 'boolean' }, natural_voice: { type: 'boolean' }, unnecessary_advice: { type: 'boolean' }, approved: { type: 'boolean' }, reasons: { type: 'array', items: { type: 'string' } } } };
 const calibrationSchema = { type: 'object', additionalProperties: false, required: ['question', 'options', 'allow_free_text', 'reason', 'missing_context_field'], properties: { question: { type: 'string', minLength: 12, maxLength: 180 }, options: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'object', additionalProperties: false, required: ['id', 'label', 'context_value'], properties: { id: { type: 'string', minLength: 2, maxLength: 40 }, label: { type: 'string', minLength: 2, maxLength: 80 }, context_value: { type: 'string', minLength: 2, maxLength: 180 } } } }, allow_free_text: { type: 'boolean', const: true }, reason: { type: 'string', enum: ['too_general', 'missing_context', 'context_changed', 'desired_change_changed'] }, missing_context_field: { type: 'string', enum: ['current_context', 'active_context', 'relevant_situations', 'desired_change'] } } };
 
 const system = `Eres el motor de mensajes de NIA. Cada candidato debe entregar valor utilizable después de cerrar WhatsApp, no una frase motivacional. No inventes personas, lugares, trabajos, conflictos ni hechos personales. No hagas terapia, coaching ni claims clínicos. No uses frases genéricas, afirmaciones vacías ni introducciones de chatbot. No uses sostener, mantener tu dirección, volver a tu intención, honrar tu proceso, alinearte contigo ni equivalentes salvo que sean palabras de la usuaria. La situación debe estar confirmada por la usuaria. Devuelve únicamente el JSON solicitado.`;
-const candidateGenerationSystem = `${system} Para candidatos de intervención, no escribas el mensaje final en un campo text. Completa exactamente estos campos: recognition, explanation, insight, steps, action y closing. Cada campo cumple una función distinta y no debe repetir la misma idea con sinónimos: el siguiente campo debe profundizarla, operacionalizarla, convertirla en acción o mostrar una consecuencia. recognition entra directamente en la situación o tensión; no repitas desiredChange, no digas “estás buscando”, “estás trabajando en” ni “quieres aprender a”, y no describas el proceso de cambio como un coach. explanation explica un mecanismo sencillo y añade una capa nueva, sin repetir recognition, concept o desiredChange. insight aporta una distinción que aún no se haya expresado. steps operacionaliza el insight: cada paso debe avanzar la intervención y no repetirlo; contiene 2 o 3 instrucciones o preguntas concretas, sin numeración ni saltos de línea. action es una aplicación inmediata y no repite literalmente un step. closing expresa una consecuencia práctica breve; no es un aforismo, slogan, frase motivacional, frase de identidad ni conclusión poética. La aplicación compondrá la presentación final. Mantén aproximadamente 70–150 palabras en total, contexto confirmado, herramienta concreta, variación de función/estructura/ángulo, lenguaje humano y sin claims clínicos. Los 3 candidatos deben ser concisos: recognition, explanation e insight de 15–30 palabras cada uno; cada step de 8–20 palabras; action de 8–20 palabras; closing de 5–15 palabras; concept y angle breves. No escribas explicaciones adicionales fuera del JSON, no repitas ideas entre candidatos y no agregues comentarios, markdown ni texto fuera del schema. En el JSON, function y structure son identificadores internos cerrados; concept y angle son descripciones semánticas libres en español.`;
+const candidateGenerationSystem = `${system} El brief editorial decide qué conviene trabajar y cómo variar la entrega. No escribas un mensaje final en un campo text. Devuelve exactamente topic, concept, angle, intervention_type, depth, blocks, function y structure. Cada block solo tiene type y text; usa entre 1 y 7 bloques, sin rellenar. Los tipos disponibles son idea, recognition, explanation, insight, question, tool, step, example, action y closing. Los 3 candidatos deben variar cuando sea útil: pueden ser una idea breve, una reflexión, una herramienta, un ejemplo o una guía. No obligues todos los bloques: steps, action, question, explanation, insight y recognition son opcionales según el contenido. Si intervention_type es step_by_step usa al menos dos bloques step; si es tool, incluye un bloque tool. No repitas la misma idea entre bloques ni entre candidatos. La aplicación compondrá la presentación final uniendo los bloques y numerando únicamente los bloques step. Mantén prioridad en relevancia, valor y diversidad; la preferencia es una señal, no una plantilla. No inventes hechos personales, no hagas terapia, coaching, motivación genérica ni introducciones de chatbot. No escribas explicaciones fuera del JSON ni markdown.`;
 
 export function composeCandidateText(candidate: LlmCandidate) {
-  const steps = candidate.steps.map((step, index) => `${index + 1}. ${step.trim()}`).join('\n');
-  return formatCandidateText([candidate.recognition, candidate.explanation, candidate.insight, steps, candidate.action, candidate.closing].map(value => value.trim()).join('\n\n')).trim();
+  if (!Array.isArray(candidate.blocks)) {
+    const legacy = [candidate.recognition, candidate.explanation, candidate.insight, ...(candidate.steps ?? []).map((step, index) => `${index + 1}. ${step}`), candidate.action, candidate.closing].filter((value): value is string => Boolean(value?.trim()));
+    return formatCandidateText(legacy.join('\n\n')).trim();
+  }
+  let stepNumber = 0;
+  const parts = candidate.blocks.map(block => {
+    const value = block.text.trim();
+    if (block.type !== 'step') return value;
+    stepNumber += 1;
+    return `${stepNumber}. ${value}`;
+  }).filter(Boolean);
+  return formatCandidateText(parts.join('\n\n')).trim();
 }
 
 export function validateLlmCandidate(value: unknown): value is LlmCandidate {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<LlmCandidate>;
-  const strings = [candidate.recognition, candidate.explanation, candidate.insight, candidate.action, candidate.closing];
-  const validSteps = Array.isArray(candidate.steps) && candidate.steps.length >= 2 && candidate.steps.length <= 3 && candidate.steps.every(step => typeof step === 'string' && step.trim().length > 0 && !/[\r\n]/.test(step) && !/^\s*\d+[.)]\s/.test(step));
-  if (!strings.every(value => typeof value === 'string' && value.trim().length > 0) || !validSteps) return false;
+  const blocks = Array.isArray(candidate.blocks) ? candidate.blocks : [];
+  const validBlocks = blocks.length >= 1 && blocks.length <= 7 && blocks.every(block => block && typeof block === 'object' && candidateBlockTypes.includes((block as EditorialBlock).type) && typeof (block as EditorialBlock).text === 'string' && (block as EditorialBlock).text.trim().length > 0 && !/[\r\n]/.test((block as EditorialBlock).text));
+  if (typeof candidate.topic !== 'string' || !candidate.topic.trim() || !validBlocks) return false;
+  if (!['brief_insight', 'reflection', 'practical_guidance', 'tool', 'step_by_step', 'example', 'deep_dive'].includes(candidate.intervention_type as string) || !['brief', 'medium', 'deep'].includes(candidate.depth as string)) return false;
   if (typeof candidate.concept !== 'string' || candidate.concept.trim().length < 2 || typeof candidate.angle !== 'string' || candidate.angle.trim().length < 2 || !candidateFunctions.includes(candidate.function as typeof candidateFunctions[number]) || !candidateStructures.includes(candidate.structure as typeof candidateStructures[number])) return false;
+  if (candidate.intervention_type === 'step_by_step' && blocks.filter(block => block.type === 'step').length < 2) return false;
+  if (candidate.intervention_type === 'tool' && !blocks.some(block => block.type === 'tool')) return false;
   const text = composeCandidateText(candidate as LlmCandidate);
-  return text.includes('\n') && text.includes('\n\n') && text.length >= 180 && text.length <= 900;
+  return text.length > 0 && (blocks.length === 1 || (text.includes('\n') && text.includes('\n\n'))) && text.length <= 1400;
 }
 
 export async function generateCandidatesWithLLM(brief: InterventionBrief): Promise<InterventionCandidate[]> {
@@ -181,7 +199,7 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
   const usage: StructuredUsage = {};
   const callUsages: ProviderUsageSnapshot[] = [];
   const execution = await withTechnicalJsonRetryMeta(async () => {
-    const response = await requestStructuredJsonWithMeta('nia_intervention_candidates', candidateSchema, candidateGenerationSystem, `Construye exactamente 3 candidatos diferentes. Deben variar en ángulo y estructura, no ser paráfrasis. Usa únicamente hechos y situaciones confirmados por la usuaria. Si el brief no contiene una situación concreta, no la inventes. Restricciones activas: ${(brief.generationConstraints ?? []).join(' | ') || 'ninguna adicional'}. Brief completo:\n${JSON.stringify(brief)}`);
+    const response = await requestStructuredJsonWithMeta('nia_intervention_candidates', candidateSchema, candidateGenerationSystem, `Construye exactamente 3 candidatos diferentes. Usa únicamente hechos y situaciones confirmados por la usuaria. Si el brief no contiene una situación concreta, no la inventes. Respeta el brief editorial y evita topics, angles y concepts recientes indicados allí. Restricciones activas: ${(brief.generationConstraints ?? []).join(' | ') || 'ninguna adicional'}. Brief editorial: ${JSON.stringify(brief.editorialPlan ?? null)}. Contexto y objetivo: ${JSON.stringify({ desiredChange: brief.desiredChange, currentContext: brief.currentContext, relevantSituations: brief.relevantSituations, communicationPreference: brief.communicationPreference })}`);
     callUsages.push(response.usage ?? {});
     addUsage(usage, response.usage);
     const value = response.value as { candidates?: unknown };
@@ -189,7 +207,7 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
     if (structuredCandidates.length !== 3 || !structuredCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
     return structuredCandidates as LlmCandidate[];
   });
-  return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), recognition: candidate.recognition, explanation: candidate.explanation, insight: candidate.insight, steps: candidate.steps, action: candidate.action, closing: candidate.closing, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
+  return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), topic: candidate.topic, interventionType: candidate.intervention_type, depth: candidate.depth, blocks: candidate.blocks, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
 }
 
 export function validateCalibrationPrompt(value: unknown): value is CalibrationPrompt {
@@ -223,7 +241,7 @@ Evalúa chatbot_language con precisión. No marques como chatbot el reconocimien
 
 Evalúa coaching_language como performative_coaching_voice. Una intervención puede recomendar acciones, hacer preguntas, proponer pasos concretos, sugerir una pausa, dar criterios de decisión, proponer una frase para usar o plantear un pequeño experimento. Eso no constituye coaching. Marca coaching_language únicamente cuando la voz se vuelve genérica, motivacional, terapéutica o propia de una sesión de coaching: exhortaciones sobre confianza, autoestima, crecimiento personal, potencial o identidad sin conexión operativa concreta, o motivación en lugar de una herramienta. Evalúa el mensaje completo y su función, no palabras aisladas. Mantén separadas las dimensiones coaching, therapy, chatbot_language y generic_motivation.
 
-Evalúa también la repetición interna. No rechaces porque se repita una estructura de composición o porque el candidato pertenezca al mismo tema que una intervención anterior. Rechaza semantic_repetition o concept_repetition cuando recognition, explanation, insight, steps, action o closing vuelvan a expresar la misma idea accionable sin profundizarla, operacionalizarla o añadir una consecuencia distinta. Distingue la repetición histórica de la repetición interna del propio candidato.
+Evalúa también la repetición interna sobre blocks[]. No rechaces porque se repita una estructura de composición, un formato o porque el candidato pertenezca al mismo tema que una intervención anterior. Rechaza semantic_repetition o concept_repetition cuando varios bloques vuelvan a expresar la misma idea accionable sin profundizarla, operacionalizarla o añadir una consecuencia distinta. Distingue la repetición histórica de la repetición interna del propio candidato.
 
 Brief:
 ${JSON.stringify({ desired_change: brief.desiredChange, current_context: brief.currentContext, relevant_context: brief.relevantSituations, candidate, recent_interventions: brief.recentInterventions, semantic_matches: semanticMatches, recent_concepts: brief.recentConcepts, recent_structures: brief.recentStructures })}`);

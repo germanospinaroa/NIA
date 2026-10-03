@@ -13,12 +13,13 @@ export async function GET(request: Request) {
   const period = parseAdminPeriod(new URL(request.url));
   await recordAdminAudit(admin, { adminUserId: access.user.id, action: 'view_dashboard', targetType: 'dashboard', metadata: { period: period.key } });
   const inPeriod = <T extends { gte: (column: string, value: string) => T; lt: (column: string, value: string) => T }>(query: T, column: string): T => query.gte(column, period.from).lt(column, period.to);
-  const [authUsers, executionsResult, attemptsResult, providerResult, interventionsResult, eventsResult, feedbackResult, learningResult, subscriptionsResult] = await Promise.all([
+  const [authUsers, executionsResult, attemptsResult, providerResult, interventionsResult, editorialResult, eventsResult, feedbackResult, learningResult, subscriptionsResult] = await Promise.all([
     listAllAuthUsers(admin),
     inPeriod(admin.from('execution_runs').select('id,user_id,status,duration_ms,failure_code,started_at'), 'started_at'),
     inPeriod(admin.from('generation_attempts').select('attempt_type,candidate_count,approved_candidate_count,rejection_count,duration_ms'), 'created_at'),
     inPeriod(admin.from('execution_provider_calls').select('id,execution_run_id,provider,model,operation,input_tokens,output_tokens,total_tokens,latency_ms,status,error_code,created_at'), 'created_at'),
     inPeriod(admin.from('interventions').select('user_id,status,created_at,delivered_at'), 'created_at'),
+    inPeriod(admin.from('interventions').select('user_id,status,created_at,delivered_at,topic,intervention_type,depth'), 'created_at'),
     inPeriod(admin.from('event_log').select('user_id,event_type,metadata,occurred_at'), 'occurred_at'),
     inPeriod(admin.from('intervention_feedback').select('id', { count: 'exact', head: true }), 'created_at'),
     inPeriod(admin.from('learning_signals').select('id', { count: 'exact', head: true }), 'created_at'),
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
     attempts: attemptsResult.data ?? [],
     providerCalls: providerResult.data ?? [],
     interventions: interventionsResult.data ?? [],
+    editorialInterventions: editorialResult.data ?? [],
     events: eventsResult.data ?? [],
     feedback: feedbackResult.count ?? 0,
     learningSignals: learningResult.count ?? 0,

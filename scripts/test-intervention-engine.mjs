@@ -9,27 +9,22 @@ assert.equal(formatCandidateText('Introducción.\n\n1. Primer paso\n2. Segundo p
 assert.equal(formatCandidateText('Texto completamente plano sin estructura detectable.'), 'Texto completamente plano sin estructura detectable.');
 assert.equal(formatCandidateText('texto\r\n\r\n1. paso'), 'texto\n\n1. paso');
 const structuredCandidate = {
-  recognition: 'Cuando tu jefe cuestiona una decisión, notas que empiezas a mirar tu criterio con sus ojos.',
-  explanation: 'La duda puede aparecer aunque la situación no haya cambiado y aunque antes tuvieras razones claras.',
-  insight: 'Escuchar una opinión y necesitar convertirla en una razón para cambiar son cosas distintas.',
-  steps: ['Anota qué pensabas antes de escucharla.', 'Revisa si apareció un dato nuevo o solo una opinión diferente.', 'Espera antes de cambiar si tus razones siguen teniendo sentido.'],
-  action: 'Hoy practica esa pausa antes de pedir otra opinión sobre una decisión concreta.',
-  closing: 'Puedes escuchar y seguir decidiendo tú.',
+  topic: 'criterio propio', intervention_type: 'step_by_step', depth: 'medium',
+  blocks: [{ type: 'recognition', text: 'Cuando tu jefe cuestiona una decisión, notas que empiezas a mirar tu criterio con sus ojos.' }, { type: 'step', text: 'Anota qué pensabas antes de escucharla.' }, { type: 'step', text: 'Revisa si apareció un dato nuevo o solo una opinión diferente.' }],
   function: 'anticipate', concept: 'self_trust', angle: 'revisar datos antes de cambiar', structure: 'when_then',
 };
 const composedStructured = composeCandidateText(structuredCandidate);
-assert.equal(composedStructured.split('\n').filter(line => /^\d+\. /.test(line)).length, 3);
+assert.equal(composedStructured.split('\n').filter(line => /^\d+\. /.test(line)).length, 2);
 assert.equal(composedStructured.includes('\n\n'), true);
-assert.equal(composedStructured, [structuredCandidate.recognition, structuredCandidate.explanation, structuredCandidate.insight, '1. Anota qué pensabas antes de escucharla.\n2. Revisa si apareció un dato nuevo o solo una opinión diferente.\n3. Espera antes de cambiar si tus razones siguen teniendo sentido.', structuredCandidate.action, structuredCandidate.closing].join('\n\n'));
+assert.equal(composedStructured, [structuredCandidate.blocks[0].text, '1. Anota qué pensabas antes de escucharla.', '2. Revisa si apareció un dato nuevo o solo una opinión diferente.'].join('\n\n'));
 assert.equal(validateLlmCandidate(structuredCandidate), true);
-assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: [] }), false);
-assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: ['Solo un paso'] }), false);
-assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: ['1', '2', '3', '4'] }), false);
-assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: ['1. Numerado por error', 'Otro paso'] }), false);
-assert.equal(validateLlmCandidate({ ...structuredCandidate, recognition: undefined }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, blocks: [] }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, blocks: [{ type: 'step', text: 'Solo un paso' }] }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, blocks: Array.from({ length: 8 }, () => ({ type: 'idea', text: 'idea' })) }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, blocks: [{ type: 'unknown', text: 'x' }, { type: 'step', text: 'y' }] }), false);
 assert.equal(validateLlmCandidate({ ...structuredCandidate, function: 'invalid' }), false);
 assert.equal(validateLlmCandidate({ ...structuredCandidate, structure: 'invalid' }), false);
-assert.equal(auditCandidate({ text: composedStructured, function: structuredCandidate.function, concept: structuredCandidate.concept, angle: structuredCandidate.angle, structure: structuredCandidate.structure }, base).reasons.includes('missing_structure'), false);
+assert.equal(auditCandidate({ text: composedStructured, blocks: structuredCandidate.blocks, interventionType: structuredCandidate.intervention_type, depth: structuredCandidate.depth, function: structuredCandidate.function, concept: structuredCandidate.concept, angle: structuredCandidate.angle, structure: structuredCandidate.structure }, base).reasons.includes('missing_structure'), false);
 const generic = { text: 'Confía en ti.', function: 'remind', concept: 'self_trust', angle: 'generic', structure: 'specific_permission' };
 assert.equal(auditCandidate(generic, base).status, 'rejected');
 assert(auditCandidate(generic, base).reasons.includes('generic_or_missing_user_context'));
@@ -46,7 +41,7 @@ assert.equal(feedbackFor(contextual).dimension, 'relevance');
 assert(feedbackFor(contextual).options.some(option => option.key === 'context_changed'));
 assert(feedbackFor(contextual).options.some(option => option.key === 'desired_change_changed'));
 const structureAudit = auditCandidate({ ...contextual, structure: 'context_does_not_mean' }, { ...base, recentStructures: ['context_does_not_mean'] });
-assert(structureAudit.reasons.includes('recent_structure_reuse'));
+assert(structureAudit.warnings.includes('recent_structure_reuse'));
 assert.equal(contextStatusForDays(new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), null), true);
 assert.equal(contextStatusForDays(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), null), false);
 assert.equal(auditCandidate({ ...contextual, text: 'Eres suficiente.' }, base).status, 'rejected');

@@ -1,6 +1,29 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Auditoría editorial — 2026-10-03
+
+EDITORIAL_AUDIT_COMPLETED=yes
+EDITORIAL_CANONICAL_INTERVENTION_TABLE=public.interventions
+COMMUNICATION_PREFERENCE_FIELD=NEW profiles.communication_preference
+EDITORIAL_FIELDS_EXISTING=function,concept,angle,structure,audit_results,desired_change_snapshot,current_context_snapshot,profiles.learning_profile,context_history,desired_change_history
+EDITORIAL_FIELDS_MISSING=profiles.communication_preference,interventions.topic,interventions.intervention_type,interventions.depth,interventions.blocks,interventions.editorial_strategy,interventions.editorial_reason
+SAFE_TO_IMPLEMENT=yes
+
+La auditoría read-only del esquema observable de Production confirmó que no existe una tabla `learning_profile`; `learning_profile` es JSONB en `profiles`. Las intervenciones históricas viven en `public.interventions` y ya conservan función, concepto, ángulo, estructura, texto y auditorías. `intervention_candidates` conserva el texto y metadata de candidatos, pero no es la fuente canónica de intervenciones entregadas. Las nuevas columnas serán aditivas y nullable para no inventar metadata histórica. La preferencia de comunicación no se mezclará con `voice_style`: `voice_style` representa el estilo existente y no tiene los valores editoriales `idea|practical|structured|adaptive`.
+
+Decisión editorial: NIA deriva su memoria principalmente de `interventions`; no se crea una tabla paralela de memoria. El planner se ejecuta antes de generar contenido y la entrega WhatsApp permanece fuera de alcance.
+
+## Memoria editorial y diversidad adaptativa — 2026-10-03
+- Añadida la migración pendiente `20261003120000_editorial_memory.sql`. Es aditiva: agrega `profiles.communication_preference` con default `adaptive` y metadata nullable en `interventions` y `intervention_candidates` (`topic`, `intervention_type`, `depth`, `blocks`, `editorial_strategy`, `editorial_reason`). No modifica ni elimina datos históricos.
+- `lib/server/editorial-memory.ts` deriva las últimas intervenciones, recurrencia de temas, ángulos, formatos y profundidad. La saturación es determinista y distingue tema repetido de idea/ángulo repetido.
+- `lib/server/editorial-planner.ts` decide `continue_topic`, `change_angle`, `refresh_topic` o `explore_adjacent` con prioridad relevancia → valor → diversidad → preferencia → novedad → profundidad. La preferencia solo cambia pesos; no impone una plantilla.
+- El contrato nuevo de generación usa `topic`, `concept`, `angle`, `intervention_type`, `depth` y `blocks[]`. `composeCandidateText()` compone los bloques y numera solo los bloques `step`; no exige recognition, insight, action, question o steps en todos los mensajes.
+- El auditor acepta formatos flexibles, valida requisitos específicos de `step_by_step`/`tool`, detecta repetición interna por bloques y conserva `same concept != duplicate`. Reutilizar una estructura reciente es una advertencia, no un rechazo automático.
+- Onboarding y `/app/tú` permiten elegir `idea`, `practical`, `structured` o `adaptive`; los usuarios existentes se inicializan en `adaptive` al aplicar la migración. Admin user detail y dashboard muestran el mapa editorial agregado.
+- Tests offline nuevos: `test:editorial-memory`, `test:editorial-planner`, `test:flexible-interventions`, además de structured output actualizado. No hubo llamadas OpenAI, embeddings, semantic judge, LLM audit, Evolution, WhatsApp ni cron.
+- Pendiente para Production: aplicar `supabase/migrations/20261003120000_editorial_memory.sql`. El cambio de código queda validado localmente y NO está desplegado.
+
 ## Refinamiento UI app — 2026-10-03
 - `/app` quedó centrado en saludo real, intervención almacenada y una frase natural del próximo mensaje; se eliminaron el estado de conexión redundante y cualquier apariencia de dashboard en la primera pantalla.
 - `lib/next-message.ts` conserva el cálculo existente y añade el formato humano “Tu próximo mensaje llegará hoy/mañana a…” sin exponer slots, timezone ni IDs.

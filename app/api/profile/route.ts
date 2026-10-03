@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { intentionLabel, invalidIntention, isValidIntention, validCustomIntention } from '@/lib/intention';
 
 const allowed = new Set([
-  'first_name', 'direction_key', 'direction_text', 'voice_style', 'message_frequency', 'message_time_1', 'message_time_2', 'timezone',
+  'first_name', 'direction_key', 'direction_text', 'voice_style', 'communication_preference', 'message_frequency', 'message_time_1', 'message_time_2', 'timezone',
   'whatsapp_enabled', 'whatsapp_phone', 'desired_change_original', 'desired_change_summary', 'desired_change_concepts', 'desired_change_language',
   'desired_change_started_at', 'desired_change_last_confirmed_at', 'desired_change_status', 'current_context_original', 'current_context_summary',
   'current_context_domain', 'current_context_started_at', 'current_context_last_confirmed_at', 'current_context_status', 'learning_profile',

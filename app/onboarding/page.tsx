@@ -18,7 +18,8 @@ const contextOptions = [
   ['opinion', 'Cuando alguien cuestiona lo que decidí.'],
   ['conversation', 'Cuando tengo que expresar lo que pienso.'],
 ] as const;
-type Stage = 'name' | 'intro' | 'direction' | 'context' | 'timing' | 'generating' | 'calibration' | 'first_intervention' | 'ready';
+type CommunicationPreference = 'idea' | 'practical' | 'structured' | 'adaptive';
+type Stage = 'name' | 'intro' | 'direction' | 'context' | 'communication' | 'timing' | 'generating' | 'calibration' | 'first_intervention' | 'ready';
 type CalibrationOption = { id: string; label: string; context_value: string };
 type CalibrationPrompt = { question: string; options: CalibrationOption[] };
 
@@ -42,6 +43,7 @@ export default function OnboardingPage() {
   const [name, setName] = useState('');
   const [direction, setDirection] = useState('');
   const [context, setContext] = useState('');
+  const [communicationPreference, setCommunicationPreference] = useState<CommunicationPreference>('adaptive');
   const [customContext, setCustomContext] = useState('');
   const [editingDirection, setEditingDirection] = useState(false);
   const [intervention, setIntervention] = useState('');
@@ -60,8 +62,9 @@ export default function OnboardingPage() {
     setName(persistedName);
     setDirection(persistedDirection);
     setContext(persistedContext);
+    if (state.communicationPreference) setCommunicationPreference(state.communicationPreference);
     const restoredStage = state.onboardingStage;
-    const nextStage: Stage = !persistedName ? 'name' : !persistedDirection ? 'intro' : restoredStage === 'ready' ? 'ready' : restoredStage === 'first_intervention' && state.firstInterventionContent ? 'first_intervention' : restoredStage === 'calibration' ? 'calibration' : restoredStage === 'timing' && persistedContext ? 'timing' : restoredStage === 'timing' ? 'context' : 'intro';
+    const nextStage: Stage = !persistedName ? 'name' : !persistedDirection ? 'intro' : restoredStage === 'ready' ? 'ready' : restoredStage === 'first_intervention' && state.firstInterventionContent ? 'first_intervention' : restoredStage === 'calibration' ? 'calibration' : restoredStage === 'timing' && persistedContext ? 'timing' : restoredStage === 'timing' ? 'context' : restoredStage === 'communication' ? 'communication' : 'intro';
     setStage(nextStage);
     saveFunnelState({ onboardingStage: nextStage });
     trackFunnel('onboarding_started');
@@ -108,7 +111,7 @@ export default function OnboardingPage() {
     setContext(nextContext);
     saveFunnelState({ onboardingContext: nextContext });
     trackFunnel('context_selected', { context: nextContext });
-    go('timing');
+    go('communication');
   }
 
   function submitCustomContext() {
@@ -117,8 +120,10 @@ export default function OnboardingPage() {
     setContext(value);
     saveFunnelState({ onboardingContext: value });
     trackFunnel('context_selected', { context: 'other' });
-    go('timing');
+    go('communication');
   }
+
+  function submitCommunication(value: CommunicationPreference) { setCommunicationPreference(value); saveFunnelState({ communicationPreference: value }); go('timing'); }
 
   async function loadDaily() {
     let response: Response;
@@ -155,6 +160,7 @@ export default function OnboardingPage() {
       direction_key: directionKeyForContext(state.discoverContext),
       direction_text: desiredChange,
       voice_style: 'grounded',
+      communication_preference: communicationPreference,
       message_frequency: 1,
       message_time_1: time,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -218,6 +224,7 @@ export default function OnboardingPage() {
     {stage === 'intro' && <><h1>Hola, {name}.</h1><p className="funnel-copy">Ya estás dentro.</p><p className="funnel-copy">Ahora sí quiero que NIA empiece a trabajar contigo.</p><p className="funnel-copy">No voy a llenarte de preguntas. Primero vamos a dejar claro qué quieres trabajar y después vamos a empezar contigo desde ahí.</p><button className="funnel-button" onClick={begin}>Empecemos <ArrowRight size={17} /></button></>}
     {stage === 'direction' && <>{direction && !editingDirection ? <><h1>Por lo que me contaste, creo que hay algo que quieres trabajar:</h1><div className="nia-response-card"><p>{direction}</p></div><p className="funnel-copy">¿Sí va por ahí?</p><div className="option-list"><button className="option-button" onClick={() => submitDirection()}>Sí, eso es <ArrowRight size={16} /></button><button className="option-button" onClick={() => setEditingDirection(true)}>Quiero decirlo de otra manera <ArrowRight size={16} /></button></div></> : <><h1>¿Qué quieres trabajar?</h1><p className="funnel-copy">Escríbelo con tus palabras.</p><textarea autoFocus className="funnel-input textarea" value={direction} onChange={event => setDirection(event.target.value)} placeholder="Quiero..." maxLength={180} /><button className="funnel-button" disabled={!direction.trim()} onClick={() => submitDirection()}>Guardar lo que quiero trabajar <ArrowRight size={17} /></button></>}</>}
     {stage === 'context' && <><h1>Perfecto.</h1><p className="funnel-copy">Ahora quiero ubicar un poquito mejor dónde te pasa.</p><p className="funnel-copy">¿Dónde notas más esa duda?</p><div className="option-list">{contextOptions.map(([value, label]) => <button key={value} className="option-button" onClick={() => submitContext(value)}>{label}<ArrowRight size={16} /></button>)}<button className="option-button" onClick={() => submitContext('other')}>En otra situación <ArrowRight size={16} /></button></div>{context === 'other' && <><input autoFocus className="funnel-input" value={customContext} onChange={event => setCustomContext(event.target.value)} placeholder="Cuéntame brevemente dónde te pasa" maxLength={180} /><button className="funnel-button" disabled={!customContext.trim()} onClick={submitCustomContext}>Guardar esta situación <ArrowRight size={17} /></button></>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'communication' && <><h1>¿Cómo te gusta que NIA te ayude?</h1><p className="funnel-copy">Es una preferencia. NIA también cuidará que sus mensajes no se vuelvan repetitivos.</p><div className="option-list">{([['idea','Una idea clara','Una idea que me haga pensar, sin darle tantas vueltas.'],['practical','Algo práctico','Algo que pueda llevar a mi vida.'],['structured','Paso a paso cuando haga falta','Cuando el tema lo requiera, prefiero que me muestre cómo hacerlo.'],['adaptive','Prefiero que varíe','Quiero que NIA decida según el momento.']] as const).map(([value,label,detail]) => <button key={value} className="option-button" onClick={() => submitCommunication(value)}><span><strong className="block">{label}</strong><small className="mt-1 block opacity-70">{detail}</small></span><ArrowRight size={16} /></button>)}</div></>}
     {stage === 'timing' && <><p className="funnel-eyebrow">PARA EMPEZAR</p><h1>¿En qué momento del día te gustaría recibir tu mensaje de NIA?</h1><p className="funnel-copy">Elige el momento del día en el que te resultaría más fácil leerlo y tomarte unos minutos para ti.</p><div className="option-list">{timingOptions.map(([value, label]) => <button key={value} className="option-button" disabled={loading} onClick={() => submitTiming(value)}>{label}<ArrowRight size={16} /></button>)}</div>{loading && <p className="funnel-note">Guardando tu elección…</p>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
     {stage === 'generating' && <><p className="funnel-eyebrow">PARA TI</p><h1>Estoy preparando algo para ti.</h1><p className="funnel-copy">Estoy tomando en cuenta lo que quieres trabajar para que este mensaje tenga sentido para ti.</p><div className="funnel-progress" aria-label="Preparando tu mensaje"><span /></div><p className="funnel-note">Revisando lo que quieres trabajar · preparando tu mensaje · dejándolo listo para ti.</p>{error && <p className="funnel-error" role="alert">{error}</p>}</>}
     {stage === 'calibration' && calibration && <><p className="funnel-eyebrow">PARA SEGUIR</p><h1>{calibration.question}</h1><div className="option-list">{calibration.options.map(option => <button key={option.id} className="option-button" disabled={loading} onClick={() => submitCalibration(option)}>{option.label}<ArrowRight size={16} /></button>)}</div>{loading && <p className="funnel-note">Guardando tu elección…</p>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}

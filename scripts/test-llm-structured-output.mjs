@@ -1,26 +1,23 @@
 import assert from 'node:assert/strict';
 import { candidateSchema, isRetryableLlmError, requestStructuredJsonWithMeta, validateLlmCandidate, withTechnicalJsonRetryMeta } from '../lib/server/llm-intervention.ts';
 
-const stepsSchema = candidateSchema.properties.candidates.items.properties.steps;
-assert.equal(stepsSchema.items.type, 'string');
-assert.equal('pattern' in stepsSchema.items, false);
+const blocksSchema = candidateSchema.properties.candidates.items.properties.blocks;
+assert.equal(blocksSchema.items.properties.type.type, 'string');
+assert.equal(blocksSchema.items.properties.text.type, 'string');
 
 const base = {
-  recognition: 'Reconozco lo que quieres trabajar.',
-  explanation: 'A veces una opinión cambia cómo miras una decisión.',
-  insight: 'Escuchar una opinión y cambiar de criterio no son lo mismo.',
-  steps: ['Vuelve a lo que pensabas antes.', 'Revisa qué cambió realmente.'],
-  action: 'Antes de pedir otra opinión, escribe una frase sobre tu propio criterio.',
-  closing: 'Puedes tomarte tu tiempo.',
+  topic: 'criterio propio',
+  intervention_type: 'step_by_step',
+  depth: 'medium',
+  blocks: [{ type: 'recognition', text: 'Cuando una opinión cuestiona una decisión, puede parecer que necesitas abrirla de nuevo.' }, { type: 'step', text: 'Vuelve a lo que pensabas antes de escucharla.' }, { type: 'step', text: 'Revisa qué información cambió realmente.' }],
   function: 'distinguish',
   concept: 'criterio propio',
   angle: 'separar opinión y decisión',
   structure: 'distinguish_between',
 };
 assert.equal(validateLlmCandidate(base), true);
-for (const steps of [[], ['uno'], ['uno', 'dos', 'tres', 'cuatro'], ['1. numerado', 'otro'], ['uno\ndos', 'otro']]) {
-  assert.equal(validateLlmCandidate({ ...base, steps }), false);
-}
+for (const blocks of [[], [{ type: 'step', text: 'uno' }], Array.from({ length: 8 }, () => ({ type: 'idea', text: 'idea' }))]) assert.equal(validateLlmCandidate({ ...base, blocks }), false);
+assert.equal(validateLlmCandidate({ ...base, intervention_type: 'step_by_step', blocks: [{ type: 'step', text: 'uno' }] }), false);
 
 const previousFetch = globalThis.fetch;
 const previousKey = process.env.OPENAI_API_KEY;

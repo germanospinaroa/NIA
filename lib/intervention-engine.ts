@@ -3,6 +3,11 @@ import type { VoiceStyle } from './mvp';
 export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distinguish' | 'interrupt' | 'permit' | 'anchor' | 'redirect';
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
 export type AuditStatus = 'approved' | 'rejected';
+export type EditorialInterventionType = 'brief_insight' | 'reflection' | 'practical_guidance' | 'tool' | 'step_by_step' | 'example' | 'deep_dive';
+export type EditorialDepth = 'brief' | 'medium' | 'deep';
+export type EditorialBlockType = 'idea' | 'recognition' | 'explanation' | 'insight' | 'question' | 'tool' | 'step' | 'example' | 'action' | 'closing';
+export type EditorialBlock = { type: EditorialBlockType; text: string };
+export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; diversity_notes: string };
 
 export type SemanticMatch = {
   intervention_id: string;
@@ -58,6 +63,8 @@ export type InterventionBrief = {
   interventionFunction?: InterventionFunction;
   feedbackGoal?: FeedbackDimension | 'specific_context' | 'new_angle' | 'new_wording' | 'recalibration';
   generationConstraints?: string[];
+  communicationPreference?: 'idea' | 'practical' | 'structured' | 'adaptive';
+  editorialPlan?: EditorialPlan;
 };
 
 export type CalibrationOption = { id: string; label: string; context_value: string };
@@ -94,6 +101,10 @@ export type CandidateAudit = {
 
 export type InterventionCandidate = {
   text: string;
+  topic?: string;
+  interventionType?: EditorialInterventionType;
+  depth?: EditorialDepth;
+  blocks?: EditorialBlock[];
   recognition?: string;
   explanation?: string;
   insight?: string;
@@ -268,7 +279,7 @@ export function hasUnsupportedPersonalContext(text: string, brief: InterventionB
 
 /** Detects repeated ideas inside one composed candidate without judging historical similarity. */
 export function hasInternalRepetition(parts: string[]) {
-  const normalizedParts = parts.map(part => normalize(part)).filter(Boolean);
+  const normalizedParts = parts.filter((part): part is string => typeof part === 'string').map(part => normalize(part)).filter(Boolean);
   for (let left = 0; left < normalizedParts.length; left += 1) {
     for (let right = left + 1; right < normalizedParts.length; right += 1) {
       if (lexicalSimilarity(normalizedParts[left], normalizedParts[right]) >= 0.4) return true;
@@ -339,8 +350,9 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const hasParagraph = candidate.text.includes('\n');
   const wordCount = text.split(' ').filter(Boolean).length;
   const structuredParts = [candidate.recognition, candidate.explanation, candidate.insight].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
-  const hasInsight = typeof candidate.insight === 'string' && Boolean(candidate.insight.trim()) && !hasInternalRepetition(structuredParts);
-  const hasTool = /\b(prueba|anota|escribe|pregunta|separa|elige|respira|revisa|di:)\b/i.test(candidate.text);
+  const blocks = candidate.blocks ?? [];
+  const hasValue = blocks.length > 0 ? blocks.some(block => block.text.trim().length > 0 && ['idea', 'insight', 'explanation', 'question', 'tool', 'example', 'action', 'step'].includes(block.type)) : Boolean(candidate.text.trim());
+  const hasInsight = blocks.length > 0 ? hasValue : typeof candidate.insight === 'string' && Boolean(candidate.insight.trim()) && !hasInternalRepetition(structuredParts);
   if (isGeneric) reasons.push('generic_or_missing_user_context');
   if (hasCliche) reasons.push('generic_motivation');
   if (hasForbidden) reasons.push('forbidden_framework_language');
@@ -351,14 +363,16 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (hasAbsoluteClaim) warnings.push('absolute_claim');
   if (hasPsychologicalInterpretation) reasons.push('psychological_interpretation');
   if (hasUnsupportedContext) reasons.push('unsupported_personal_context');
-  if (!hasParagraph) reasons.push('missing_structure');
-  if (wordCount < 45 || wordCount > 180) reasons.push('insufficient_value_length');
-  if (!hasInsight) reasons.push('missing_insight');
-  if (!hasTool) reasons.push('missing_concrete_tool');
+  if (!hasParagraph && blocks.length === 0) reasons.push('missing_structure');
+  if (blocks.length === 0 && (wordCount < 45 || wordCount > 180)) reasons.push('insufficient_value_length');
+  if (!hasInsight) reasons.push('empty_value');
+  if (candidate.interventionType === 'step_by_step' && blocks.filter(block => block.type === 'step').length < 2) reasons.push('missing_steps_for_type');
+  if (candidate.interventionType === 'tool' && !blocks.some(block => block.type === 'tool')) reasons.push('missing_tool_for_type');
   if (similarities.length) reasons.push('semantic_duplicate');
   if (conceptCount >= interventionConfig.conceptSaturationThreshold) warnings.push('concept_saturated');
-  if (structuredParts.length >= 3 && hasInternalRepetition([candidate.recognition!, candidate.explanation!, candidate.insight!, ...(candidate.steps ?? []), candidate.action ?? '', candidate.closing ?? ''])) reasons.push('internal_repetition');
-  if (structureCount >= 1) reasons.push('recent_structure_reuse');
+  const internalParts = blocks.length ? blocks.map(block => block.text) : [candidate.recognition!, candidate.explanation!, candidate.insight!, ...(candidate.steps ?? []), candidate.action ?? '', candidate.closing ?? ''];
+  if (internalParts.length >= 2 && hasInternalRepetition(internalParts)) reasons.push('internal_repetition');
+  if (structureCount >= 1) warnings.push('recent_structure_reuse');
   const excludedAngles = (brief.learningSignals ?? []).flatMap(signal => {
     if (signal.signal !== 'angle_quality' || typeof signal.value !== 'object' || !signal.value) return [];
     const angle = signal.value.angle;
@@ -378,7 +392,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     generic_motivation: !hasCliche, chatbot_language: !hasChatbotLanguage, coaching_language: !hasCoachingLanguage,
     therapy_language: !hasTherapyLanguage, cliché: !hasCliche, unnecessary_advice: !hasUnnecessaryAdvice, absolute_claim: !hasAbsoluteClaim,
     psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
-    value_structure: hasParagraph && hasInsight && hasTool, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
+    value_structure: hasValue, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
 }
