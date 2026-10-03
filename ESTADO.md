@@ -12,7 +12,7 @@
 - La navegación de `/app` quedó reducida a `Hoy` y `Tú`; `Punto NIA` y `Evidencia` redirigen a `/app` y no forman parte de la experiencia autenticada. No se modificaron `/` ni `/descubre`.
 - `Hoy` muestra únicamente intención real, próximo horario y estado de WhatsApp. `Tú` permite editar intención, frecuencia/horarios, cuenta, privacidad y conexión WhatsApp sin nombres ni intenciones fallback.
 - Se implementaron endpoints autenticados `/api/whatsapp/connection`, `/link`, `/disconnect`, `/test` y webhook firmado `/api/whatsapp/webhook`; códigos hashados, temporales, de un solo uso y protegidos contra reutilización/takeover.
-- Se añadió `supabase/migrations/20261003010000_whatsapp_connections.sql`. La migración aún debe aplicarse al proyecto Supabase de producción y faltan credenciales Meta/Vercel (`WHATSAPP_*`); hasta entonces la UI muestra `no configurado` y nunca finge una conexión o envío.
+- Se añadió `supabase/migrations/20261003010000_whatsapp_connections.sql`; las tablas base están verificadas en Supabase Production. Evolution está configurado en Vercel y la UI nunca finge una conexión o envío.
 - Se corrigió `middleware.ts` para actualizar cookies del request y copiar las cookies refrescadas a una única respuesta SSR.
 - Verificado localmente: typecheck, lint, tests existentes, contrato WhatsApp y build. QA anónima de `/` y `/descubre` realizada; QA autenticada de `/app` queda pendiente de una sesión de test controlada.
 
@@ -634,3 +634,11 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - `app/api/admin/interventions/[id]/route.ts` devuelve expediente estructurado, obtiene email desde Auth, registra `view_intervention`, valida el ID y no expone prompts, credenciales ni headers. `learning_signals` se muestra como historial del usuario porque el schema no tiene `intervention_id`; no se atribuye causalidad individual.
 - Test nuevo: `npm run test:intervention-detail`; suite, typecheck y build PASS; lint PASS con 4 warnings heredados; `git diff --check` PASS.
 - QA autenticada pendiente: no había sesión admin en el entorno. Playwright confirmó redirect seguro a `/login`; capturas de ese estado en `output/playwright/admin-intervention-detail-1440.png` y `admin-intervention-detail-390.png`.
+
+## Fase 4E — Conexión WhatsApp Evolution — 2026-10-03
+- `/app/tú` usa un panel real para iniciar la vinculación: genera código temporal `NIA-XXXX`, muestra el número oficial desde `WHATSAPP_BUSINESS_NUMBER`, abre el deep link de WhatsApp y consulta el estado durante un tiempo limitado.
+- `/api/whatsapp/link` usa sesión real y cliente administrativo server-side para persistir tokens porque la RLS existente no permite escrituras directas; el código se almacena como hash.
+- El webhook `MESSAGES_UPSERT` valida el token, evita `fromMe`, vincula `wa_id`/teléfono en `whatsapp_connections`, consume el token y envía confirmación mediante Evolution con nombre dinámico.
+- Producción tiene las tablas base `whatsapp_connections` y `whatsapp_link_tokens`; no se añadió migración porque el código usa el esquema real disponible. Evolution `nia` mantiene webhook autenticado y `MESSAGES_UPSERT`.
+- Validación: suites relevantes, typecheck, lint y build PASS; lint conserva 4 warnings heredados. `/` y `/descubre` responden 200; API de conexión sin sesión responde 401.
+- Pendiente real: prueba manual con un teléfono de WhatsApp que envíe el código y reciba la confirmación/mensaje de prueba; no se enviaron mensajes reales durante esta sesión.
