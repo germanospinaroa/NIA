@@ -1,6 +1,13 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Flujo login → admin — 2026-10-03
+- Corregido el redirect global de middleware que enviaba a `/app` cualquier sesión existente al visitar `/login`, ignorando `next=/admin`.
+- `middleware.ts` y `app/login/page.tsx` conservan destinos internos seguros; URLs externas o con esquema son descartadas y vuelven a `/app`.
+- La autorización administrativa no cambió: sesión Supabase + email normalizado contra `NIA_ADMIN_EMAILS`; `/admin` sigue devolviendo 403 a usuarios autenticados no autorizados.
+- Añadido `lib/safe-next.ts` y ampliado `test:admin-access`. TypeScript y build pasan; lint conserva cuatro warnings heredados.
+- Pendiente: desplegar este cambio a Production y validar el acceso autenticado desde el navegador del administrador. No se ejecutó ninguna prueba real de NIA.
+
 ## Control admin para QA real — 2026-10-03
 - Añadido el control "Prueba real de NIA" en /admin/users/[id], reutilizando la sesión administrativa existente y el endpoint POST /api/admin/qa/daily-intervention.
 - La UI exige confirmación explícita, deshabilita la acción durante la ejecución y evita un segundo click o una segunda solicitud en la misma vista. Muestra planner, generación, interacción, delivery y estados separados de Evolution/WhatsApp.

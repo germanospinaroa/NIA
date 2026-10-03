@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isAdminEmail } from '@/lib/admin-allowlist';
+import { getSafeNextPath } from '@/lib/safe-next';
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -21,7 +22,10 @@ export async function middleware(request: NextRequest) {
     if (!user) return NextResponse.redirect(new URL('/login?next=/admin', request.url));
     if (!isAdminEmail(user.email)) return new NextResponse('Forbidden', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   }
-  if (request.nextUrl.pathname === '/login' && user) return NextResponse.redirect(new URL('/app', request.url));
+  if (request.nextUrl.pathname === '/login' && user) {
+    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'));
+    return NextResponse.redirect(new URL(nextPath, request.url));
+  }
   return supabaseResponse;
 }
 
