@@ -1,6 +1,12 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Configuración de mensajes — 2026-10-03
+- `/api/profile` ya actualiza perfiles existentes con `update(values).eq('id', user.id)`; se eliminó el `upsert` del guardado de configuración.
+- Los errores del PATCH registran código, mensaje, detalles e hint server-side saneados, sin exponer SQL al cliente. `/app/tú` conserva los cambios en pantalla si falla y solo actualiza `savedDraft` tras respuesta exitosa.
+- Añadido `test:profile-settings` para cubrir configuraciones de 1 y 2 mensajes, incluyendo `01:00`, `01:15` y `America/Bogota`.
+- Production desplegada en `dpl_CZ5o54jp2K9BL6cWQyYGF9VMHxD4`. La persistencia mediante sesión autenticada real y comprobación directa del perfil requieren un buzón/sesión controlada no disponible en este entorno.
+
 ## Envío diario automático por WhatsApp — implementación 2026-10-03
 - Se añadió un generador compartido en `lib/server/daily-message.ts`: `/api/daily` y el job usan la misma interacción diaria persistida y el mismo `message-composer`; no existe una segunda lógica psicológica ni una segunda versión del mensaje.
 - Se añadió `lib/server/whatsapp-daily.ts`, con elegibilidad por `whatsapp_enabled` + conexión `connected`, timezone individual, franjas `message_time_1/message_time_2`, reserva concurrente y estados `pending/sent/failed`.
