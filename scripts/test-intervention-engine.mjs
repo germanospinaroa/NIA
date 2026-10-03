@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, formatCandidateText, hasPerformativeCoachingVoice, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
+import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, formatCandidateText, hasInternalRepetition, hasPerformativeCoachingVoice, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
 import { composeCandidateText, validateLlmCandidate } from '../lib/server/llm-intervention.ts';
 
 const base = { desiredChange: 'Quiero confiar más en mis decisiones.', currentContext: 'Mi jefe cuestiona mis decisiones.', recentInterventions: [], recentConcepts: [], recentAngles: [], recentStructures: [] };
@@ -70,6 +70,36 @@ for (const text of [
 ]) assert.equal(hasPerformativeCoachingVoice(text), true);
 assert.equal(auditCandidate({ ...contextual, text: 'Haz una pausa y escribe qué información nueva apareció antes de responder.' }, base).checks.coaching_language, true);
 assert.equal(auditCandidate({ ...contextual, text: 'Haz un trabajo profundo para confiar en ti y dejar atrás tus dudas.' }, base).checks.coaching_language, false);
+const naturalRecognition = 'Cuando alguien cuestiona una decisión que ya tomaste, el desacuerdo puede sentirse como una señal de que deberías revisarla.';
+const recognitionAudit = auditCandidate({ ...contextual, text: `${naturalRecognition}\n\nUna crítica puede mezclar opinión e información; separarlas permite decidir qué merece una revisión.` }, { ...base, currentContext: 'Cuando alguien cuestiona una decisión que ya tomaste.' });
+assert.equal(recognitionAudit.checks.chatbot_language, true);
+assert.equal(recognitionAudit.checks.fits_current_context, true);
+assert.equal(hasUnsupportedPersonalContext('Una opinión general no ofrece el mismo trabajo que una observación concreta.', base), false);
+assert.equal(hasUnsupportedPersonalContext('Un proyecto puede necesitar revisión cuando aparece información nueva.', base), false);
+assert.equal(hasUnsupportedPersonalContext('El equipo puede aportar otra perspectiva.', base), false);
+const noPersonalBrief = { ...base, currentContext: 'Cuando alguien cuestiona una decisión.' };
+assert.equal(hasUnsupportedPersonalContext('Tu jefe cuestionó la decisión.', noPersonalBrief), true);
+assert.equal(hasUnsupportedPersonalContext('Tu equipo te pidió cambiarla.', noPersonalBrief), true);
+assert.equal(hasUnsupportedPersonalContext('En tu trabajo ocurrió algo distinto.', noPersonalBrief), true);
+const nonRepetitiveParts = [
+  'Cuando alguien cuestiona una decisión, el desacuerdo puede sentirse como una señal de revisión.',
+  'Una crítica amplia puede mezclar opinión e información; separarlas permite decidir qué merece atención.',
+  'Lo relevante es identificar qué dato nuevo cambiaría el criterio.',
+  'Pregunta qué dato concreto respalda la objeción.',
+  'Compáralo con la información disponible al decidir.',
+  'Hoy escribe qué hallazgo justificaría revisar una decisión reciente.',
+  'Así la revisión depende de evidencia nueva.',
+];
+assert.equal(hasInternalRepetition(nonRepetitiveParts), false);
+const repetitiveParts = [
+  'Una crítica puede mezclar opinión e información.',
+  'La crítica mezcla opinión e información.',
+  'Lo importante es separar opinión e información.',
+  'Pregunta qué opinión e información contiene.',
+  'Hoy separa opinión e información.',
+  'Así separas opinión e información.',
+];
+assert.equal(hasInternalRepetition(repetitiveParts), true);
 const semantic = auditSemanticCandidate(contextual, [{ intervention_id: '1', text: 'No necesitas aprobación para tomar decisiones.', similarity: 0.91, concept: contextual.concept, angle: 'other' }], { matches: [{ intervention_id: '1', relationship: 'duplicate', same_actionable_idea: true, same_angle: true, reason: 'Misma idea accionable.' }] });
 assert.equal(semantic.status, 'rejected');
 const calibratedDuplicate = auditSemanticCandidate(contextual, [{ intervention_id: '2', text: 'Confía en tu propio criterio.', similarity: 0.70, concept: 'self_trust', angle: 'paraphrase' }], { matches: [{ intervention_id: '2', relationship: 'duplicate', same_actionable_idea: true, same_angle: true, reason: 'Paráfrasis de la misma idea.' }] });

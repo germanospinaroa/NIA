@@ -1,6 +1,12 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Calidad del generador y auditor — 2026-10-03
+- Ajustadas offline las instrucciones de generación para que recognition entre directamente en la situación, cada campo aporte una función distinta, action no repita steps y closing exprese una consecuencia práctica.
+- El auditor LLM ahora distingue reconocimiento contextual natural de voz de chatbot y evalúa explícitamente la repetición interna frente a la repetición histórica.
+- `unsupported_personal_context` separa anchors inequívocos de usos ambiguos; palabras aisladas como `trabajo`, `proyecto`, `equipo` o `familia` ya no bloquean candidatas.
+- Añadidos tests offline para reconocimiento, contexto personal abstracto/concreto y repetición interna. Tests, typecheck, lint y build pasan. No hubo llamadas API, deployment ni prueba real.
+
 ## Configuración de mensajes — 2026-10-03
 - `/api/profile` ya actualiza perfiles existentes con `update(values).eq('id', user.id)`; se eliminó el `upsert` del guardado de configuración.
 - Los errores del PATCH registran código, mensaje, detalles e hint server-side saneados, sin exponer SQL al cliente. `/app/tú` conserva los cambios en pantalla si falla y solo actualiza `savedDraft` tras respuesta exitosa.

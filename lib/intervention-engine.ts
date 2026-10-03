@@ -195,7 +195,23 @@ export function hasSufficientContext(brief: Pick<InterventionBrief, 'currentCont
   return { sufficient: evidence.length > 0, evidence, missing };
 }
 
-const personalContextAnchors = ['jefe', 'pareja', 'familia', 'amigo', 'amiga', 'cliente', 'equipo', 'reunion', 'reunión', 'proyecto', 'colega', 'madre', 'padre', 'hijo', 'hija', 'casa', 'trabajo'];
+const unambiguousPersonalContextAnchors = [
+  'jefe', 'jefa', 'pareja', 'novio', 'novia', 'esposo', 'esposa',
+  'amigo', 'amiga', 'cliente', 'colega', 'madre', 'padre',
+  'hijo', 'hija',
+];
+const ambiguousPersonalContextPatterns = [
+  /\b(en|de|del|con|para) (tu|mi|su) (trabajo|casa|proyecto|equipo|familia|reunion)\b/,
+  /\b(tu|mi|su) (trabajo|casa|proyecto|equipo|familia|reunion)\b/,
+  /\b(en|durante|despues de|antes de) la reunion\b/,
+  /\b(en|de|del) casa\b/,
+];
+
+function personalContextAnchorMatches(candidate: string) {
+  const matches = unambiguousPersonalContextAnchors.filter(anchor => new RegExp(`\\b${anchor}\\b`).test(candidate));
+  for (const pattern of ambiguousPersonalContextPatterns) if (pattern.test(candidate)) matches.push(pattern.source);
+  return matches;
+}
 
 export function hasUnsupportedPersonalContext(text: string, brief: InterventionBrief) {
   const source = normalize([
@@ -206,7 +222,24 @@ export function hasUnsupportedPersonalContext(text: string, brief: InterventionB
     ...(brief.learningSignals ?? []).flatMap(signal => typeof signal.value === 'object' && signal.value && typeof signal.value.context === 'string' ? [signal.value.context] : []),
   ].join(' '));
   const candidate = normalize(text);
-  return personalContextAnchors.some(anchor => candidate.includes(normalize(anchor)) && !source.includes(normalize(anchor)));
+  return personalContextAnchorMatches(candidate).some(anchor => {
+    if (anchor.startsWith('\\b')) {
+      const sourceMatches = personalContextAnchorMatches(source);
+      return !sourceMatches.includes(anchor);
+    }
+    return !source.includes(normalize(anchor));
+  });
+}
+
+/** Detects repeated ideas inside one composed candidate without judging historical similarity. */
+export function hasInternalRepetition(parts: string[]) {
+  const normalizedParts = parts.map(part => normalize(part)).filter(Boolean);
+  for (let left = 0; left < normalizedParts.length; left += 1) {
+    for (let right = left + 1; right < normalizedParts.length; right += 1) {
+      if (lexicalSimilarity(normalizedParts[left], normalizedParts[right]) >= 0.4) return true;
+    }
+  }
+  return false;
 }
 
 function situationClause(context: string) {
