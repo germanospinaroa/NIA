@@ -64,12 +64,14 @@ const localResult = await withTechnicalJsonRetryMeta(async () => { localCalls +=
 assert.equal(localCalls, 1);
 assert.equal(localResult.code, 'llm_candidate_schema_invalid');
 
+let requestBody;
 async function requestWithPayload(payload) {
-  globalThis.fetch = async () => new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
+  globalThis.fetch = async (_url, init) => { requestBody = JSON.parse(init.body); return new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } }); };
   return requestStructuredJsonWithMeta('test_schema', {}, 'system', 'user');
 }
 
 const normal = await requestWithPayload({ id: 'resp-test', model: 'test-model', choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }], usage: { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 } });
+assert.equal(requestBody.max_completion_tokens, 2400);
 assert.deepEqual(normal.value, { ok: true });
 assert.deepEqual(normal.usage, { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18, cached_input_tokens: undefined, cache_write_tokens: undefined });
 
