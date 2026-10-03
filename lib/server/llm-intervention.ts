@@ -28,7 +28,7 @@ export function embeddingModel() { return process.env.OPENAI_EMBEDDING_MODEL || 
 
 export type StructuredUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cached_input_tokens?: number; cache_write_tokens?: number };
 export type ProviderUsageSnapshot = StructuredUsage;
-type LlmError = Error & { status?: number; code?: string; retryable?: boolean; technicalAttempts?: number };
+type LlmError = Error & { status?: number; code?: string; retryable?: boolean; technicalAttempts?: number; providerMeta?: Record<string, unknown> };
 
 function normalizeUsage(raw?: Record<string, unknown>): StructuredUsage | undefined {
   if (!raw) return undefined;
@@ -74,12 +74,28 @@ export async function requestStructuredJsonWithMeta(name: string, schema: Record
       providerError.retryable = [408, 429, 500, 502, 503, 504].includes(response.status);
       throw providerError;
     }
-    const payload = await response.json() as { choices?: { message?: { content?: string } }[]; usage?: Record<string, unknown> };
-    const content = payload.choices?.[0]?.message?.content;
+    const payload = await response.json() as { id?: unknown; model?: unknown; choices?: { finish_reason?: unknown; message?: { content?: unknown; refusal?: unknown } }[]; usage?: Record<string, unknown> };
+    const firstChoice = Array.isArray(payload.choices) ? payload.choices[0] : undefined;
+    const rawContent = firstChoice?.message?.content;
+    const content = typeof rawContent === 'string' ? rawContent : null;
+    const refusal = firstChoice?.message?.refusal;
+    const providerMeta = {
+      provider_response_id: typeof payload.id === 'string' ? payload.id : null,
+      choices_count: Array.isArray(payload.choices) ? payload.choices.length : 0,
+      finish_reason: typeof firstChoice?.finish_reason === 'string' ? firstChoice.finish_reason : null,
+      content_present: content !== null && content.length > 0,
+      content_length: content?.length ?? 0,
+      refusal_present: typeof refusal === 'string' && refusal.length > 0,
+      refusal_reason: typeof refusal === 'string' && refusal.length > 0 ? 'provider_refusal' : null,
+      usage: normalizeUsage(payload.usage) ?? null,
+      model: typeof payload.model === 'string' ? payload.model : llmModel(),
+    };
     if (!content) {
       const emptyError = new Error('llm_empty_response') as LlmError;
       emptyError.code = 'llm_empty_response';
       emptyError.retryable = false;
+      emptyError.providerMeta = providerMeta;
+      console.error('llm_empty_response', providerMeta);
       throw emptyError;
     }
     try {

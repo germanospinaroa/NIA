@@ -63,6 +63,30 @@ let localCalls = 0;
 const localResult = await withTechnicalJsonRetryMeta(async () => { localCalls += 1; throw Object.assign(new Error('invalid'), { code: 'llm_candidate_schema_invalid' }); }).catch(error => error);
 assert.equal(localCalls, 1);
 assert.equal(localResult.code, 'llm_candidate_schema_invalid');
+
+async function requestWithPayload(payload) {
+  globalThis.fetch = async () => new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
+  return requestStructuredJsonWithMeta('test_schema', {}, 'system', 'user');
+}
+
+const normal = await requestWithPayload({ id: 'resp-test', model: 'test-model', choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }], usage: { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 } });
+assert.deepEqual(normal.value, { ok: true });
+assert.deepEqual(normal.usage, { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18, cached_input_tokens: undefined, cache_write_tokens: undefined });
+
+const refusalError = await requestWithPayload({ id: 'resp-refusal', choices: [{ finish_reason: 'stop', message: { content: null, refusal: 'private refusal text' } }] }).catch(error => error);
+assert.equal(refusalError.code, 'llm_empty_response');
+assert.equal(refusalError.retryable, false);
+assert.deepEqual(refusalError.providerMeta, { provider_response_id: 'resp-refusal', choices_count: 1, finish_reason: 'stop', content_present: false, content_length: 0, refusal_present: true, refusal_reason: 'provider_refusal', usage: null, model: 'gpt-5-mini' });
+assert.equal(JSON.stringify(refusalError.providerMeta).includes('private refusal text'), false);
+
+const lengthError = await requestWithPayload({ choices: [{ finish_reason: 'length', message: { content: null } }] }).catch(error => error);
+assert.equal(lengthError.code, 'llm_empty_response');
+assert.equal(lengthError.providerMeta.finish_reason, 'length');
+
+const emptyChoicesError = await requestWithPayload({ choices: [] }).catch(error => error);
+assert.equal(emptyChoicesError.code, 'llm_empty_response');
+assert.equal(emptyChoicesError.providerMeta.choices_count, 0);
+
 globalThis.fetch = previousFetch;
 if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
 
