@@ -28,6 +28,7 @@ export function embeddingModel() { return process.env.OPENAI_EMBEDDING_MODEL || 
 
 export type StructuredUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cached_input_tokens?: number; cache_write_tokens?: number };
 export type ProviderUsageSnapshot = StructuredUsage;
+type LlmError = Error & { status?: number; code?: string; retryable?: boolean; technicalAttempts?: number };
 
 function normalizeUsage(raw?: Record<string, unknown>): StructuredUsage | undefined {
   if (!raw) return undefined;
@@ -45,9 +46,18 @@ export async function requestStructuredJsonWithMeta(name: string, schema: Record
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error('llm_not_configured');
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
   try {
-    const response = await fetch(OPENAI_URL, { method: 'POST', signal: controller.signal, headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: llmModel(), max_completion_tokens: 1200, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } } }) });
+    let response: Response;
+    try {
+      response = await fetch(OPENAI_URL, { method: 'POST', signal: controller.signal, headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: llmModel(), max_completion_tokens: 1200, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } } }) });
+    } catch {
+      const networkError = new Error(timedOut ? 'llm_timeout' : 'llm_network_error') as LlmError;
+      networkError.code = timedOut ? 'llm_timeout' : 'llm_network_error';
+      networkError.retryable = true;
+      throw networkError;
+    }
     if (!response.ok) {
       const bodyText = await response.text();
       let providerMessage = `HTTP ${response.status}`;
@@ -58,31 +68,56 @@ export async function requestStructuredJsonWithMeta(name: string, schema: Record
         // Keep the status-only fallback when the provider does not return JSON.
       }
       const safeMessage = providerMessage.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]').replace(/(?:sk|sess)-[A-Za-z0-9_-]+/g, '[redacted]').replace(/[\r\n\t]+/g, ' ').slice(0, 500);
-      throw new Error(`llm_http_${response.status}: ${safeMessage}`);
+      const providerError = new Error(`llm_http_${response.status}: ${safeMessage}`) as LlmError;
+      providerError.status = response.status;
+      providerError.code = `llm_http_${response.status}`;
+      providerError.retryable = [408, 429, 500, 502, 503, 504].includes(response.status);
+      throw providerError;
     }
     const payload = await response.json() as { choices?: { message?: { content?: string } }[]; usage?: Record<string, unknown> };
     const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error('llm_empty_response');
-    return { value: JSON.parse(content), usage: normalizeUsage(payload.usage) };
+    if (!content) {
+      const emptyError = new Error('llm_empty_response') as LlmError;
+      emptyError.code = 'llm_empty_response';
+      emptyError.retryable = false;
+      throw emptyError;
+    }
+    try {
+      return { value: JSON.parse(content), usage: normalizeUsage(payload.usage) };
+    } catch {
+      const parseError = new Error('llm_invalid_json') as LlmError;
+      parseError.code = 'llm_invalid_json';
+      parseError.retryable = false;
+      throw parseError;
+    }
   } finally { clearTimeout(timeout); }
 }
 export async function requestStructuredJson(name: string, schema: Record<string, unknown>, system: string, user: string): Promise<unknown> {
   return (await requestStructuredJsonWithMeta(name, schema, system, user)).value;
 }
 
+export function isRetryableLlmError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as LlmError;
+  if (typeof candidate.retryable === 'boolean') return candidate.retryable;
+  if (typeof candidate.status === 'number') return [408, 429, 500, 502, 503, 504].includes(candidate.status);
+  if (candidate.code === 'llm_timeout' || candidate.code === 'llm_network_error') return true;
+  return candidate.name === 'AbortError';
+}
+
 async function withTechnicalJsonRetry<T>(operation: () => Promise<T>): Promise<T> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 2; attempt += 1) { try { return await operation(); } catch (error) { lastError = error; } }
+  for (let attempt = 0; attempt < 2; attempt += 1) { try { return await operation(); } catch (error) { lastError = error; if (!isRetryableLlmError(error)) break; } }
   throw lastError instanceof Error ? lastError : new Error('llm_invalid_json');
 }
 
-async function withTechnicalJsonRetryMeta<T>(operation: () => Promise<T>): Promise<{ value: T; calls: number; failedCalls: number }> {
+export async function withTechnicalJsonRetryMeta<T>(operation: () => Promise<T>): Promise<{ value: T; calls: number; failedCalls: number }> {
   let lastError: unknown;
   let calls = 0;
   let failedCalls = 0;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     calls += 1;
-    try { return { value: await operation(), calls, failedCalls }; } catch (error) { lastError = error; failedCalls += 1; }
+    try { return { value: await operation(), calls, failedCalls }; } catch (error) { lastError = error; failedCalls += 1; if (!isRetryableLlmError(error)) break; }
   }
   const failure = lastError instanceof Error ? lastError : new Error('llm_invalid_json');
   Object.assign(failure, { technicalAttempts: calls });

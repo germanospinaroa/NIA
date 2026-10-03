@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { candidateSchema, requestStructuredJsonWithMeta, validateLlmCandidate } from '../lib/server/llm-intervention.ts';
+import { candidateSchema, isRetryableLlmError, requestStructuredJsonWithMeta, validateLlmCandidate, withTechnicalJsonRetryMeta } from '../lib/server/llm-intervention.ts';
 
 const stepsSchema = candidateSchema.properties.candidates.items.properties.steps;
 assert.equal(stepsSchema.items.type, 'string');
@@ -25,11 +25,44 @@ for (const steps of [[], ['uno'], ['uno', 'dos', 'tres', 'cuatro'], ['1. numerad
 const previousFetch = globalThis.fetch;
 const previousKey = process.env.OPENAI_API_KEY;
 process.env.OPENAI_API_KEY = 'test-key';
-globalThis.fetch = async () => new Response(JSON.stringify({ error: { message: 'Invalid schema: pattern is unsupported. Bearer secret-value sk-secret-value' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+let fetchCalls = 0;
+globalThis.fetch = async () => { fetchCalls += 1; return new Response(JSON.stringify({ error: { message: 'Invalid schema: pattern is unsupported. Bearer secret-value sk-secret-value' } }), { status: 400, headers: { 'content-type': 'application/json' } }); };
 await assert.rejects(
-  requestStructuredJsonWithMeta('test_schema', {}, 'system', 'user'),
-  error => error instanceof Error && error.message.startsWith('llm_http_400: Invalid schema') && error.message.includes('[redacted]') && !error.message.includes('secret-value'),
+  withTechnicalJsonRetryMeta(() => requestStructuredJsonWithMeta('test_schema', {}, 'system', 'user')),
+  error => error instanceof Error && error.message.startsWith('llm_http_400: Invalid schema') && error.message.includes('[redacted]') && !error.message.includes('secret-value') && error.status === 400 && error.retryable === false,
 );
+assert.equal(fetchCalls, 1);
+assert.equal(isRetryableLlmError(Object.assign(new Error('bad request'), { status: 400 })), false);
+for (const status of [401, 403, 404]) assert.equal(isRetryableLlmError(Object.assign(new Error(`http ${status}`), { status })), false);
+for (const status of [408, 429, 500, 502, 503, 504]) assert.equal(isRetryableLlmError(Object.assign(new Error(`http ${status}`), { status })), true);
+assert.equal(isRetryableLlmError(Object.assign(new Error('schema'), { code: 'llm_candidate_schema_invalid' })), false);
+assert.equal(isRetryableLlmError(Object.assign(new Error('empty'), { code: 'llm_empty_response' })), false);
+assert.equal(isRetryableLlmError(Object.assign(new Error('network'), { code: 'llm_network_error' })), true);
+
+async function retryingProvider(status) {
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls === 1) return new Response(JSON.stringify({ error: { message: `temporary ${status}` } }), { status });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), { status: 200 });
+  };
+  const result = await withTechnicalJsonRetryMeta(() => requestStructuredJsonWithMeta('test_schema', {}, 'system', 'user'));
+  assert.equal(result.calls, 2);
+  assert.equal(calls, 2);
+}
+await retryingProvider(429);
+await retryingProvider(500);
+
+let networkCalls = 0;
+globalThis.fetch = async () => { networkCalls += 1; if (networkCalls === 1) throw new TypeError('network down'); return new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), { status: 200 }); };
+const networkResult = await withTechnicalJsonRetryMeta(() => requestStructuredJsonWithMeta('test_schema', {}, 'system', 'user'));
+assert.equal(networkResult.calls, 2);
+assert.equal(networkCalls, 2);
+
+let localCalls = 0;
+const localResult = await withTechnicalJsonRetryMeta(async () => { localCalls += 1; throw Object.assign(new Error('invalid'), { code: 'llm_candidate_schema_invalid' }); }).catch(error => error);
+assert.equal(localCalls, 1);
+assert.equal(localResult.code, 'llm_candidate_schema_invalid');
 globalThis.fetch = previousFetch;
 if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
 
