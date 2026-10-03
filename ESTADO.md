@@ -642,3 +642,10 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Producción tiene las tablas base `whatsapp_connections` y `whatsapp_link_tokens`; no se añadió migración porque el código usa el esquema real disponible. Evolution `nia` mantiene webhook autenticado y `MESSAGES_UPSERT`.
 - Validación: suites relevantes, typecheck, lint y build PASS; lint conserva 4 warnings heredados. `/` y `/descubre` responden 200; API de conexión sin sesión responde 401.
 - Pendiente real: prueba manual con un teléfono de WhatsApp que envíe el código y reciba la confirmación/mensaje de prueba; no se enviaron mensajes reales durante esta sesión.
+
+## Fase 4F — Outbound WhatsApp Evolution — 2026-10-03
+- Causa del fallo outbound: la instancia real de Evolution estaba publicada como `NIA`, mientras el cliente usaba `EVOLUTION_INSTANCE=nia`; inbound seguía funcionando porque no incluye el nombre de instancia en la URL del webhook, pero `/message/sendText/{instance}` sí lo requiere.
+- `EVOLUTION_INSTANCE` de Vercel Production se sincronizó con `NIA`; la instancia fue verificada read-only como `open` mediante `fetchInstances`.
+- `sendWhatsAppText` conserva el endpoint `/message/sendText/{instance}` y el payload `{ number, text }`, añade timeout, status HTTP, extracción de message id y logging saneado. El botón de prueba y la confirmación automática no convierten errores del proveedor en éxito.
+- El webhook consume el token de vinculación de forma condicional/idempotente antes de enviar confirmación, evitando duplicados concurrentes.
+- Test sintético outbound verifica respuesta 201 con message id y rechazo 404; suites relevantes, typecheck, lint y build ejecutados. No se envió ningún mensaje real durante esta sesión.
