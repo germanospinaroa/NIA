@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, formatCandidateText, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
+import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, formatCandidateText, hasPerformativeCoachingVoice, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
 import { composeCandidateText, validateLlmCandidate } from '../lib/server/llm-intervention.ts';
 
 const base = { desiredChange: 'Quiero confiar más en mis decisiones.', currentContext: 'Mi jefe cuestiona mis decisiones.', recentInterventions: [], recentConcepts: [], recentAngles: [], recentStructures: [] };
@@ -53,6 +53,23 @@ assert.equal(contextStatusForDays(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
 assert.equal(auditCandidate({ ...contextual, text: 'Eres suficiente.' }, base).status, 'rejected');
 assert.equal(auditCandidate({ ...contextual, text: 'Entiendo que esto puede ser difícil.' }, base).status, 'rejected');
 assert.equal(auditCandidate({ ...contextual, text: 'Te invito a reflexionar sobre lo que necesitas.' }, base).status, 'rejected');
+for (const text of [
+  'Antes de responder, espera diez minutos.',
+  'Anota qué dato nuevo apareció antes de cambiar de decisión.',
+  'Pregúntate qué información nueva tienes antes de cambiar de decisión.',
+  'Prueba decir: Lo voy a pensar y te digo.',
+  'Haz una pausa y escribe qué información nueva apareció.',
+]) assert.equal(hasPerformativeCoachingVoice(text), false);
+for (const text of [
+  'Te invito a confiar más en ti.',
+  'Date permiso para confiar en tu proceso.',
+  'Recuerda que tú tienes las respuestas.',
+  'Conecta con tu poder y recuerda que eres capaz de lograrlo.',
+  'Haz un trabajo profundo para confiar en ti y dejar atrás tus dudas.',
+  'Pregúntate por qué todavía no confías en ti.',
+]) assert.equal(hasPerformativeCoachingVoice(text), true);
+assert.equal(auditCandidate({ ...contextual, text: 'Haz una pausa y escribe qué información nueva apareció antes de responder.' }, base).checks.coaching_language, true);
+assert.equal(auditCandidate({ ...contextual, text: 'Haz un trabajo profundo para confiar en ti y dejar atrás tus dudas.' }, base).checks.coaching_language, false);
 const semantic = auditSemanticCandidate(contextual, [{ intervention_id: '1', text: 'No necesitas aprobación para tomar decisiones.', similarity: 0.91, concept: contextual.concept, angle: 'other' }], { matches: [{ intervention_id: '1', relationship: 'duplicate', same_actionable_idea: true, same_angle: true, reason: 'Misma idea accionable.' }] });
 assert.equal(semantic.status, 'rejected');
 const calibratedDuplicate = auditSemanticCandidate(contextual, [{ intervention_id: '2', text: 'Confía en tu propio criterio.', similarity: 0.70, concept: 'self_trust', angle: 'paraphrase' }], { matches: [{ intervention_id: '2', relationship: 'duplicate', same_actionable_idea: true, same_angle: true, reason: 'Paráfrasis de la misma idea.' }] });

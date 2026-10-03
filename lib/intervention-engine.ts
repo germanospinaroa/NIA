@@ -112,6 +112,18 @@ export type FeedbackSpec = {
 const forbidden = ['sostener', 'mantener tu dirección', 'volver a tu intención', 'honrar tu proceso', 'alineada'];
 const clichés = ['confía en ti', 'cree en ti', 'tú puedes', 'eres suficiente', 'sé tu mejor versión', 'todo estará bien', 'no tengas miedo', 'recuerda quién eres', 'escucha tu corazón', 'da el primer paso', 'sal de tu zona de confort', 'todo pasa por algo'];
 const chatbotOpeners = ['entiendo que', 'es normal sentirse', 'recuerda que está bien', 'quizás podrías', 'te invito a reflexionar', 'es importante que', 'date permiso para'];
+const performativeCoachingPatterns = [
+  /\bte invito a (confiar|creer|conectar|trabajar en ti|transformarte|cambiar tu vida)\b/,
+  /\bdate permiso para (confiar|creer|ser|conectar|vivir|avanzar)\b/,
+  /\brecuerda que tu tienes (todas )?las respuestas\b/,
+  /\bconecta con tu poder\b/,
+  /\bes momento de (creer|confiar|ser|convertirte)\b/,
+  /\bconfia en que eres capaz\b/,
+  /\bdeberias trabajar en (tu )?(seguridad|autoestima|confianza)\b/,
+  /\bpreguntate por que todavia no confias en ti\b/,
+  /\bhaz un trabajo profundo para confiar en ti\b/,
+  /\bpermitete ser la persona que quieres ser\b/,
+];
 
 export const interventionConfig = {
   semanticDuplicateThreshold: 0.52,
@@ -126,6 +138,11 @@ export const interventionConfig = {
 
 function normalize(value: string) {
   return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function hasPerformativeCoachingVoice(value: string) {
+  const text = normalize(value);
+  return performativeCoachingPatterns.some(pattern => pattern.test(text));
 }
 
 export function canonicalConceptKey(value: string) {
@@ -248,7 +265,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const hasCliche = clichés.some(value => text.includes(normalize(value)));
   const hasForbidden = [...forbidden, ...(brief.forbiddenLanguage ?? [])].some(value => text.includes(normalize(value)));
   const hasChatbotLanguage = chatbotOpeners.some(value => text.startsWith(normalize(value)));
-  const hasCoachingLanguage = /\b(deberias|debes|te invito a|preguntate|haz esto|recuerda que)\b/i.test(text);
+  const hasCoachingLanguage = hasPerformativeCoachingVoice(candidate.text);
   const hasTherapyLanguage = /\b(terapia|terapeut|trauma|sanar|curar|diagnost|ansiedad|depresion)\b/i.test(text);
   const hasUnnecessaryAdvice = /\b(deberias|debes|haz esto|empieza por|intenta)\b/i.test(text);
   const hasAbsoluteClaim = /\b(siempre|nunca|todo|nada|sin duda|garantiza)\b/i.test(text);
