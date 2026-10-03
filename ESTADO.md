@@ -1,6 +1,13 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Refinamiento UI app — 2026-10-03
+- `/app` quedó centrado en saludo real, intervención almacenada y una frase natural del próximo mensaje; se eliminaron el estado de conexión redundante y cualquier apariencia de dashboard en la primera pantalla.
+- `lib/next-message.ts` conserva el cálculo existente y añade el formato humano “Tu próximo mensaje llegará hoy/mañana a…” sin exponer slots, timezone ni IDs.
+- `/app/tú` prioriza cuenta, plan y preferencias; el estado del plan no inventa fechas cuando faltan y distingue cancelación solicitada. `/activate` usa “Continuar”.
+- Tests UI y próximo mensaje pasan; typecheck/build pasan; lint mantiene cuatro warnings heredados. QA visual capturada en `output/playwright/ui-refinement-login-390.png`, `ui-refinement-activate-390.png` y `ui-refinement-login-1440.png`. La QA autenticada de `/app` y `/app/tú` queda pendiente de sesión controlada.
+- No se modificaron generación, auditorías, composer, WhatsApp, Evolution, cron, scheduler, delivery, idempotencia, slots, Hotmart ni suscripciones.
+
 ## Auth Hotmart y duplicados diarios — 2026-10-03
 - Causa del duplicado confirmada: `runDailyWhatsApp()` obtenía una sola `daily_message` por usuario/fecha antes de recorrer los slots y la reutilizaba; además `interactions_daily_once` impedía representar dos interacciones diarias.
 - Corregido el pipeline para generar/obtener una interacción por `local_date + slot` (`1`/`2`) y mantener delivery idempotente por `user_id + local_date + slot`. Añadida migración `20261003060000_daily_interactions_by_slot.sql`; no se editaron migraciones históricas.

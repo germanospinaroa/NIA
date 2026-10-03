@@ -46,3 +46,8 @@ export function formatNextMessageSlot(slot: NextMessageSlot | null) {
   if (!slot) return null;
   return slot.isTomorrow ? `mañana · ${slot.time}` : slot.time;
 }
+
+export function formatNextMessageSentence(slot: NextMessageSlot | null) {
+  if (!slot) return null;
+  return `Tu próximo mensaje llegará ${slot.isTomorrow ? 'mañana' : 'hoy'} a las ${slot.time}.`;
+}
