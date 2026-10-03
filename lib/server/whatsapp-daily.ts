@@ -35,12 +35,12 @@ export async function runDailyWhatsApp(admin: DbClient, now = new Date(), option
     const connection = byUser.get(profile.id);
     const slots = dueSlots(profile, now);
     if (!connection?.wa_id || !slots.length) continue;
-    let daily;
-    try { daily = await getOrCreateDailyInteraction(admin, profile.id, 'whatsapp', now); } catch (error) {
-      results.push({ userId: profile.id, status: 'skipped', reason: error instanceof Error ? error.message : 'generation_failed' });
-      continue;
-    }
     for (const due of slots) {
+      let daily;
+      try { daily = await getOrCreateDailyInteraction(admin, profile.id, 'whatsapp', now, due.slot); } catch (error) {
+        results.push({ userId: profile.id, slot: due.slot, status: 'skipped', reason: error instanceof Error ? error.message : 'generation_failed' });
+        continue;
+      }
       const claim = await claimDelivery(admin, { userId: profile.id, interactionId: String(daily.interaction.id), localDate: due.localDate, slot: due.slot });
       if (!claim) continue;
       if (options.dryRun) {

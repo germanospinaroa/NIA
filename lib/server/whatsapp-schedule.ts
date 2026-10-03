@@ -12,11 +12,11 @@ export type ScheduleProfile = { timezone: string | null; message_frequency: numb
 export function dueSlots(profile: ScheduleProfile, now = new Date()) {
   const clock = localClock(profile.timezone, now);
   const configured = [profile.message_time_1, profile.message_frequency === 2 ? profile.message_time_2 : null].filter((value): value is string => Boolean(value));
-  return configured.filter(value => {
+  return configured.map((value, index) => ({ value, slot: String(index + 1) })).filter(({ value }) => {
     const [hour, minute] = value.split(':').map(Number);
     if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return false;
     const currentMinutes = clock.hour * 60 + clock.minute;
     const scheduledMinutes = hour * 60 + minute;
     return currentMinutes >= scheduledMinutes && currentMinutes < scheduledMinutes + 15;
-  }).map(value => ({ slot: value, localDate: clock.date }));
+  }).map(({ slot }) => ({ slot, localDate: clock.date }));
 }

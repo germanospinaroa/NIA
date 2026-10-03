@@ -1,6 +1,14 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Auth Hotmart y duplicados diarios — 2026-10-03
+- Causa del duplicado confirmada: `runDailyWhatsApp()` obtenía una sola `daily_message` por usuario/fecha antes de recorrer los slots y la reutilizaba; además `interactions_daily_once` impedía representar dos interacciones diarias.
+- Corregido el pipeline para generar/obtener una interacción por `local_date + slot` (`1`/`2`) y mantener delivery idempotente por `user_id + local_date + slot`. Añadida migración `20261003060000_daily_interactions_by_slot.sql`; no se editaron migraciones históricas.
+- Añadido `test:daily-whatsapp-idempotency`: cubre slots separados, reejecución, delivery único y contenidos distintos como contrato de scheduling. No hubo Evolution ni WhatsApp real.
+- Login normal ahora usa email + contraseña. `/activate` usa el enlace de invitación de Supabase para crear la contraseña una sola vez y completa `must_set_password/account_status` server-side.
+- Añadidos webhook idempotente `/api/webhooks/hotmart`, entitlements, eventos Hotmart, campos ampliados de suscripción, consulta/cancelación server-side y sección `Tu plan` en `/app/tú`. Variables nuevas: `HOTMART_HOTTOK`, `HOTMART_CLIENT_ID`, `HOTMART_CLIENT_SECRET`.
+- Tests, typecheck, lint y build pasan; lint conserva cuatro warnings heredados. QA pública de login/activación capturada; `/app/tú` autenticada queda pendiente de sesión controlada. No deployment ni llamadas reales a Hotmart, Evolution, WhatsApp u OpenAI.
+
 ## Home, próximo mensaje y acceso — 2026-10-03
 - `/app` quedó reducido a saludo, mensaje completo almacenado y una línea secundaria con próximo envío y estado de WhatsApp; se eliminaron el pretítulo `HOY`, “Último mensaje disponible” y las tres tarjetas de dashboard.
 - `lib/next-message.ts` calcula determinísticamente el siguiente horario usando la frecuencia, ambas franjas y el timezone del perfil. Un slot exactamente en el minuto actual se considera ya procesado de forma conservadora y se toma el siguiente futuro o el primer slot del día siguiente.

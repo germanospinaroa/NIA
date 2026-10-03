@@ -27,7 +27,7 @@ export async function PATCH(request: Request) {
   const feedback_note = typeof body.feedback_note === 'string' ? body.feedback_note.trim().slice(0, 500) : null;
   if (!['serves', 'different', 'not_me', 'relevant', 'almost', 'not_relevant'].includes(feedback_type)) return NextResponse.json({ error: 'invalid_feedback' }, { status: 400 });
   const { data: profile } = await supabase.from('profiles').select('timezone').eq('id', user.id).single();
-  const { data, error } = await supabase.from('interactions').update({ feedback_type, feedback_note: feedback_type === 'not_me' ? feedback_note : null }).eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', localDate(profile?.timezone || 'UTC')).select('*').single();
+  const { data, error } = await supabase.from('interactions').update({ feedback_type, feedback_note: feedback_type === 'not_me' ? feedback_note : null }).eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', localDate(profile?.timezone || 'UTC')).is('slot', null).select('*').single();
   if (error) return NextResponse.json({ error: 'daily_feedback_failed' }, { status: 400 });
   return NextResponse.json({ interaction: data });
 }

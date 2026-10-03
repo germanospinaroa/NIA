@@ -21,6 +21,8 @@
     "test:message-composer": "node --experimental-strip-types scripts/test-message-composer.mjs",
     "test:next-message": "node --experimental-strip-types scripts/test-next-message.mjs",
     "test:daily-whatsapp": "node --experimental-strip-types scripts/test-daily-whatsapp.mjs",
+    "test:daily-whatsapp-idempotency": "node --experimental-strip-types scripts/test-daily-whatsapp-idempotency.mjs",
+    "test:hotmart-access": "node --experimental-strip-types scripts/test-hotmart-access.mjs",
     "test:profile-settings": "node scripts/test-profile-settings.mjs",
     "test:intention-value": "node --experimental-strip-types scripts/test-intention-value.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
