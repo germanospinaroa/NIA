@@ -35,8 +35,10 @@ await recordEvent(supabase, { userId: 'user-1', eventType: 'candidate_rejected',
 
 assert(calls.some(call => call.table === 'execution_runs' && call.operation === 'insert'));
 assert(calls.some(call => call.table === 'generation_attempts' && call.operation === 'insert'));
+assert.equal(calls.find(call => call.table === 'generation_attempts' && call.operation === 'insert')?.payload.user_id, 'user-1');
 assert(calls.some(call => call.table === 'generation_attempts' && call.operation === 'update'));
 assert(calls.some(call => call.table === 'execution_provider_calls' && call.operation === 'insert'));
+assert.equal(calls.find(call => call.table === 'execution_provider_calls')?.payload.user_id, 'user-1');
 assert.equal(calls.find(call => call.table === 'execution_provider_calls')?.payload.cached_input_tokens, 2);
 assert.equal(calls.find(call => call.table === 'execution_provider_calls')?.payload.cache_write_tokens, 1);
 assert(calls.some(call => call.table === 'event_log' && call.operation === 'insert'));

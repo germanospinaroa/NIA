@@ -112,8 +112,18 @@ export async function recordExecutionStage(supabase: DbClient, context: Executio
 
 export async function startGenerationAttempt(supabase: DbClient, context: ExecutionContext, input: { attemptNumber: number; attemptType: AttemptType; provider?: string; model?: string }) {
   const startedAt = Date.now();
-  const { data, error } = await operationalClient(supabase).from('generation_attempts').insert({ execution_run_id: context.executionId, attempt_number: input.attemptNumber, attempt_type: input.attemptType, provider: input.provider ?? null, model: input.model ?? null, status: 'started' }).select('id').single();
-  if (error || !data) throw new Error('generation_attempt_save_failed');
+  const { data, error } = await operationalClient(supabase).from('generation_attempts').insert({ user_id: context.userId, execution_run_id: context.executionId, attempt_number: input.attemptNumber, attempt_type: input.attemptType, provider: input.provider ?? null, model: input.model ?? null, status: 'started' }).select('id').single();
+  if (error || !data) {
+    console.error('[nia-generation-attempt-save-failed]', {
+      code: error?.code,
+      message: safeMessage(error?.message || 'no generation attempt row returned'),
+      details: safeMessage(error?.details || ''),
+      hint: safeMessage(error?.hint || ''),
+      userId: context.userId,
+      executionId: context.executionId,
+    });
+    throw new Error('generation_attempt_save_failed');
+  }
   return { id: data.id as string, startedAt };
 }
 
@@ -124,7 +134,7 @@ export async function finishGenerationAttempt(supabase: DbClient, attemptId: str
 
 export async function recordProviderCall(supabase: DbClient, context: ExecutionContext, input: ProviderUsage & { generationAttemptId?: string }) {
   try {
-    const { data, error } = await operationalClient(supabase).from('execution_provider_calls').insert({ execution_run_id: context.executionId, generation_attempt_id: input.generationAttemptId ?? null, provider: input.provider, model: input.model ?? null, operation: input.operation, input_tokens: input.inputTokens ?? null, cached_input_tokens: input.cachedInputTokens ?? null, cache_write_tokens: input.cacheWriteTokens ?? null, output_tokens: input.outputTokens ?? null, total_tokens: input.totalTokens ?? null, latency_ms: input.latencyMs ?? null, status: input.status, error_code: input.errorCode ?? null, error_message: input.errorMessage ? safeMessage(input.errorMessage) : null }).select('id,execution_run_id,provider,model,operation,input_tokens,cached_input_tokens,cache_write_tokens,output_tokens,total_tokens,created_at').single();
+    const { data, error } = await operationalClient(supabase).from('execution_provider_calls').insert({ user_id: context.userId, execution_run_id: context.executionId, generation_attempt_id: input.generationAttemptId ?? null, provider: input.provider, model: input.model ?? null, operation: input.operation, input_tokens: input.inputTokens ?? null, cached_input_tokens: input.cachedInputTokens ?? null, cache_write_tokens: input.cacheWriteTokens ?? null, output_tokens: input.outputTokens ?? null, total_tokens: input.totalTokens ?? null, latency_ms: input.latencyMs ?? null, status: input.status, error_code: input.errorCode ?? null, error_message: input.errorMessage ? safeMessage(input.errorMessage) : null }).select('id,execution_run_id,provider,model,operation,input_tokens,cached_input_tokens,cache_write_tokens,output_tokens,total_tokens,created_at').single();
     if (error) console.error('[nia-provider-call-log-failed]', error.message);
     if (!error && data) {
       const db = operationalClient(supabase);

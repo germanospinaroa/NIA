@@ -1,5 +1,10 @@
 # ESTADO — NIA
-Última actualización: 2026-10-02 | Sesión actual: Funnel /descubre — reconstrucción definitiva
+Última actualización: 2026-10-03 | Sesión actual: auditoría producción onboarding — fallo operativo corregido
+
+## Onboarding — primera intervención bloqueada — 2026-10-03
+- Causa real confirmada en producción: `PATCH /api/profile` respondía 200, pero el `GET /api/daily` respondía 500 porque `startGenerationAttempt()` insertaba en `generation_attempts` sin `user_id`. La tabla remota exige ese campo (`PostgreSQL 23502: null value in column "user_id"`). `execution_runs` se creaba y quedaba con `failure_code = generation_attempt_save_failed`; no era un problema de horario, sesión ni `/api/profile`.
+- Corrección: los inserts de `generation_attempts` y `execution_provider_calls` ahora incluyen el `user_id` autenticado real. Se añadió logging server-side con código, mensaje, detalle e identificadores operativos saneados cuando falle una escritura de telemetría.
+- Verificación read-only en Supabase: ambos payloads con `user_id` fueron aceptados con `Prefer: tx=rollback` (HTTP 201, sin persistir datos); los payloads sin `user_id` reprodujeron HTTP 400/23502. Tests de observabilidad, typecheck, lint y build pasan. La sesión autenticada Playwright no está disponible en el entorno, por lo que el recorrido completo con Magic Link no se marca como PASS.
 
 ## Onboarding — horario y primera interacción — 2026-10-02
 - Causa reproducida: la selección de horario sí se enviaba a `/api/profile`, pero `/onboarding` trataba la respuesta válida `status: calibration_required` de `/api/daily` como un fallo genérico porque esperaba siempre una interacción inmediata. En la sesión sin Magic Link usada para reproducir también se confirmó un `401 unauthorized`, por ausencia de sesión Supabase real.
