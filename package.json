@@ -26,6 +26,7 @@
     "test:daily-whatsapp-idempotency": "node --experimental-strip-types scripts/test-daily-whatsapp-idempotency.mjs",
     "test:hotmart-access": "node --experimental-strip-types scripts/test-hotmart-access.mjs",
     "test:profile-settings": "node scripts/test-profile-settings.mjs",
+    "test:admin-qa-daily-intervention": "node scripts/test-admin-qa-daily-intervention.mjs",
     "test:editorial-memory": "node --experimental-strip-types scripts/test-editorial-memory.mjs",
     "test:editorial-planner": "node --experimental-strip-types scripts/test-editorial-planner.mjs",
     "test:flexible-interventions": "node --experimental-strip-types scripts/test-flexible-interventions.mjs",

@@ -132,11 +132,11 @@ async function withTechnicalJsonRetry<T>(operation: () => Promise<T>): Promise<T
   throw lastError instanceof Error ? lastError : new Error('llm_invalid_json');
 }
 
-export async function withTechnicalJsonRetryMeta<T>(operation: () => Promise<T>): Promise<{ value: T; calls: number; failedCalls: number }> {
+export async function withTechnicalJsonRetryMeta<T>(operation: () => Promise<T>, options: { maxAttempts?: number } = {}): Promise<{ value: T; calls: number; failedCalls: number }> {
   let lastError: unknown;
   let calls = 0;
   let failedCalls = 0;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < (options.maxAttempts ?? 2); attempt += 1) {
     calls += 1;
     try { return { value: await operation(), calls, failedCalls }; } catch (error) { lastError = error; failedCalls += 1; if (!isRetryableLlmError(error)) break; }
   }
@@ -194,7 +194,7 @@ export async function generateCandidatesWithLLM(brief: InterventionBrief): Promi
   return (await generateCandidatesWithLLMWithMeta(brief)).candidates;
 }
 
-export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief): Promise<{ candidates: InterventionCandidate[]; calls: number; technicalRetries: number; technicalFailures: number; usage: StructuredUsage; callUsages: ProviderUsageSnapshot[]; latencyMs: number }> {
+export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief, options: { maxTechnicalAttempts?: number } = {}): Promise<{ candidates: InterventionCandidate[]; calls: number; technicalRetries: number; technicalFailures: number; usage: StructuredUsage; callUsages: ProviderUsageSnapshot[]; latencyMs: number }> {
   const started = Date.now();
   const usage: StructuredUsage = {};
   const callUsages: ProviderUsageSnapshot[] = [];
@@ -206,7 +206,7 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
     const structuredCandidates = Array.isArray(value.candidates) ? value.candidates : [];
     if (structuredCandidates.length !== 3 || !structuredCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
     return structuredCandidates as LlmCandidate[];
-  });
+  }, { maxAttempts: options.maxTechnicalAttempts });
   return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), topic: candidate.topic, interventionType: candidate.intervention_type, depth: candidate.depth, blocks: candidate.blocks, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
 }
 

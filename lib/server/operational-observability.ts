@@ -59,9 +59,9 @@ export function errorCode(error: unknown): string {
 
 export async function startExecutionRun(
   supabase: DbClient,
-  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey?: string },
+  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey?: string; requestId?: string },
 ): Promise<ExecutionContext> {
-  const requestId = crypto.randomUUID();
+  const requestId = input.requestId ?? crypto.randomUUID();
   const startedAt = Date.now();
   const db = operationalClient(supabase);
   const { data, error } = await db.from('execution_runs').insert({
@@ -77,6 +77,37 @@ export async function startExecutionRun(
     throw new Error('execution_run_save_failed');
   }
   return { executionId: data.id, requestId, userId: input.userId, channel: input.channel, triggerSource: input.triggerSource, idempotencyKey: input.idempotencyKey, startedAt };
+}
+
+export async function startIdempotentExecutionRun(
+  supabase: DbClient,
+  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey: string; requestId: string },
+): Promise<{ context: ExecutionContext; created: boolean }> {
+  try {
+    return { context: await startExecutionRun(supabase, input), created: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('execution_run_save_failed')) throw error;
+    const { data: existing, error: lookupError } = await operationalClient(supabase)
+      .from('execution_runs')
+      .select('id,user_id,request_id,channel,trigger_source,idempotency_key,started_at,status')
+      .eq('request_id', input.requestId)
+      .eq('user_id', input.userId)
+      .maybeSingle();
+    if (lookupError || !existing) throw error;
+    return {
+      created: false,
+      context: {
+        executionId: existing.id,
+        requestId: existing.request_id,
+        userId: existing.user_id,
+        channel: existing.channel,
+        triggerSource: existing.trigger_source,
+        idempotencyKey: existing.idempotency_key ?? undefined,
+        startedAt: existing.started_at ? new Date(existing.started_at).getTime() : Date.now(),
+      },
+    };
+  }
 }
 
 export async function updateExecutionRun(supabase: DbClient, context: ExecutionContext, input: { status: ExecutionStatus; interventionId?: string | null; failure?: unknown; candidateCount?: number; retryCount?: number; stageResults?: Record<string, unknown> }) {

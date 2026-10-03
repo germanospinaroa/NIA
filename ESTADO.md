@@ -24,6 +24,13 @@ Decisión editorial: NIA deriva su memoria principalmente de `interventions`; no
 - Tests offline nuevos: `test:editorial-memory`, `test:editorial-planner`, `test:flexible-interventions`, además de structured output actualizado. No hubo llamadas OpenAI, embeddings, semantic judge, LLM audit, Evolution, WhatsApp ni cron.
 - Pendiente para Production: aplicar `supabase/migrations/20261003120000_editorial_memory.sql`. El cambio de código queda validado localmente y NO está desplegado.
 
+## QA admin de generación editorial — 2026-10-03
+- Añadido `POST /api/admin/qa/daily-intervention`, protegido por la sesión Supabase existente y `NIA_ADMIN_EMAILS`; no usa `CRON_SECRET` ni crea roles nuevos.
+- El endpoint recibe únicamente `user_id`, valida usuario y conexión WhatsApp, ejecuta el mismo `resolveIntervention()` que usa el flujo diario con `maxGenerationAttempts: 1`, y reutiliza composer, claim y envío Evolution existentes.
+- La ejecución usa `trigger_source=admin_qa`, `request_id`/`idempotency_key` deterministas por usuario y fecha, y un delivery marcado con slot `qa`; una repetición devuelve el resultado existente y no vuelve a generar ni enviar.
+- No se añadió una página pública ni una UI nueva de QA; la operación queda disponible únicamente como endpoint admin hasta una futura herramienta dentro del back office.
+- No se creó una tabla nueva ni se modificó el cron. La prueba real sigue pendiente de instrucción explícita.
+
 ## Refinamiento UI app — 2026-10-03
 - `/app` quedó centrado en saludo real, intervención almacenada y una frase natural del próximo mensaje; se eliminaron el estado de conexión redundante y cualquier apariencia de dashboard en la primera pantalla.
 - `lib/next-message.ts` conserva el cálculo existente y añade el formato humano “Tu próximo mensaje llegará hoy/mañana a…” sin exponer slots, timezone ni IDs.

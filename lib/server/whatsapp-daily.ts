@@ -13,7 +13,7 @@ function deliveryError(code: string) {
   return new Error(code);
 }
 
-async function claimDelivery(admin: DbClient, input: { userId: string; interactionId: string; localDate: string; slot: string }) {
+export async function claimDelivery(admin: DbClient, input: { userId: string; interactionId: string; localDate: string; slot: string }) {
   const { error: insertError } = await admin.from('whatsapp_daily_deliveries').insert({ user_id: input.userId, interaction_id: input.interactionId, local_date: input.localDate, slot: input.slot, status: 'pending' });
   if (insertError && insertError.code !== '23505') throw new Error(insertError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
   const { data: current, error: selectError } = await admin.from('whatsapp_daily_deliveries').select('id,status,locked_until,attempt_count').eq('user_id', input.userId).eq('local_date', input.localDate).eq('slot', input.slot).maybeSingle();

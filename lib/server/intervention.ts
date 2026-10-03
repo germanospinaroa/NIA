@@ -161,7 +161,7 @@ async function persistRejectedCandidates(supabase: DbClient, userId: string, can
   if (error) throw new Error('candidate_save_failed');
 }
 
-export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext): Promise<InterventionResult> {
+export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean }): Promise<InterventionResult> {
   if (execution) {
     await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'intervention_requested', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { contextKey, channel, idempotencyKey: idempotencyKey ?? null } }));
     await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'generating' }));
@@ -192,7 +192,8 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
   }
   const candidates: InterventionCandidate[] = [];
   let selected: InterventionCandidate | undefined;
-  const maxAttempts = brief.feedbackGoal === 'specific_context' || brief.generationConstraints?.some(value => value.includes('acaba de ser confirmado')) ? interventionConfig.maxGenerationRounds : 1;
+  const configuredMaxAttempts = brief.feedbackGoal === 'specific_context' || brief.generationConstraints?.some(value => value.includes('acaba de ser confirmado')) ? interventionConfig.maxGenerationRounds : 1;
+  const maxAttempts = options?.maxGenerationAttempts ?? configuredMaxAttempts;
   for (let attempt = 0; attempt < maxAttempts && !selected; attempt += 1) {
     const attemptBrief = retryBrief(brief, attempt);
     const generationAttempt = execution ? await startGenerationAttempt(supabase, execution, { attemptNumber: attempt + 1, attemptType: attempt === 0 ? 'generation' : 'quality_retry', provider: 'openai', model: llmModel() }) : null;
@@ -201,7 +202,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     let generationUsage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined;
     try {
       const generationStarted = Date.now();
-      const generation = await generateCandidatesWithLLMWithMeta(attemptBrief);
+      const generation = await generateCandidatesWithLLMWithMeta(attemptBrief, { maxTechnicalAttempts: options?.disableTechnicalGenerationRetry ? 1 : undefined });
       generationUsage = { inputTokens: generation.usage.prompt_tokens, outputTokens: generation.usage.completion_tokens, totalTokens: generation.usage.total_tokens };
       generated = generation.candidates.map(candidate => ({ ...candidate, conceptKey: canonicalConceptKey(candidate.concept) }));
       if (execution) {
