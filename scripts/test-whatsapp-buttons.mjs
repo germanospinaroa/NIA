@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { sendWhatsAppReplyButtons } from '../lib/server/whatsapp.ts';
+
+const previousFetch = globalThis.fetch;
+const previousProvider = process.env.WHATSAPP_PROVIDER;
+const previousUrl = process.env.EVOLUTION_API_URL;
+const previousKey = process.env.EVOLUTION_API_KEY;
+const previousInstance = process.env.EVOLUTION_INSTANCE;
+process.env.WHATSAPP_PROVIDER = 'evolution';
+process.env.EVOLUTION_API_URL = 'https://evolution.test';
+process.env.EVOLUTION_API_KEY = 'test-key';
+process.env.EVOLUTION_INSTANCE = 'nia';
+let requestBody;
+globalThis.fetch = async (_url, init) => { requestBody = JSON.parse(init.body); return new Response(JSON.stringify({ key: { id: 'provider-button-1' } }), { status: 201 }); };
+const sent = await sendWhatsAppReplyButtons('573001112233', '¿Cómo te pareció esta prueba?', [{ id: 'liked', title: 'Me gustó' }, { id: 'mixed', title: 'Más o menos' }, { id: 'not_useful', title: 'No me funcionó' }]);
+assert.equal(sent.ok, true);
+assert.equal(requestBody.buttons.length, 3);
+assert.equal(requestBody.buttons.every(button => button.type === 'reply'), true);
+assert.equal(sent.providerMessageId, 'provider-button-1');
+assert.equal((await sendWhatsAppReplyButtons('573001112233', 'x', Array.from({ length: 4 }, (_, i) => ({ id: String(i), title: String(i) })))).reason, 'invalid_buttons');
+globalThis.fetch = previousFetch;
+process.env.WHATSAPP_PROVIDER = previousProvider;
+process.env.EVOLUTION_API_URL = previousUrl;
+process.env.EVOLUTION_API_KEY = previousKey;
+process.env.EVOLUTION_INSTANCE = previousInstance;
+console.log('whatsapp buttons tests: PASS');

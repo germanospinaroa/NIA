@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     inPeriod(admin.from('generation_attempts').select('attempt_type,candidate_count,approved_candidate_count,rejection_count,duration_ms'), 'created_at'),
     inPeriod(admin.from('execution_provider_calls').select('id,execution_run_id,provider,model,operation,input_tokens,output_tokens,total_tokens,latency_ms,status,error_code,created_at'), 'created_at'),
     inPeriod(admin.from('interventions').select('user_id,status,created_at,delivered_at'), 'created_at'),
-    inPeriod(admin.from('interventions').select('user_id,status,created_at,delivered_at,topic,intervention_type,depth'), 'created_at'),
+    inPeriod(admin.from('interventions').select('user_id,status,created_at,delivered_at,topic,intervention_type,depth,experience_type'), 'created_at'),
     inPeriod(admin.from('event_log').select('user_id,event_type,metadata,occurred_at'), 'occurred_at'),
     inPeriod(admin.from('intervention_feedback').select('id', { count: 'exact', head: true }), 'created_at'),
     inPeriod(admin.from('learning_signals').select('id', { count: 'exact', head: true }), 'created_at'),

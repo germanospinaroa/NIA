@@ -7,6 +7,8 @@ assert.equal(blocksSchema.items.properties.text.type, 'string');
 
 const base = {
   topic: 'criterio propio',
+  editorial_take: 'Escuchar una objeción no convierte la duda en evidencia.',
+  experience_type: 'exercise',
   intervention_type: 'step_by_step',
   depth: 'medium',
   blocks: [{ type: 'recognition', text: 'Cuando una opinión cuestiona una decisión, puede parecer que necesitas abrirla de nuevo.' }, { type: 'step', text: 'Vuelve a lo que pensabas antes de escucharla.' }, { type: 'step', text: 'Revisa qué información cambió realmente.' }],

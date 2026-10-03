@@ -82,3 +82,32 @@ export async function sendWhatsAppText(to: string, text: string) {
   if (!response.ok) return { ok: false as const, reason: 'provider_error' as const, status: response.status, providerError: payload?.error?.code || 'provider_error' };
   return { ok: true as const, providerMessageId: payload?.messages?.[0]?.id ?? null };
 }
+
+export type WhatsAppReplyButton = { id: string; title: string };
+
+export async function sendWhatsAppReplyButtons(to: string, body: string, buttons: WhatsAppReplyButton[]) {
+  if (buttons.length < 1 || buttons.length > 3 || buttons.some(button => !button.id.trim() || !button.title.trim())) return { ok: false as const, reason: 'invalid_buttons' as const };
+  if (whatsappProvider() !== 'evolution') return { ok: false as const, reason: 'buttons_not_supported_by_provider' as const };
+  const baseUrl = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+  const apiKey = process.env.EVOLUTION_API_KEY;
+  const instance = process.env.EVOLUTION_INSTANCE;
+  if (!baseUrl || !apiKey || !instance) return { ok: false as const, reason: 'not_configured' as const };
+  const endpoint = `${baseUrl}/message/sendButtons/${encodeURIComponent(instance)}`;
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { apikey: apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: to.replace(/\D/g, ''), title: 'NIA', description: body, footer: 'NIA', buttons: buttons.map(button => ({ type: 'reply', displayText: button.title, id: button.id })) }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    console.error('whatsapp_buttons_request_failed', { provider: 'evolution', instance, reason: error instanceof Error ? error.name : 'network_error' });
+    return { ok: false as const, reason: 'network_error' as const };
+  }
+  const payload = await response.json().catch(() => ({}));
+  const providerMessageId = payload?.key?.id ?? payload?.message?.key?.id ?? payload?.messages?.[0]?.id ?? null;
+  if (!response.ok) return { ok: false as const, reason: 'provider_error' as const, status: response.status };
+  console.info('whatsapp_buttons_result', { provider: 'evolution', instance, status: response.status, messageIdPresent: Boolean(providerMessageId) });
+  return { ok: true as const, status: response.status, providerMessageId };
+}

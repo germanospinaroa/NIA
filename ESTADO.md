@@ -1,5 +1,13 @@
 # ESTADO — NIA
-Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
+Última actualización: 2026-10-03 | Sesión actual: editorial rhythm + diversidad de experiencia — validación offline completada, migración y despliegue pendientes
+
+## Editorial rhythm, diversidad y feedback — 2026-10-03
+- La memoria editorial deriva de `public.interventions` y ahora resume ventanas de 3/5/7 días y hasta 10 intervenciones: topics, `editorial_take`, `experience_type`, formatos, profundidad, ejercicios, preguntas, feedback solicitado, concentración y territorios repetidos. No se creó una tabla paralela.
+- El planner recibe ese ritmo antes de la generación y pondera una experiencia alternativa cuando la reciente está concentrada. La preferencia de comunicación sigue siendo una señal; no existe calendario fijo ni rotación obligatoria. Relevancia y valor tienen prioridad sobre variedad.
+- Las nuevas intervenciones estructuradas incluyen `editorial_take` y `experience_type`; se persisten también `territory_key`, `exercise_present`, `question_present` y `feedback_requested` en `interventions` y `intervention_candidates`. `same topic != duplicate`; el take/ángulo/idea repetidos sí se penalizan.
+- Añadida `supabase/migrations/20261003130000_editorial_rhythm_feedback.sql`, aditiva y nullable. Está pendiente de aplicar en Production; por seguridad no se despliega código que consulte estos campos hasta aplicarla.
+- Feedback existente continúa usando `intervention_feedback`/`learning_signals`; no se cambia una preferencia por una sola respuesta. Se añadió soporte opcional y aislado para hasta 3 botones reply de Evolution mediante `POST /api/admin/qa/whatsapp-buttons` y reconocimiento del evento en el webhook. No se ejecutó la prueba real de botones.
+- Admin dashboard y user detail muestran experiencia/ritmo reciente. Tests offline, typecheck y build pasan; lint conserva cuatro warnings heredados. OpenAI, embeddings, semantic judge, LLM audit, Evolution y WhatsApp: 0 durante esta implementación. No deployment.
 
 ## Flujo login → admin — 2026-10-03
 - Corregido el redirect global de middleware que enviaba a `/app` cualquier sesión existente al visitar `/login`, ignorando `next=/admin`.

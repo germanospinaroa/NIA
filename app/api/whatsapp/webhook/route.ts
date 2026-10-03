@@ -30,8 +30,9 @@ function evolutionMessage(body: Record<string, unknown>) {
   const message = (data.message ?? {}) as Record<string, unknown>;
   const extended = (message.extendedTextMessage ?? {}) as Record<string, unknown>;
   const text = typeof message.conversation === 'string' ? message.conversation : typeof extended.text === 'string' ? extended.text : '';
+  const button = (message.buttonsResponseMessage ?? message.templateButtonReplyMessage ?? {}) as Record<string, unknown>;
   const remoteJid = typeof key.remoteJid === 'string' ? key.remoteJid : '';
-  return { from: remoteJid.replace(/@.*$/, ''), text, fromMe: key.fromMe === true };
+  return { from: remoteJid.replace(/@.*$/, ''), text, buttonId: typeof button.selectedButtonId === 'string' ? button.selectedButtonId : typeof button.selectedId === 'string' ? button.selectedId : null, buttonText: typeof button.selectedDisplayText === 'string' ? button.selectedDisplayText : typeof button.selectedName === 'string' ? button.selectedName : null, messageId: typeof key.id === 'string' ? key.id : null, fromMe: key.fromMe === true };
 }
 
 export async function POST(request: Request) {
@@ -46,6 +47,12 @@ export async function POST(request: Request) {
   const text = evolution ? evolution.text : metaMessage?.text?.body;
   if (evolution?.fromMe) return NextResponse.json({ received: true });
   const code = text ? extractLinkCode(text) : null;
+  if (evolution?.buttonId && from) {
+    console.info('whatsapp_feedback_button_received', { buttonId: evolution.buttonId, buttonTextPresent: Boolean(evolution.buttonText), messageIdPresent: Boolean(evolution.messageId), waIdSuffix: from.slice(-4) });
+    const admin = createAdminClient();
+    await admin.from('event_log').insert({ user_id: null, event_type: 'whatsapp_feedback_received', entity_type: 'whatsapp', metadata: { button_id: evolution.buttonId, button_text: evolution.buttonText, provider_message_id: evolution.messageId, wa_id_suffix: from.slice(-4) } });
+    return NextResponse.json({ received: true, feedback: 'identified' });
+  }
   if (!from || !code) return NextResponse.json({ received: true });
   const admin = createAdminClient();
   const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at').eq('token_hash', hashLinkCode(code)).maybeSingle();

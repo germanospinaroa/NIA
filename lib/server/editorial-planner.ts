@@ -1,10 +1,11 @@
-import { editorialInterventionTypes, type CommunicationPreference, type EditorialDepth, type EditorialInterventionType, type EditorialMemory, type EditorialStrategy } from './editorial-memory.ts';
+import { editorialExperienceTypes, editorialInterventionTypes, type CommunicationPreference, type EditorialDepth, type EditorialExperienceType, type EditorialInterventionType, type EditorialMemory, type EditorialStrategy } from './editorial-memory.ts';
 
 export type EditorialPlan = {
   strategy: EditorialStrategy;
   recommended_topic: string;
   topic_reason: string;
   preferred_or_recommended_intervention_type: EditorialInterventionType;
+  recommended_experience_type: EditorialExperienceType;
   recommended_depth: EditorialDepth;
   recent_topics_to_avoid: string[];
   recent_angles_to_avoid: string[];
@@ -24,6 +25,19 @@ function preferredType(preference: CommunicationPreference, memory: EditorialMem
   return preference === 'adaptive' ? underused : preference === 'practical' ? 'practical_guidance' : preference === 'idea' ? 'reflection' : underused;
 }
 
+function preferredExperience(memory: EditorialMemory, preference: CommunicationPreference): EditorialExperienceType {
+  const recent = memory.rhythm;
+  const candidates: EditorialExperienceType[] = preference === 'practical'
+    ? ['practical_tool', 'exercise', 'concrete_example', 'perspective_shift']
+    : preference === 'structured'
+      ? ['exercise', 'practical_tool', 'concrete_example', 'reflection']
+      : preference === 'idea'
+        ? ['brief_insight', 'perspective_shift', 'reflection', 'encouragement']
+        : ['perspective_shift', 'practical_tool', 'encouragement', 'brief_insight', 'question'];
+  const overused = recent.experienceConcentration >= 0.6 ? recent.dominantExperience : null;
+  return candidates.find(candidate => candidate !== overused && (recent.experienceCounts[candidate] ?? 0) < 2) ?? candidates.find(candidate => candidate !== overused) ?? editorialExperienceTypes[0];
+}
+
 export function planEditorial(input: PlannerInput): EditorialPlan {
   const preference = validPreferences.has(input.communicationPreference ?? 'adaptive') ? input.communicationPreference ?? 'adaptive' : 'adaptive';
   const dominant = input.memory.topics[0];
@@ -36,15 +50,18 @@ export function planEditorial(input: PlannerInput): EditorialPlan {
   const recentTypeCount = input.memory.recent.slice(0, 4).filter(item => item.intervention_type === type).length;
   const finalType = recentTypeCount >= 3 ? (editorialInterventionTypes.find(item => item !== type && !input.memory.recent.slice(0, 4).some(row => row.intervention_type === item)) ?? 'reflection') : type;
   const depth: EditorialDepth = strategy === 'refresh_topic' ? 'medium' : input.memory.depths.deep === 0 && type === 'deep_dive' ? 'deep' : recentTypeCount >= 2 ? 'brief' : 'medium';
+  const experience = preferredExperience(input.memory, preference);
+  const rhythmReason = input.memory.rhythm.experienceConcentration >= 0.6 ? ` La experiencia reciente está concentrada en ${input.memory.rhythm.dominantExperience}; se prioriza ${experience} para abrir el ritmo.` : '';
   return {
     strategy,
     recommended_topic: topic,
     topic_reason: strategy === 'refresh_topic' ? 'topic saturated in recent history; relevant alternative selected' : strategy === 'change_angle' ? 'recent topic remains relevant but needs a substantially different angle' : 'current intention and context remain the most relevant direction',
     preferred_or_recommended_intervention_type: finalType,
+    recommended_experience_type: experience,
     recommended_depth: depth,
     recent_topics_to_avoid: saturated ? [dominant.topic] : [],
     recent_angles_to_avoid: (dominant?.angles ?? []).slice(0, 3).map(item => item.angle),
     recent_concepts_to_avoid: input.memory.recent.slice(0, 4).map(item => item.concept).filter((value): value is string => Boolean(value)),
-    diversity_notes: `Preferencia ${preference}; formatos recientes: ${Object.entries(input.memory.formats).filter(([, count]) => count > 0).map(([key, count]) => `${key}:${count}`).join(', ') || 'sin metadata histórica'}.`,
+    diversity_notes: `Preferencia ${preference}; experiencias recientes: ${Object.entries(input.memory.rhythm.experienceCounts).filter(([, count]) => count > 0).map(([key, count]) => `${key}:${count}`).join(', ') || 'sin metadata histórica'}.${rhythmReason}`,
   };
 }

@@ -3,7 +3,7 @@ export type DashboardExecution = { id: string; user_id: string; status: string; 
 export type DashboardAttempt = { attempt_type: string; candidate_count: number; approved_candidate_count: number; rejection_count: number; duration_ms: number | null };
 export type DashboardProviderCall = { provider: string; model: string | null; operation: string; input_tokens: number | null; output_tokens: number | null; total_tokens: number | null; latency_ms: number | null; status: string; error_code: string | null; created_at: string };
 export type DashboardIntervention = { user_id: string; status: string; created_at: string; delivered_at: string | null };
-export type EditorialDashboardIntervention = DashboardIntervention & { topic: string | null; intervention_type: string | null; depth: string | null };
+export type EditorialDashboardIntervention = DashboardIntervention & { topic: string | null; intervention_type: string | null; depth: string | null; experience_type?: string | null };
 export type DashboardEvent = { user_id: string | null; event_type: string; metadata: Record<string, unknown> | null; occurred_at: string };
 
 const numberOrZero = (value: number | null | undefined) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -68,6 +68,7 @@ export function aggregateDashboard(input: {
   const topicCounts = countBy(editorial.map(row => row.topic).filter((value): value is string => Boolean(value)));
   const formatCounts = countBy(editorial.map(row => row.intervention_type).filter((value): value is string => Boolean(value)));
   const depthCounts = countBy(editorial.map(row => row.depth).filter((value): value is string => Boolean(value)));
+  const experienceCounts = countBy(editorial.map(row => row.experience_type).filter((value): value is string => Boolean(value)));
   return {
     users: { total: users.length, active: usersActive, new: usersCreated, onboardingCompleted: eventCounts.onboarding_completed ?? 0, activityToday: usersToday, activeSubscriptions: input.activeSubscriptions },
     interventions: { requests: eventCounts.intervention_requested ?? 0, completed: completedExecutions, approved: approvedExecutions, delivered, failed: failedInterventions, noApproved, approvalRate: completedExecutions ? approvedExecutions / completedExecutions : null },
@@ -78,7 +79,7 @@ export function aggregateDashboard(input: {
     feedback: { received: input.feedback, learningSignals: input.learningSignals },
     providerUsage: { calls: providerCalls.length, inputTokens: providerCalls.reduce((sum, row) => sum + numberOrZero(row.input_tokens), 0), outputTokens: providerCalls.reduce((sum, row) => sum + numberOrZero(row.output_tokens), 0), totalTokens: providerCalls.reduce((sum, row) => sum + numberOrZero(row.total_tokens), 0), latency: stats(providerCalls.map(row => numberOrZero(row.latency_ms)).filter(value => value > 0)), providers: providerSummary },
     events: eventSummary,
-    editorial: { topics: Object.entries(topicCounts).sort((a, b) => b[1] - a[1]), formats: Object.entries(formatCounts).sort((a, b) => b[1] - a[1]), depths: Object.entries(depthCounts).sort((a, b) => b[1] - a[1]) },
+    editorial: { topics: Object.entries(topicCounts).sort((a, b) => b[1] - a[1]), formats: Object.entries(formatCounts).sort((a, b) => b[1] - a[1]), experiences: Object.entries(experienceCounts).sort((a, b) => b[1] - a[1]), depths: Object.entries(depthCounts).sort((a, b) => b[1] - a[1]) },
     available: ['users', 'executions', 'interventions', 'generation', 'errors', 'performance', 'feedback', 'learning_signals', 'provider_usage', 'event_log'],
     unavailable: ['AI cost', 'WhatsApp usage/cost', 'Infrastructure cost', 'MRR', 'Churn', 'Trial conversion'],
   };

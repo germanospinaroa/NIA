@@ -4,10 +4,11 @@ export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distin
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
 export type AuditStatus = 'approved' | 'rejected';
 export type EditorialInterventionType = 'brief_insight' | 'reflection' | 'practical_guidance' | 'tool' | 'step_by_step' | 'example' | 'deep_dive';
+export type EditorialExperienceType = 'brief_insight' | 'reflection' | 'encouragement' | 'perspective_shift' | 'practical_tool' | 'exercise' | 'challenge' | 'question' | 'check_in' | 'validation' | 'direct_push' | 'concrete_example' | 'story_or_scenario' | 'feedback_request';
 export type EditorialDepth = 'brief' | 'medium' | 'deep';
 export type EditorialBlockType = 'idea' | 'recognition' | 'explanation' | 'insight' | 'question' | 'tool' | 'step' | 'example' | 'action' | 'closing';
 export type EditorialBlock = { type: EditorialBlockType; text: string };
-export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; diversity_notes: string };
+export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; diversity_notes: string };
 
 export type SemanticMatch = {
   intervention_id: string;
@@ -105,6 +106,12 @@ export type InterventionCandidate = {
   interventionType?: EditorialInterventionType;
   depth?: EditorialDepth;
   blocks?: EditorialBlock[];
+  editorialTake?: string;
+  experienceType?: EditorialExperienceType;
+  territoryKey?: string;
+  exercisePresent?: boolean;
+  questionPresent?: boolean;
+  feedbackRequested?: boolean;
   recognition?: string;
   explanation?: string;
   insight?: string;
