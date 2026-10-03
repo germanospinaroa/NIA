@@ -8,6 +8,7 @@ assert.equal(blocksSchema.items.properties.text.type, 'string');
 const base = {
   topic: 'criterio propio',
   editorial_take: 'Escuchar una objeción no convierte la duda en evidencia.',
+  editorial_idea: 'Una objeción no es evidencia de error.',
   experience_type: 'exercise',
   intervention_type: 'step_by_step',
   depth: 'medium',

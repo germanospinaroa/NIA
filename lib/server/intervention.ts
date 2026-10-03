@@ -10,7 +10,7 @@ import { buildEditorialMemory, loadEditorialMemory } from '@/lib/server/editoria
 import { planEditorial } from '@/lib/server/editorial-planner';
 
 type DbClient = SupabaseClient;
-type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null };
+type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; editorial_idea?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null };
 type SignalRow = LearningSignal & { user_id: string };
 
 export class CalibrationRequiredError extends Error {
@@ -21,7 +21,7 @@ export class CalibrationRequiredError extends Error {
 function vectorLiteral(embedding: number[]) { return `[${embedding.join(',')}]`; }
 
 function candidateFromRow(row: HistoryRow): InterventionCandidate {
-  return { text: row.text, topic: row.topic ?? undefined, interventionType: row.intervention_type as InterventionCandidate['interventionType'], depth: row.depth as InterventionCandidate['depth'], blocks: Array.isArray(row.blocks) ? row.blocks as InterventionCandidate['blocks'] : undefined, editorialTake: row.editorial_take ?? undefined, experienceType: row.experience_type as InterventionCandidate['experienceType'], territoryKey: row.territory_key ?? undefined, exercisePresent: row.exercise_present ?? undefined, questionPresent: row.question_present ?? undefined, feedbackRequested: row.feedback_requested ?? undefined, function: row.function as InterventionCandidate['function'], concept: row.concept, conceptKey: canonicalConceptKey(row.concept), angle: row.angle, structure: row.structure as InterventionCandidate['structure'] };
+  return { text: row.text, topic: row.topic ?? undefined, interventionType: row.intervention_type as InterventionCandidate['interventionType'], depth: row.depth as InterventionCandidate['depth'], blocks: Array.isArray(row.blocks) ? row.blocks as InterventionCandidate['blocks'] : undefined, editorialTake: row.editorial_take ?? undefined, editorialIdea: row.editorial_idea ?? undefined, experienceType: row.experience_type as InterventionCandidate['experienceType'], territoryKey: row.territory_key ?? undefined, exercisePresent: row.exercise_present ?? undefined, questionPresent: row.question_present ?? undefined, feedbackRequested: row.feedback_requested ?? undefined, function: row.function as InterventionCandidate['function'], concept: row.concept, conceptKey: canonicalConceptKey(row.concept), angle: row.angle, structure: row.structure as InterventionCandidate['structure'] };
 }
 
 function relevantFallback(history: HistoryRow[], contextKey: ContextKey, currentContext: string, feedbackGoal?: InterventionBrief['feedbackGoal']): HistoryRow | null {
@@ -100,6 +100,9 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
     recentConcepts: activeRows.map(row => row.concept),
     recentAngles: activeRows.map(row => row.angle),
     recentStructures: activeRows.map(row => row.structure),
+    recentEditorialIdeas: activeRows.map(row => row.editorial_idea).filter((value): value is string => Boolean(value)),
+    recentEditorialTakes: activeRows.map(row => row.editorial_take).filter((value): value is string => Boolean(value)),
+    recentExperienceTypes: activeRows.map(row => row.experience_type).filter((value): value is NonNullable<InterventionBrief['recentExperienceTypes']>[number] => Boolean(value)),
     successfulPatterns: [],
     rejectedPatterns: [],
     learningSignals: [],
@@ -143,7 +146,7 @@ function enrichAudit(candidate: InterventionCandidate, deterministic: ReturnType
     reasons: [...deterministic.reasons, ...semantic.reasons, ...llm.reasons],
     hard_failures: [...deterministic.hard_failures, ...semantic.hard_failures, ...llm.reasons],
     warnings: [...deterministic.warnings, ...semantic.warnings],
-    checks: { ...deterministic.checks, ...semantic.checks, llm_approved: llm.approved, llm_context_fit: llm.context_fit, llm_specificity: llm.specificity, llm_semantic_repetition: llm.semantic_repetition },
+    checks: { ...deterministic.checks, ...semantic.checks, llm_approved: llm.approved, llm_context_fit: llm.context_fit, llm_specificity: llm.specificity, llm_semantic_repetition: llm.semantic_repetition, llm_first_read_comprehension: llm.first_read_comprehension, llm_editorial_novelty: llm.editorial_novelty, llm_experience_novelty: llm.experience_novelty },
     similarInterventions: semantic.similarInterventions,
     similarity: semantic.similarity,
     semanticStatus: semantic.semanticStatus,
@@ -156,7 +159,7 @@ function enrichAudit(candidate: InterventionCandidate, deterministic: ReturnType
 }
 
 async function persistRejectedCandidates(supabase: DbClient, userId: string, candidates: InterventionCandidate[], interventionId: string | null) {
-  const rows = candidates.map(candidate => ({ intervention_id: interventionId, user_id: userId, candidate_text: candidate.text, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, topic: candidate.topic ?? null, intervention_type: candidate.interventionType ?? null, depth: candidate.depth ?? null, blocks: candidate.blocks ?? null, editorial_take: candidate.editorialTake ?? null, experience_type: candidate.experienceType ?? null, territory_key: candidate.territoryKey ?? null, exercise_present: candidate.exercisePresent ?? candidate.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: candidate.questionPresent ?? candidate.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: candidate.feedbackRequested ?? candidate.experienceType === 'feedback_request', audit_results: candidate.audit ?? { status: 'rejected', approved: false, reasons: ['generation_failed'] }, rejection_reason: candidate.audit?.approved ? null : (candidate.audit?.reasons ?? ['generation_failed']).join(',') }));
+  const rows = candidates.map(candidate => ({ intervention_id: interventionId, user_id: userId, candidate_text: candidate.text, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, topic: candidate.topic ?? null, intervention_type: candidate.interventionType ?? null, depth: candidate.depth ?? null, blocks: candidate.blocks ?? null, editorial_take: candidate.editorialTake ?? null, editorial_idea: candidate.editorialIdea ?? null, experience_type: candidate.experienceType ?? null, territory_key: candidate.territoryKey ?? null, exercise_present: candidate.exercisePresent ?? candidate.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: candidate.questionPresent ?? candidate.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: candidate.feedbackRequested ?? candidate.experienceType === 'feedback_request', audit_results: candidate.audit ?? { status: 'rejected', approved: false, reasons: ['generation_failed'] }, rejection_reason: candidate.audit?.approved ? null : (candidate.audit?.reasons ?? ['generation_failed']).join(',') }));
   const { error } = await supabase.from('intervention_candidates').insert(rows);
   if (error) throw new Error('candidate_save_failed');
 }
@@ -229,7 +232,13 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     const auditStarted = Date.now();
     for (const candidate of generated) {
       if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_generated', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, candidateIndex: attemptCandidates.length } }));
-      const deterministic = auditCandidate(candidate, attemptBrief);
+      const deterministic = auditCandidate(candidate, {
+        ...attemptBrief,
+        recentEditorialIdeas: [
+          ...(attemptBrief.recentEditorialIdeas ?? []),
+          ...attemptCandidates.map(previous => previous.editorialIdea).filter((value): value is string => Boolean(value)),
+        ],
+      });
       if (!deterministic.approved) {
         candidate.audit = deterministic;
         attemptCandidates.push(candidate);
@@ -317,7 +326,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'selected_embedding' });
     throw new Error('semantic_audit_unavailable');
   }
-  const { data: intervention, error: interventionError } = await supabase.from('interventions').insert({ user_id: userId, text: selected.text, function: selected.function, concept: selected.concept, angle: selected.angle, structure: selected.structure, topic: selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, intervention_type: selected.interventionType ?? brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: selected.depth ?? brief.editorialPlan?.recommended_depth ?? null, blocks: selected.blocks ?? null, editorial_take: selected.editorialTake ?? null, experience_type: selected.experienceType ?? brief.editorialPlan?.recommended_experience_type ?? null, territory_key: selected.territoryKey ?? selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, exercise_present: selected.exercisePresent ?? selected.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: selected.questionPresent ?? selected.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: selected.feedbackRequested ?? selected.experienceType === 'feedback_request', editorial_strategy: brief.editorialPlan?.strategy ?? 'continue_topic', editorial_reason: brief.editorialPlan?.topic_reason ?? null, context_key: contextKey, desired_change_snapshot: brief.desiredChange, current_context_snapshot: brief.currentContext, audit_status: 'approved', audit_results: selected.audit, channel, status: 'created', idempotency_key: idempotencyKey ?? null, embedding: vectorLiteral(selectedEmbedding) }).select('*').single();
+  const { data: intervention, error: interventionError } = await supabase.from('interventions').insert({ user_id: userId, text: selected.text, function: selected.function, concept: selected.concept, angle: selected.angle, structure: selected.structure, topic: selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, intervention_type: selected.interventionType ?? brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: selected.depth ?? brief.editorialPlan?.recommended_depth ?? null, blocks: selected.blocks ?? null, editorial_take: selected.editorialTake ?? null, editorial_idea: selected.editorialIdea ?? null, experience_type: selected.experienceType ?? brief.editorialPlan?.recommended_experience_type ?? null, territory_key: selected.territoryKey ?? selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, exercise_present: selected.exercisePresent ?? selected.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: selected.questionPresent ?? selected.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: selected.feedbackRequested ?? selected.experienceType === 'feedback_request', editorial_strategy: brief.editorialPlan?.strategy ?? 'continue_topic', editorial_reason: brief.editorialPlan?.topic_reason ?? null, context_key: contextKey, desired_change_snapshot: brief.desiredChange, current_context_snapshot: brief.currentContext, audit_status: 'approved', audit_results: selected.audit, channel, status: 'created', idempotency_key: idempotencyKey ?? null, embedding: vectorLiteral(selectedEmbedding) }).select('*').single();
   if (interventionError || !intervention) {
     if (idempotencyKey) { const { data: winner } = await supabase.from('interventions').select('*').eq('user_id', userId).eq('idempotency_key', idempotencyKey).maybeSingle(); if (winner) { const existing = candidateFromRow(winner as HistoryRow); return { intervention: existing, interventionId: winner.id, feedback: feedbackFor(existing), candidates: [] }; } }
     throw new Error('intervention_save_failed');

@@ -10,6 +10,8 @@ export type EditorialPlan = {
   recent_topics_to_avoid: string[];
   recent_angles_to_avoid: string[];
   recent_concepts_to_avoid: string[];
+  recent_editorial_ideas_to_avoid: string[];
+  recent_experiences_to_avoid: EditorialExperienceType[];
   diversity_notes: string;
 };
 
@@ -49,9 +51,19 @@ export function planEditorial(input: PlannerInput): EditorialPlan {
   const type = preferredType(preference, input.memory);
   const recentTypeCount = input.memory.recent.slice(0, 4).filter(item => item.intervention_type === type).length;
   const finalType = recentTypeCount >= 3 ? (editorialInterventionTypes.find(item => item !== type && !input.memory.recent.slice(0, 4).some(row => row.intervention_type === item)) ?? 'reflection') : type;
-  const depth: EditorialDepth = strategy === 'refresh_topic' ? 'medium' : input.memory.depths.deep === 0 && type === 'deep_dive' ? 'deep' : recentTypeCount >= 2 ? 'brief' : 'medium';
   const experience = preferredExperience(input.memory, preference);
-  const rhythmReason = input.memory.rhythm.experienceConcentration >= 0.6 ? ` La experiencia reciente está concentrada en ${input.memory.rhythm.dominantExperience}; se prioriza ${experience} para abrir el ritmo.` : '';
+  const experienceSaturated = input.memory.rhythm.experienceConcentration >= 0.6;
+  const recentDepth = input.memory.rhythm.last5.map(item => item.depth).filter(Boolean);
+  const depth: EditorialDepth = strategy === 'refresh_topic'
+    ? 'medium'
+    : recentDepth.length >= 3 && recentDepth.every(value => value === 'medium')
+      ? 'brief'
+      : input.memory.depths.deep === 0 && type === 'deep_dive'
+        ? 'deep'
+        : recentTypeCount >= 2
+          ? 'brief'
+          : 'medium';
+  const rhythmReason = experienceSaturated ? ` La experiencia reciente está concentrada en ${input.memory.rhythm.dominantExperience}; se prioriza ${experience} para abrir el ritmo.` : '';
   return {
     strategy,
     recommended_topic: topic,
@@ -62,6 +74,8 @@ export function planEditorial(input: PlannerInput): EditorialPlan {
     recent_topics_to_avoid: saturated ? [dominant.topic] : [],
     recent_angles_to_avoid: (dominant?.angles ?? []).slice(0, 3).map(item => item.angle),
     recent_concepts_to_avoid: input.memory.recent.slice(0, 4).map(item => item.concept).filter((value): value is string => Boolean(value)),
-    diversity_notes: `Preferencia ${preference}; experiencias recientes: ${Object.entries(input.memory.rhythm.experienceCounts).filter(([, count]) => count > 0).map(([key, count]) => `${key}:${count}`).join(', ') || 'sin metadata histórica'}.${rhythmReason}`,
+    recent_editorial_ideas_to_avoid: input.memory.rhythm.recentIdeas.slice(0, 5),
+    recent_experiences_to_avoid: experienceSaturated && input.memory.rhythm.dominantExperience ? [input.memory.rhythm.dominantExperience] : [],
+    diversity_notes: `Preferencia ${preference}; experiencias recientes: ${Object.entries(input.memory.rhythm.experienceCounts).filter(([, count]) => count > 0).map(([key, count]) => `${key}:${count}`).join(', ') || 'sin metadata histórica'}. Ideas recientes: ${input.memory.rhythm.recentIdeas.slice(0, 3).join(' | ') || 'ninguna'}.${rhythmReason}`,
   };
 }

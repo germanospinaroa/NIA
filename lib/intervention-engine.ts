@@ -8,7 +8,7 @@ export type EditorialExperienceType = 'brief_insight' | 'reflection' | 'encourag
 export type EditorialDepth = 'brief' | 'medium' | 'deep';
 export type EditorialBlockType = 'idea' | 'recognition' | 'explanation' | 'insight' | 'question' | 'tool' | 'step' | 'example' | 'action' | 'closing';
 export type EditorialBlock = { type: EditorialBlockType; text: string };
-export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; diversity_notes: string };
+export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; recent_editorial_ideas_to_avoid?: string[]; recent_experiences_to_avoid?: EditorialExperienceType[]; diversity_notes: string };
 
 export type SemanticMatch = {
   intervention_id: string;
@@ -51,6 +51,9 @@ export type InterventionBrief = {
   recentConcepts?: string[];
   recentAngles?: string[];
   recentStructures?: string[];
+  recentEditorialIdeas?: string[];
+  recentEditorialTakes?: string[];
+  recentExperienceTypes?: EditorialExperienceType[];
   forbiddenLanguage?: string[];
   preferredLanguage?: string[];
   voiceStyle?: VoiceStyle | null;
@@ -107,6 +110,7 @@ export type InterventionCandidate = {
   depth?: EditorialDepth;
   blocks?: EditorialBlock[];
   editorialTake?: string;
+  editorialIdea?: string;
   experienceType?: EditorialExperienceType;
   territoryKey?: string;
   exercisePresent?: boolean;
@@ -148,6 +152,17 @@ const performativeCoachingPatterns = [
   /\bhaz un trabajo profundo para confiar en ti\b/,
   /\bpermitete ser la persona que quieres ser\b/,
 ];
+const roboticOrAbstractPatterns = [
+  /\bevalua la calidad de la objecion\b/,
+  /\bdefine un umbral (?:verificable|de reconsideracion)\b/,
+  /\bidentifica que informacion modifica tus criterios\b/,
+  /\bsepara evidencia de preferencia\b/,
+  /\bsepara la evidencia de la preferencia\b/,
+  /\bestablece un mecanismo de validacion\b/,
+  /\binformacion disponible al momento de decidir\b/,
+  /\bumbral de reconsideracion\b/,
+  /\breconsiderar tu criterio\b/,
+];
 
 export const interventionConfig = {
   semanticDuplicateThreshold: 0.52,
@@ -167,6 +182,36 @@ function normalize(value: string) {
 export function hasPerformativeCoachingVoice(value: string) {
   const text = normalize(value);
   return performativeCoachingPatterns.some(pattern => pattern.test(text));
+}
+
+export function hasRoboticOrAbstractLanguage(value: string) {
+  const text = normalize(value);
+  return roboticOrAbstractPatterns.some(pattern => pattern.test(text));
+}
+
+export function firstReadComprehension(value: string) {
+  const text = normalize(value);
+  if (!text || hasRoboticOrAbstractLanguage(text)) return false;
+  const words = text.split(' ').filter(Boolean);
+  const nominalizations = words.filter(word => /(cion|sion|miento|mientos|idad|dades|encia|encias)$/.test(word)).length;
+  return nominalizations < 4 || nominalizations / Math.max(words.length, 1) < 0.18;
+}
+
+export function editorialIdeaKey(value: string) {
+  const text = normalize(value);
+  if (!text) return '';
+  if (/(alguien|otra persona|opinion|desacuerdo|duda).*(equivoc|error|mala decision)|equivoc.*(desacuerdo|opinion)/.test(text)) return 'disagreement_is_not_evidence_of_error';
+  if (/(escuchar|pedir|preguntar).*(opinion|consejo).*(decidir|decision|criterio)|opinion.*(instruccion|orden)|entregar.*decision/.test(text)) return 'seek_input_without_transferring_decision';
+  if (/(dato nuevo|informacion nueva|evidencia).*(cambiar|revisar|modificar).*(decision|criterio)|cambiar.*(decision|criterio).*(dato|evidencia)/.test(text)) return 'new_evidence_can_change_a_decision';
+  if (/(pausa|esperar|no responder).*(duda|incomodidad|reaccion)|incomodidad.*(cambio|decision)/.test(text)) return 'pause_separates_reaction_from_change';
+  if (/(seguridad|completamente segura|claridad).*(mover|hacer|actuar)|claridad.*(segura|mover)/.test(text)) return 'movement_does_not_require_complete_certainty';
+  return text.split(' ').filter(word => word.length > 3).slice(0, 8).join('_');
+}
+
+export function sameEditorialIdea(candidate: Pick<InterventionCandidate, 'editorialIdea' | 'editorialTake' | 'text'>, previous: string) {
+  const candidateKey = editorialIdeaKey(candidate.editorialIdea || candidate.editorialTake || candidate.text);
+  const previousKey = editorialIdeaKey(previous);
+  return Boolean(candidateKey && previousKey && candidateKey === previousKey) || lexicalSimilarity(candidate.editorialIdea || candidate.editorialTake || candidate.text, previous) >= 0.62;
 }
 
 export function canonicalConceptKey(value: string) {
@@ -349,11 +394,14 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const hasForbidden = [...forbidden, ...(brief.forbiddenLanguage ?? [])].some(value => text.includes(normalize(value)));
   const hasChatbotLanguage = chatbotOpeners.some(value => text.startsWith(normalize(value)));
   const hasCoachingLanguage = hasPerformativeCoachingVoice(candidate.text);
+  const hasRoboticLanguage = hasRoboticOrAbstractLanguage(candidate.text);
+  const firstReadPasses = firstReadComprehension(candidate.text);
   const hasTherapyLanguage = /\b(terapia|terapeut|trauma|sanar|curar|diagnost|ansiedad|depresion)\b/i.test(text);
   const hasUnnecessaryAdvice = /\b(deberias|debes|haz esto|empieza por|intenta)\b/i.test(text);
   const hasAbsoluteClaim = /\b(siempre|nunca|todo|nada|sin duda|garantiza)\b/i.test(text);
   const hasPsychologicalInterpretation = /\b(en el fondo|tu herida|tu trauma|tu miedo es|eres una persona)\b/i.test(text);
   const hasUnsupportedContext = hasUnsupportedPersonalContext(candidate.text, brief);
+  const repeatedEditorialIdea = (brief.recentEditorialIdeas ?? []).some(previous => sameEditorialIdea(candidate, previous));
   const hasParagraph = candidate.text.includes('\n');
   const wordCount = text.split(' ').filter(Boolean).length;
   const structuredParts = [candidate.recognition, candidate.explanation, candidate.insight].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
@@ -365,11 +413,13 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (hasForbidden) reasons.push('forbidden_framework_language');
   if (hasChatbotLanguage) reasons.push('chatbot_language');
   if (hasCoachingLanguage) reasons.push('coaching_language');
+  if (hasRoboticLanguage) reasons.push('robotic_or_abstract_language');
   if (hasTherapyLanguage) reasons.push('therapy_language');
   if (hasUnnecessaryAdvice) reasons.push('unnecessary_advice');
   if (hasAbsoluteClaim) warnings.push('absolute_claim');
   if (hasPsychologicalInterpretation) reasons.push('psychological_interpretation');
   if (hasUnsupportedContext) reasons.push('unsupported_personal_context');
+  if (repeatedEditorialIdea) reasons.push('same_editorial_idea');
   if (!hasParagraph && blocks.length === 0) reasons.push('missing_structure');
   if (blocks.length === 0 && (wordCount < 45 || wordCount > 180)) reasons.push('insufficient_value_length');
   if (!hasInsight) reasons.push('empty_value');
@@ -380,6 +430,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const internalParts = blocks.length ? blocks.map(block => block.text) : [candidate.recognition!, candidate.explanation!, candidate.insight!, ...(candidate.steps ?? []), candidate.action ?? '', candidate.closing ?? ''];
   if (internalParts.length >= 2 && hasInternalRepetition(internalParts)) reasons.push('internal_repetition');
   if (structureCount >= 1) warnings.push('recent_structure_reuse');
+  if (!firstReadPasses && !hasRoboticLanguage) warnings.push('first_read_comprehension');
   const excludedAngles = (brief.learningSignals ?? []).flatMap(signal => {
     if (signal.signal !== 'angle_quality' || typeof signal.value !== 'object' || !signal.value) return [];
     const angle = signal.value.angle;
@@ -394,11 +445,11 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     duplicate_literal: recent.some(previous => normalize(previous) === text), duplicate_semantic: similarities.length === 0,
     repeated_concept: conceptCount < interventionConfig.conceptSaturationThreshold, repeated_angle: !(brief.recentAngles ?? []).slice(0, interventionConfig.recentHistoryWindow).includes(candidate.angle),
     repeated_structure: structureCount === 0, one_clear_idea: !candidate.text.includes(' y ') || candidate.text.split(' y ').length <= 2,
-    clear_function: Boolean(candidate.function), specific: hasContext, concrete: hasContext, natural: !hasChatbotLanguage && !hasCoachingLanguage,
-    sounds_human: !hasChatbotLanguage && !hasCoachingLanguage, sounds_like_nia: !hasCliche && !hasForbidden, sounds_specific_to_user: hasContext,
+    clear_function: Boolean(candidate.function), specific: hasContext, concrete: hasContext, natural: !hasChatbotLanguage && !hasCoachingLanguage && !hasRoboticLanguage,
+    sounds_human: !hasChatbotLanguage && !hasCoachingLanguage && !hasRoboticLanguage, sounds_like_nia: !hasCliche && !hasForbidden, sounds_specific_to_user: hasContext,
     generic_motivation: !hasCliche, chatbot_language: !hasChatbotLanguage, coaching_language: !hasCoachingLanguage,
     therapy_language: !hasTherapyLanguage, cliché: !hasCliche, unnecessary_advice: !hasUnnecessaryAdvice, absolute_claim: !hasAbsoluteClaim,
-    psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
+    psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, first_read_comprehension: firstReadPasses, robotic_or_abstract_language: !hasRoboticLanguage, editorial_novelty: !repeatedEditorialIdea, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
     value_structure: hasValue, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };

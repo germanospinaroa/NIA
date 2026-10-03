@@ -33,6 +33,7 @@
     "test:editorial-memory": "node --experimental-strip-types scripts/test-editorial-memory.mjs",
     "test:editorial-planner": "node --experimental-strip-types scripts/test-editorial-planner.mjs",
     "test:editorial-rhythm": "node --experimental-strip-types scripts/test-editorial-rhythm.mjs",
+    "test:editorial-quality": "node --experimental-strip-types scripts/test-editorial-quality.mjs",
     "test:flexible-interventions": "node --experimental-strip-types scripts/test-flexible-interventions.mjs",
     "test:intention-value": "node --experimental-strip-types scripts/test-intention-value.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",

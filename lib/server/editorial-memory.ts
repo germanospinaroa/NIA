@@ -21,6 +21,7 @@ export type EditorialHistoryItem = {
   intervention_type: EditorialInterventionType | null;
   depth: EditorialDepth | null;
   editorial_take?: string | null;
+  editorial_idea?: string | null;
   experience_type?: EditorialExperienceType | null;
   territory_key?: string | null;
   exercise_present?: boolean | null;
@@ -37,10 +38,13 @@ export type EditorialRhythm = {
   depthCounts: Record<EditorialDepth, number>;
   topicCounts: Record<string, number>;
   takeCounts: Record<string, number>;
+  ideaCounts: Record<string, number>;
+  recentIdeas: string[];
   dominantExperience: EditorialExperienceType | null;
   experienceConcentration: number;
   repeatedTake: string | null;
   repeatedTerritory: string | null;
+  repeatedIdea: string | null;
 };
 export type EditorialTopicSummary = { topic: string; count: number; last_seen: string; share: number; state: 'normal' | 'watch' | 'saturated' | 'refresh'; angles: Array<{ angle: string; count: number; last_seen: string }> };
 export type EditorialMemory = {
@@ -77,6 +81,7 @@ export function buildEditorialRhythm(rows: EditorialHistoryItem[], now = new Dat
   const depthCounts = emptyDepths();
   const topicCounts: Record<string, number> = {};
   const takeCounts: Record<string, number> = {};
+  const ideaCounts: Record<string, number> = {};
   const territoryCounts: Record<string, number> = {};
   for (const row of last7To10) {
     const experience = experienceFor(row); if (experience) experienceCounts[experience] += 1;
@@ -84,12 +89,13 @@ export function buildEditorialRhythm(rows: EditorialHistoryItem[], now = new Dat
     if (row.depth) depthCounts[row.depth] += 1;
     if (row.topic) topicCounts[row.topic] = (topicCounts[row.topic] ?? 0) + 1;
     if (row.editorial_take) takeCounts[row.editorial_take] = (takeCounts[row.editorial_take] ?? 0) + 1;
+    if (row.editorial_idea) ideaCounts[row.editorial_idea] = (ideaCounts[row.editorial_idea] ?? 0) + 1;
     if (row.territory_key) territoryCounts[row.territory_key] = (territoryCounts[row.territory_key] ?? 0) + 1;
   }
   const ranked = Object.entries(experienceCounts).sort((a, b) => b[1] - a[1]);
   const total = last7To10.length;
   const repeated = (counts: Record<string, number>) => Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[1] >= 2 ? Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] : null;
-  return { last3, last5, last7Days, last7To10, experienceCounts, interventionTypeCounts, depthCounts, topicCounts, takeCounts, dominantExperience: ranked[0]?.[1] ? ranked[0][0] as EditorialExperienceType : null, experienceConcentration: total ? (ranked[0]?.[1] ?? 0) / total : 0, repeatedTake: repeated(takeCounts), repeatedTerritory: repeated(territoryCounts) };
+  return { last3, last5, last7Days, last7To10, experienceCounts, interventionTypeCounts, depthCounts, topicCounts, takeCounts, ideaCounts, recentIdeas: last7To10.map(row => row.editorial_idea).filter((value): value is string => Boolean(value)), dominantExperience: ranked[0]?.[1] ? ranked[0][0] as EditorialExperienceType : null, experienceConcentration: total ? (ranked[0]?.[1] ?? 0) / total : 0, repeatedTake: repeated(takeCounts), repeatedTerritory: repeated(territoryCounts), repeatedIdea: repeated(ideaCounts) };
 }
 
 export function topicState(count: number, share: number, sameAngleCount: number): EditorialTopicSummary['state'] {
@@ -121,7 +127,7 @@ export function buildEditorialMemory(rows: EditorialHistoryItem[], windowDays = 
 }
 
 export async function loadEditorialMemory(admin: SupabaseClient, userId: string, now = new Date(), windowDays = 30): Promise<EditorialMemory> {
-  const { data, error } = await admin.from('interventions').select('id,created_at,topic,concept,angle,intervention_type,depth,editorial_take,experience_type,territory_key,exercise_present,question_present,feedback_requested').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+  const { data, error } = await admin.from('interventions').select('id,created_at,topic,concept,angle,intervention_type,depth,editorial_take,editorial_idea,experience_type,territory_key,exercise_present,question_present,feedback_requested').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
   if (error) throw new Error('editorial_memory_unavailable');
   return buildEditorialMemory((data ?? []) as EditorialHistoryItem[], windowDays, now);
 }

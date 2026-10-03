@@ -9,7 +9,7 @@ assert.equal(formatCandidateText('Introducción.\n\n1. Primer paso\n2. Segundo p
 assert.equal(formatCandidateText('Texto completamente plano sin estructura detectable.'), 'Texto completamente plano sin estructura detectable.');
 assert.equal(formatCandidateText('texto\r\n\r\n1. paso'), 'texto\n\n1. paso');
 const structuredCandidate = {
-  topic: 'criterio propio', editorial_take: 'Escuchar una objeción no convierte la duda en evidencia.', experience_type: 'exercise', intervention_type: 'step_by_step', depth: 'medium',
+  topic: 'criterio propio', editorial_take: 'Escuchar una objeción no convierte la duda en evidencia.', editorial_idea: 'Una objeción no es evidencia de error.', experience_type: 'exercise', intervention_type: 'step_by_step', depth: 'medium',
   blocks: [{ type: 'recognition', text: 'Cuando tu jefe cuestiona una decisión, notas que empiezas a mirar tu criterio con sus ojos.' }, { type: 'step', text: 'Anota qué pensabas antes de escucharla.' }, { type: 'step', text: 'Revisa si apareció un dato nuevo o solo una opinión diferente.' }],
   function: 'anticipate', concept: 'self_trust', angle: 'revisar datos antes de cambiar', structure: 'when_then',
 };

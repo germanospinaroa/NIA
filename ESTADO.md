@@ -1,4 +1,10 @@
 # ESTADO — NIA
+
+## Calidad editorial conversacional — 2026-10-03
+- Añadida metadata nullable `editorial_idea` en `interventions` e `intervention_candidates` mediante `supabase/migrations/20261003140000_editorial_idea_voice.sql`; los históricos permanecen NULL.
+- La memoria editorial conserva ideas recientes además de topic, take, angle, experiencia y profundidad. El planner penaliza experiencias concentradas, evita ideas recientes y mantiene la preferencia como peso, no como plantilla.
+- El generador recibe instrucciones explícitas de primera lectura, voz humana, profundidad flexible y no repetición de la misma enseñanza. El auditor determinista separa `same_editorial_idea`, `robotic_or_abstract_language` y `first_read_comprehension` de coaching/chatbot/therapy.
+- Añadidos fixtures offline en `test:editorial-quality`. No se hicieron llamadas OpenAI, embeddings, semantic judge, LLM audit, Evolution ni WhatsApp. No deployment.
 Última actualización: 2026-10-03 | Sesión actual: control admin para botones WhatsApp — implementación offline validada, despliegue pendiente
 
 ## Control admin de botones WhatsApp — 2026-10-03
