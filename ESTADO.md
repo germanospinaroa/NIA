@@ -1,6 +1,12 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Control admin para QA real — 2026-10-03
+- Añadido el control "Prueba real de NIA" en /admin/users/[id], reutilizando la sesión administrativa existente y el endpoint POST /api/admin/qa/daily-intervention.
+- La UI exige confirmación explícita, deshabilita la acción durante la ejecución y evita un segundo click o una segunda solicitud en la misma vista. Muestra planner, generación, interacción, delivery y estados separados de Evolution/WhatsApp.
+- La ficha administrativa ahora lee el estado real de profiles.whatsapp_enabled y whatsapp_connections; no inventa que WhatsApp está conectado.
+- Tests, typecheck, lint y build pasan. La prueba real NO fue ejecutada desde Codex; queda para el administrador desde su navegador autenticado.
+
 ## Auditoría editorial — 2026-10-03
 
 EDITORIAL_AUDIT_COMPLETED=yes
