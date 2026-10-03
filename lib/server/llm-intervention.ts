@@ -1,7 +1,18 @@
 import { formatCandidateText } from '../intervention-engine.ts';
 import type { CalibrationPrompt, InterventionBrief, InterventionCandidate, InterventionFunction, InterventionStructure, SemanticMatch } from '../intervention-engine.ts';
 
-type LlmCandidate = { text: string; function: InterventionFunction; concept: string; angle: string; structure: InterventionStructure };
+export type LlmCandidate = {
+  recognition: string;
+  explanation: string;
+  insight: string;
+  steps: string[];
+  action: string;
+  closing: string;
+  function: InterventionFunction;
+  concept: string;
+  angle: string;
+  structure: InterventionStructure;
+};
 export type LlmAudit = {
   context_fit: boolean; specificity: boolean; generic_motivation: boolean; chatbot_language: boolean; coaching_language: boolean; therapy_language: boolean; cliché: boolean; semantic_repetition: boolean; concept_repetition: boolean; structure_repetition: boolean; single_idea: boolean; natural_voice: boolean; unnecessary_advice: boolean; approved: boolean; reasons: string[];
 };
@@ -76,16 +87,27 @@ function addUsage(target: StructuredUsage, source?: StructuredUsage) {
   for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens', 'cached_input_tokens', 'cache_write_tokens'] as const) target[key] = (target[key] ?? 0) + (source?.[key] ?? 0);
 }
 
-const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['text', 'function', 'concept', 'angle', 'structure'], properties: { text: { type: 'string', minLength: 180, maxLength: 900 }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
+const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['recognition', 'explanation', 'insight', 'steps', 'action', 'closing', 'function', 'concept', 'angle', 'structure'], properties: { recognition: { type: 'string', minLength: 1, maxLength: 300 }, explanation: { type: 'string', minLength: 1, maxLength: 300 }, insight: { type: 'string', minLength: 1, maxLength: 300 }, steps: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string', minLength: 1, maxLength: 180, pattern: '^\\s*(?!\\d+[.)]\\s)' } }, action: { type: 'string', minLength: 1, maxLength: 240 }, closing: { type: 'string', minLength: 1, maxLength: 160 }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
 const auditSchema = { type: 'object', additionalProperties: false, required: ['context_fit', 'specificity', 'generic_motivation', 'chatbot_language', 'coaching_language', 'therapy_language', 'cliché', 'semantic_repetition', 'concept_repetition', 'structure_repetition', 'single_idea', 'natural_voice', 'unnecessary_advice', 'approved', 'reasons'], properties: { context_fit: { type: 'boolean' }, specificity: { type: 'boolean' }, generic_motivation: { type: 'boolean' }, chatbot_language: { type: 'boolean' }, coaching_language: { type: 'boolean' }, therapy_language: { type: 'boolean' }, 'cliché': { type: 'boolean' }, semantic_repetition: { type: 'boolean' }, concept_repetition: { type: 'boolean' }, structure_repetition: { type: 'boolean' }, single_idea: { type: 'boolean' }, natural_voice: { type: 'boolean' }, unnecessary_advice: { type: 'boolean' }, approved: { type: 'boolean' }, reasons: { type: 'array', items: { type: 'string' } } } };
 const calibrationSchema = { type: 'object', additionalProperties: false, required: ['question', 'options', 'allow_free_text', 'reason', 'missing_context_field'], properties: { question: { type: 'string', minLength: 12, maxLength: 180 }, options: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'object', additionalProperties: false, required: ['id', 'label', 'context_value'], properties: { id: { type: 'string', minLength: 2, maxLength: 40 }, label: { type: 'string', minLength: 2, maxLength: 80 }, context_value: { type: 'string', minLength: 2, maxLength: 180 } } } }, allow_free_text: { type: 'boolean', const: true }, reason: { type: 'string', enum: ['too_general', 'missing_context', 'context_changed', 'desired_change_changed'] }, missing_context_field: { type: 'string', enum: ['current_context', 'active_context', 'relevant_situations', 'desired_change'] } } };
 
-const system = `Eres el motor de mensajes de NIA. Cada candidato debe entregar valor utilizable después de cerrar WhatsApp, no una frase motivacional. Escribe un texto humano y específico de 70 a 150 palabras que incluya: reconocimiento de lo que la persona está trabajando, una explicación sencilla de lo que puede estar pasando, un insight que distinga dos cosas, una herramienta concreta con 2 o 3 pasos o preguntas, una acción pequeña para hoy y un cierre que transmita claridad o capacidad. Usa párrafos o viñetas para que se pueda leer. No inventes personas, lugares, trabajos, conflictos ni hechos personales. No hagas terapia, coaching ni claims clínicos. No uses frases genéricas, afirmaciones vacías ni introducciones de chatbot. No uses sostener, mantener tu dirección, volver a tu intención, honrar tu proceso, alinearte contigo ni equivalentes salvo que sean palabras de la usuaria. La situación debe estar confirmada por la usuaria. En el JSON, function y structure son identificadores internos cerrados. concept y angle son descripciones semánticas libres en español. Devuelve únicamente el JSON solicitado.`;
+const system = `Eres el motor de mensajes de NIA. Cada candidato debe entregar valor utilizable después de cerrar WhatsApp, no una frase motivacional. No inventes personas, lugares, trabajos, conflictos ni hechos personales. No hagas terapia, coaching ni claims clínicos. No uses frases genéricas, afirmaciones vacías ni introducciones de chatbot. No uses sostener, mantener tu dirección, volver a tu intención, honrar tu proceso, alinearte contigo ni equivalentes salvo que sean palabras de la usuaria. La situación debe estar confirmada por la usuaria. Devuelve únicamente el JSON solicitado.`;
+const candidateGenerationSystem = `${system} Para candidatos de intervención, no escribas el mensaje final en un campo text. Completa exactamente estos campos: recognition, explanation, insight, steps, action y closing. recognition reconoce lo que la usuaria está trabajando; explanation explica de forma sencilla qué puede estar pasando, sin diagnóstico; insight distingue dos cosas; steps contiene 2 o 3 instrucciones o preguntas concretas, sin numeración ni saltos de línea; action propone una acción pequeña para hoy; closing transmite claridad o capacidad. La aplicación compondrá la presentación final. Mantén aproximadamente 70–150 palabras en total, contexto confirmado, herramienta concreta, variación de función/estructura/ángulo, lenguaje humano y sin claims clínicos. En el JSON, function y structure son identificadores internos cerrados; concept y angle son descripciones semánticas libres en español.`;
+
+export function composeCandidateText(candidate: LlmCandidate) {
+  const steps = candidate.steps.map((step, index) => `${index + 1}. ${step.trim()}`).join('\n');
+  return formatCandidateText([candidate.recognition, candidate.explanation, candidate.insight, steps, candidate.action, candidate.closing].map(value => value.trim()).join('\n\n')).trim();
+}
 
 export function validateLlmCandidate(value: unknown): value is LlmCandidate {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<LlmCandidate>;
-  return typeof candidate.text === 'string' && candidate.text.trim().length >= 180 && candidate.text.length <= 900 && typeof candidate.concept === 'string' && candidate.concept.trim().length >= 2 && typeof candidate.angle === 'string' && candidate.angle.trim().length >= 2 && candidateFunctions.includes(candidate.function as typeof candidateFunctions[number]) && candidateStructures.includes(candidate.structure as typeof candidateStructures[number]);
+  const strings = [candidate.recognition, candidate.explanation, candidate.insight, candidate.action, candidate.closing];
+  const validSteps = Array.isArray(candidate.steps) && candidate.steps.length >= 2 && candidate.steps.length <= 3 && candidate.steps.every(step => typeof step === 'string' && step.trim().length > 0 && !/[\r\n]/.test(step) && !/^\s*\d+[.)]\s/.test(step));
+  if (!strings.every(value => typeof value === 'string' && value.trim().length > 0) || !validSteps) return false;
+  if (typeof candidate.concept !== 'string' || candidate.concept.trim().length < 2 || typeof candidate.angle !== 'string' || candidate.angle.trim().length < 2 || !candidateFunctions.includes(candidate.function as typeof candidateFunctions[number]) || !candidateStructures.includes(candidate.structure as typeof candidateStructures[number])) return false;
+  const text = composeCandidateText(candidate as LlmCandidate);
+  return text.includes('\n') && text.includes('\n\n') && text.length >= 180 && text.length <= 900;
 }
 
 export async function generateCandidatesWithLLM(brief: InterventionBrief): Promise<InterventionCandidate[]> {
@@ -97,15 +119,15 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
   const usage: StructuredUsage = {};
   const callUsages: ProviderUsageSnapshot[] = [];
   const execution = await withTechnicalJsonRetryMeta(async () => {
-    const response = await requestStructuredJsonWithMeta('nia_intervention_candidates', candidateSchema, system, `Construye exactamente 3 candidatos diferentes. Deben variar en ángulo y estructura, no ser paráfrasis. Cada uno debe cumplir la estructura de valor completa descrita en el sistema. Usa únicamente hechos y situaciones confirmados por la usuaria. Si el brief no contiene una situación concreta, no la inventes. Restricciones activas: ${(brief.generationConstraints ?? []).join(' | ') || 'ninguna adicional'}. Brief completo:\n${JSON.stringify(brief)}`);
+    const response = await requestStructuredJsonWithMeta('nia_intervention_candidates', candidateSchema, candidateGenerationSystem, `Construye exactamente 3 candidatos diferentes. Deben variar en ángulo y estructura, no ser paráfrasis. Usa únicamente hechos y situaciones confirmados por la usuaria. Si el brief no contiene una situación concreta, no la inventes. Restricciones activas: ${(brief.generationConstraints ?? []).join(' | ') || 'ninguna adicional'}. Brief completo:\n${JSON.stringify(brief)}`);
     callUsages.push(response.usage ?? {});
     addUsage(usage, response.usage);
     const value = response.value as { candidates?: unknown };
-    const formattedCandidates = Array.isArray(value.candidates) ? value.candidates.map(candidate => ({ ...(candidate as LlmCandidate), text: typeof (candidate as LlmCandidate)?.text === 'string' ? formatCandidateText((candidate as LlmCandidate).text) : (candidate as LlmCandidate)?.text })) : [];
-    if (formattedCandidates.length !== 3 || !formattedCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
-    return formattedCandidates as LlmCandidate[];
+    const structuredCandidates = Array.isArray(value.candidates) ? value.candidates : [];
+    if (structuredCandidates.length !== 3 || !structuredCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
+    return structuredCandidates as LlmCandidate[];
   });
-  return { candidates: execution.value.map(candidate => ({ ...candidate, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
+  return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
 }
 
 export function validateCalibrationPrompt(value: unknown): value is CalibrationPrompt {

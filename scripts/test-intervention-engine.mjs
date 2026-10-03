@@ -1,16 +1,35 @@
 import assert from 'node:assert/strict';
 import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, formatCandidateText, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
-import { validateLlmCandidate } from '../lib/server/llm-intervention.ts';
+import { composeCandidateText, validateLlmCandidate } from '../lib/server/llm-intervention.ts';
 
 const base = { desiredChange: 'Quiero confiar más en mis decisiones.', currentContext: 'Mi jefe cuestiona mis decisiones.', recentInterventions: [], recentConcepts: [], recentAngles: [], recentStructures: [] };
 const flattenedList = 'Introducción. 1. Primer paso. 2. Segundo paso. 3. Tercer paso.';
-const formattedList = formatCandidateText(flattenedList);
-assert.equal(formattedList.includes('\n1. Primer paso.'), true);
-assert.equal(formattedList.includes('\n2. Segundo paso.'), true);
-assert.equal(formattedList.includes('\n3. Tercer paso.'), true);
+assert.equal(formatCandidateText(flattenedList), flattenedList);
 assert.equal(formatCandidateText('Introducción.\n\n1. Primer paso\n2. Segundo paso\n3. Tercer paso'), 'Introducción.\n\n1. Primer paso\n2. Segundo paso\n3. Tercer paso');
 assert.equal(formatCandidateText('Texto completamente plano sin estructura detectable.'), 'Texto completamente plano sin estructura detectable.');
 assert.equal(formatCandidateText('texto\r\n\r\n1. paso'), 'texto\n\n1. paso');
+const structuredCandidate = {
+  recognition: 'Cuando tu jefe cuestiona una decisión, notas que empiezas a mirar tu criterio con sus ojos.',
+  explanation: 'La duda puede aparecer aunque la situación no haya cambiado y aunque antes tuvieras razones claras.',
+  insight: 'Escuchar una opinión y necesitar convertirla en una razón para cambiar son cosas distintas.',
+  steps: ['Anota qué pensabas antes de escucharla.', 'Revisa si apareció un dato nuevo o solo una opinión diferente.', 'Espera antes de cambiar si tus razones siguen teniendo sentido.'],
+  action: 'Hoy practica esa pausa antes de pedir otra opinión sobre una decisión concreta.',
+  closing: 'Puedes escuchar y seguir decidiendo tú.',
+  function: 'anticipate', concept: 'self_trust', angle: 'revisar datos antes de cambiar', structure: 'when_then',
+};
+const composedStructured = composeCandidateText(structuredCandidate);
+assert.equal(composedStructured.split('\n').filter(line => /^\d+\. /.test(line)).length, 3);
+assert.equal(composedStructured.includes('\n\n'), true);
+assert.equal(composedStructured, [structuredCandidate.recognition, structuredCandidate.explanation, structuredCandidate.insight, '1. Anota qué pensabas antes de escucharla.\n2. Revisa si apareció un dato nuevo o solo una opinión diferente.\n3. Espera antes de cambiar si tus razones siguen teniendo sentido.', structuredCandidate.action, structuredCandidate.closing].join('\n\n'));
+assert.equal(validateLlmCandidate(structuredCandidate), true);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: [] }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: ['Solo un paso'] }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: ['1', '2', '3', '4'] }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, steps: ['1. Numerado por error', 'Otro paso'] }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, recognition: undefined }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, function: 'invalid' }), false);
+assert.equal(validateLlmCandidate({ ...structuredCandidate, structure: 'invalid' }), false);
+assert.equal(auditCandidate({ text: composedStructured, function: structuredCandidate.function, concept: structuredCandidate.concept, angle: structuredCandidate.angle, structure: structuredCandidate.structure }, base).reasons.includes('missing_structure'), false);
 const generic = { text: 'Confía en ti.', function: 'remind', concept: 'self_trust', angle: 'generic', structure: 'specific_permission' };
 assert.equal(auditCandidate(generic, base).status, 'rejected');
 assert(auditCandidate(generic, base).reasons.includes('generic_or_missing_user_context'));
@@ -69,7 +88,4 @@ const expiredBrief = applyLearningSignals(base, [{ signal: 'specificity', value:
 assert.equal(expiredBrief.feedbackGoal, undefined);
 const decayedBrief = applyLearningSignals(base, [{ signal: 'specificity', value: { value: 'low' }, confidence: 1, created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), expires_at: null }]);
 assert(decayedBrief.learningSignals[0].decayWeight < 0.5 && decayedBrief.learningSignals[0].decayWeight > 0.2);
-assert.equal(validateLlmCandidate({ text: 'Puedo esperar antes de responder. Primero anoto qué ocurrió, separo un dato nuevo de una opinión y elijo una respuesta pequeña para hoy. Así no tengo que decidir desde la urgencia.', function: 'anticipate', concept: 'aprobación externa', angle: 'ganar espacio antes de responder', structure: 'before_then' }), true);
-assert.equal(validateLlmCandidate({ text: 'Puedo esperar antes de responder.', function: 'Interrumpir el sí automático', concept: 'pausa', angle: 'ganar espacio', structure: 'before_then' }), false);
-assert.equal(validateLlmCandidate({ text: 'No tienes que aceptar para evitar incomodidad. Puedes esperar, revisar qué necesitas y responder después. Prueba escribir una frase breve antes de contestar para que tu decisión no dependa solo de la reacción que imaginas.', function: 'anticipate', concept: 'miedo a decepcionar a la familia', angle: 'decir sí para evitar incomodidad', structure: 'context_does_not_mean' }), true);
 console.log('intervention-engine tests: PASS');

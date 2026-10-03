@@ -145,10 +145,7 @@ function tokens(value: string) { return new Set(normalize(value).split(' ').filt
  * It never adds, removes, or rewrites words.
  */
 export function formatCandidateText(text: string) {
-  const normalized = text.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n');
-  const hasNumberedSequence = /(?:^|\s)1\.\s+[\s\S]*?(?:^|\s)2\.\s+[\s\S]*?(?:^|\s)3\.\s+/.test(normalized);
-  if (!hasNumberedSequence) return normalized;
-  return normalized.replace(/[ \t]+(?=(?:1|2|3)\.\s+)/g, '\n');
+  return text.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n');
 }
 
 export function lexicalSimilarity(a: string, b: string) {
