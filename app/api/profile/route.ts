@@ -48,7 +48,16 @@ export async function PATCH(request: Request) {
     if (invalidIntention(text)) return NextResponse.json({ error: 'invalid_intention' }, { status: 422 });
   }
 
-  const { data, error } = await supabase.from('profiles').upsert({ id: user.id, ...values }, { onConflict: 'id' }).select('*').single();
-  if (error) return NextResponse.json({ error: 'profile_update_failed' }, { status: 400 });
+  const { data, error } = await supabase.from('profiles').update(values).eq('id', user.id).select('*').single();
+  if (error) {
+    console.error('[profile PATCH] update failed', {
+      userId: user.id,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return NextResponse.json({ error: 'profile_update_failed' }, { status: 400 });
+  }
   return NextResponse.json({ profile: data });
 }
