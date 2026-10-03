@@ -649,3 +649,9 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - `sendWhatsAppText` conserva el endpoint `/message/sendText/{instance}` y el payload `{ number, text }`, añade timeout, status HTTP, extracción de message id y logging saneado. El botón de prueba y la confirmación automática no convierten errores del proveedor en éxito.
 - El webhook consume el token de vinculación de forma condicional/idempotente antes de enviar confirmación, evitando duplicados concurrentes.
 - Test sintético outbound verifica respuesta 201 con message id y rechazo 404; suites relevantes, typecheck, lint y build ejecutados. No se envió ningún mensaje real durante esta sesión.
+
+## Fase 4G — Composición humana de mensajes — 2026-10-03
+- Se añadió `lib/server/message-composer.ts` como capa final, separada del motor psicológico: usa `first_name` real, timezone del perfil y hora local para saludo; añade cierres breves por franja y evita repetir el cierre reciente.
+- `/api/daily` persiste el mensaje completo ya compuesto; `/app` reutiliza ese mismo contenido, sin una versión distinta para web. La intervención base, auditoría y selección del motor no cambian.
+- Tests de compositor: franjas Bogotá, timezone alternativo, nombre ausente sin fallback, cierres y no repetición inmediata. Producción desplegada; `/` y `/descubre` siguen respondiendo 200.
+- Limitación real: el repositorio no contiene actualmente un job/ruta que envíe intervenciones diarias por WhatsApp; solo existen outbound de confirmación y mensaje de prueba. No se afirma que el envío diario esté activo.
