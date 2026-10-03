@@ -7,6 +7,11 @@
 - Añadido `test:profile-settings` para cubrir configuraciones de 1 y 2 mensajes, incluyendo `01:00`, `01:15` y `America/Bogota`.
 - Production desplegada en `dpl_CZ5o54jp2K9BL6cWQyYGF9VMHxD4`. La persistencia mediante sesión autenticada real y comprobación directa del perfil requieren un buzón/sesión controlada no disponible en este entorno.
 
+## E2E WhatsApp con límite de costo — 2026-10-03
+- Auditoría: `message_frequency=2` y `message_time_1/message_time_2` usan una sola `interactions.daily_message` por usuario/fecha; cada slot tiene su propio delivery y reutiliza el mismo `interaction_id` y contenido.
+- Se ejecutó una única generación real controlada para el usuario conectado de prueba, usando el primer slot. Terminó en `no_approved_intervention`; no se creó interacción ni delivery y no se intentó ningún envío. La prueba se detuvo inmediatamente, sin reintentos.
+- Tests mock/fixture reforzados para timezone, ventana de 15 minutos, composición, idempotencia/claim/dry-run por contrato y respuestas Evolution 201/404/500/red/no configurado. No hubo llamadas LLM en estas pruebas.
+
 ## Envío diario automático por WhatsApp — implementación 2026-10-03
 - Se añadió un generador compartido en `lib/server/daily-message.ts`: `/api/daily` y el job usan la misma interacción diaria persistida y el mismo `message-composer`; no existe una segunda lógica psicológica ni una segunda versión del mensaje.
 - Se añadió `lib/server/whatsapp-daily.ts`, con elegibilidad por `whatsapp_enabled` + conexión `connected`, timezone individual, franjas `message_time_1/message_time_2`, reserva concurrente y estados `pending/sent/failed`.

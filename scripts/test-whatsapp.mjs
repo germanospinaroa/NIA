@@ -41,6 +41,16 @@ globalThis.fetch = async () => new Response(JSON.stringify({ message: 'instance 
 const rejected = await sendWhatsAppText('573001231234', 'hello');
 assert.equal(rejected.ok, false);
 assert.equal(rejected.status, 404);
+globalThis.fetch = async () => new Response(JSON.stringify({ error: 'provider unavailable' }), { status: 500, headers: { 'content-type': 'application/json' } });
+const serverRejected = await sendWhatsAppText('573001231234', 'hello');
+assert.equal(serverRejected.ok, false);
+assert.equal(serverRejected.status, 500);
+globalThis.fetch = async () => { throw new Error('network down'); };
+const networkRejected = await sendWhatsAppText('573001231234', 'hello');
+assert.deepEqual(networkRejected, { ok: false, reason: 'network_error' });
+delete process.env.EVOLUTION_API_URL;
+const notConfigured = await sendWhatsAppText('573001231234', 'hello');
+assert.deepEqual(notConfigured, { ok: false, reason: 'not_configured' });
 globalThis.fetch = originalFetch;
 if (previousProvider === undefined) delete process.env.WHATSAPP_PROVIDER; else process.env.WHATSAPP_PROVIDER = previousProvider;
 if (previousUrl === undefined) delete process.env.EVOLUTION_API_URL; else process.env.EVOLUTION_API_URL = previousUrl;
