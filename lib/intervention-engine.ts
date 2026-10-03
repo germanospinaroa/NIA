@@ -140,6 +140,17 @@ export function canonicalConceptKey(value: string) {
 
 function tokens(value: string) { return new Set(normalize(value).split(' ').filter(token => token.length > 2)); }
 
+/**
+ * Repairs only detectable formatting emitted by a candidate generator.
+ * It never adds, removes, or rewrites words.
+ */
+export function formatCandidateText(text: string) {
+  const normalized = text.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n');
+  const hasNumberedSequence = /(?:^|\s)1\.\s+[\s\S]*?(?:^|\s)2\.\s+[\s\S]*?(?:^|\s)3\.\s+/.test(normalized);
+  if (!hasNumberedSequence) return normalized;
+  return normalized.replace(/[ \t]+(?=(?:1|2|3)\.\s+)/g, '\n');
+}
+
 export function lexicalSimilarity(a: string, b: string) {
   const left = tokens(a); const right = tokens(b);
   if (!left.size || !right.size) return 0;
@@ -286,7 +297,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     generic_motivation: !hasCliche, chatbot_language: !hasChatbotLanguage, coaching_language: !hasCoachingLanguage,
     therapy_language: !hasTherapyLanguage, cliché: !hasCliche, unnecessary_advice: !hasUnnecessaryAdvice, absolute_claim: !hasAbsoluteClaim,
     psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
-    value_structure: hasParagraph && hasInsight && hasTool, no_multi_step_instruction: true, no_paragraph: true, no_repetition: similarities.length === 0,
+    value_structure: hasParagraph && hasInsight && hasTool, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0,
   };
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
 }

@@ -1,4 +1,5 @@
-import type { CalibrationPrompt, InterventionBrief, InterventionCandidate, InterventionFunction, InterventionStructure, SemanticMatch } from '@/lib/intervention-engine';
+import { formatCandidateText } from '../intervention-engine.ts';
+import type { CalibrationPrompt, InterventionBrief, InterventionCandidate, InterventionFunction, InterventionStructure, SemanticMatch } from '../intervention-engine.ts';
 
 type LlmCandidate = { text: string; function: InterventionFunction; concept: string; angle: string; structure: InterventionStructure };
 export type LlmAudit = {
@@ -100,8 +101,9 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
     callUsages.push(response.usage ?? {});
     addUsage(usage, response.usage);
     const value = response.value as { candidates?: unknown };
-    if (!Array.isArray(value.candidates) || value.candidates.length !== 3 || !value.candidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
-    return value.candidates as LlmCandidate[];
+    const formattedCandidates = Array.isArray(value.candidates) ? value.candidates.map(candidate => ({ ...(candidate as LlmCandidate), text: typeof (candidate as LlmCandidate)?.text === 'string' ? formatCandidateText((candidate as LlmCandidate).text) : (candidate as LlmCandidate)?.text })) : [];
+    if (formattedCandidates.length !== 3 || !formattedCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
+    return formattedCandidates as LlmCandidate[];
   });
   return { candidates: execution.value.map(candidate => ({ ...candidate, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
 }

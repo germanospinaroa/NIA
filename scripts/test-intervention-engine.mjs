@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
-import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
+import { applyLearningSignals, auditCandidate, auditSemanticCandidate, contextStatusForDays, feedbackFor, formatCandidateText, hasSufficientContext, hasUnsupportedPersonalContext, learningFromFeedback } from '../lib/intervention-engine.ts';
 import { validateLlmCandidate } from '../lib/server/llm-intervention.ts';
 
 const base = { desiredChange: 'Quiero confiar más en mis decisiones.', currentContext: 'Mi jefe cuestiona mis decisiones.', recentInterventions: [], recentConcepts: [], recentAngles: [], recentStructures: [] };
+const flattenedList = 'Introducción. 1. Primer paso. 2. Segundo paso. 3. Tercer paso.';
+const formattedList = formatCandidateText(flattenedList);
+assert.equal(formattedList.includes('\n1. Primer paso.'), true);
+assert.equal(formattedList.includes('\n2. Segundo paso.'), true);
+assert.equal(formattedList.includes('\n3. Tercer paso.'), true);
+assert.equal(formatCandidateText('Introducción.\n\n1. Primer paso\n2. Segundo paso\n3. Tercer paso'), 'Introducción.\n\n1. Primer paso\n2. Segundo paso\n3. Tercer paso');
+assert.equal(formatCandidateText('Texto completamente plano sin estructura detectable.'), 'Texto completamente plano sin estructura detectable.');
+assert.equal(formatCandidateText('texto\r\n\r\n1. paso'), 'texto\n\n1. paso');
 const generic = { text: 'Confía en ti.', function: 'remind', concept: 'self_trust', angle: 'generic', structure: 'specific_permission' };
 assert.equal(auditCandidate(generic, base).status, 'rejected');
 assert(auditCandidate(generic, base).reasons.includes('generic_or_missing_user_context'));
