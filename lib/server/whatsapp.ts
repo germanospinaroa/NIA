@@ -52,10 +52,26 @@ export async function sendWhatsAppText(to: string, text: string) {
     const apiKey = process.env.EVOLUTION_API_KEY;
     const instance = process.env.EVOLUTION_INSTANCE;
     if (!baseUrl || !apiKey || !instance) return { ok: false as const, reason: 'not_configured' as const };
-    const response = await fetch(`${baseUrl}/message/sendText/${encodeURIComponent(instance)}`, { method: 'POST', headers: { apikey: apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ number: to.replace(/\D/g, ''), text }) });
+    const endpoint = `${baseUrl}/message/sendText/${encodeURIComponent(instance)}`;
+    const number = to.replace(/\D/g, '');
+    let response: Response;
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { apikey: apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number, text }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      console.error('whatsapp_outbound_request_failed', { provider: 'evolution', instance, endpoint, reason: error instanceof Error ? error.name : 'network_error' });
+      return { ok: false as const, reason: 'network_error' as const };
+    }
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) return { ok: false as const, reason: 'provider_error' as const, status: response.status, providerError: payload?.message || payload?.error || 'provider_error' };
-    return { ok: true as const, providerMessageId: payload?.key?.id ?? payload?.message?.key?.id ?? null };
+    const providerMessageId = payload?.key?.id ?? payload?.message?.key?.id ?? payload?.messages?.[0]?.id ?? null;
+    const providerError = typeof payload?.message === 'string' ? payload.message : typeof payload?.error === 'string' ? payload.error : typeof payload?.response?.message === 'string' ? payload.response.message : 'provider_error';
+    console.info('whatsapp_outbound_result', { provider: 'evolution', instance, endpoint, status: response.status, ok: response.ok, messageIdPresent: Boolean(providerMessageId), error: response.ok ? undefined : providerError });
+    if (!response.ok) return { ok: false as const, reason: 'provider_error' as const, status: response.status, providerError };
+    return { ok: true as const, status: response.status, providerMessageId };
   }
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
