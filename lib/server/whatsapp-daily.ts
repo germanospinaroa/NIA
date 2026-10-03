@@ -7,6 +7,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 type DbClient = SupabaseClient;
 type Profile = { id: string; first_name: string | null; timezone: string | null; message_frequency: number | null; message_time_1: string | null; message_time_2: string | null; whatsapp_enabled: boolean | null };
 type Connection = { user_id: string; wa_id: string | null; status: string };
+type DeliveryClaim = { id: string; claimToken: string; userId: string; interactionId: string; localDate: string; slot: string };
+
+function deliveryError(code: string) {
+  return new Error(code);
+}
 
 async function claimDelivery(admin: DbClient, input: { userId: string; interactionId: string; localDate: string; slot: string }) {
   const { error: insertError } = await admin.from('whatsapp_daily_deliveries').insert({ user_id: input.userId, interaction_id: input.interactionId, local_date: input.localDate, slot: input.slot, status: 'pending' });
@@ -19,6 +24,40 @@ async function claimDelivery(admin: DbClient, input: { userId: string; interacti
   const result = current.locked_until ? await update.eq('locked_until', current.locked_until).select('id,claim_token').maybeSingle() : await update.is('locked_until', null).select('id,claim_token').maybeSingle();
   if (result.error) throw new Error(result.error.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
   return result.data?.claim_token === claimToken ? { id: current.id, claimToken } : null;
+}
+
+export async function claimExistingFailedDelivery(admin: DbClient, deliveryId: string): Promise<{ kind: 'claimed'; claim: DeliveryClaim } | { kind: 'already_sent' | 'locked' | 'not_retryable' | 'not_found'; status?: string }> {
+  const { data: delivery, error } = await admin.from('whatsapp_daily_deliveries').select('id,user_id,interaction_id,local_date,slot,status,locked_until,attempt_count').eq('id', deliveryId).maybeSingle();
+  if (error) throw deliveryError(error.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
+  if (!delivery) return { kind: 'not_found' };
+  if (delivery.status === 'sent') return { kind: 'already_sent', status: delivery.status };
+  if (delivery.status !== 'failed') return { kind: 'not_retryable', status: delivery.status };
+  if (delivery.locked_until && new Date(delivery.locked_until).getTime() > Date.now()) return { kind: 'locked', status: delivery.status };
+
+  const claimToken = randomUUID();
+  let update = admin.from('whatsapp_daily_deliveries').update({
+    status: 'pending',
+    claim_token: claimToken,
+    locked_until: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    attempt_count: Number(delivery.attempt_count ?? 0) + 1,
+  }).eq('id', delivery.id).eq('status', 'failed');
+  update = delivery.locked_until ? update.eq('locked_until', delivery.locked_until) : update.is('locked_until', null);
+  const { data: claimed, error: claimError } = await update.select('id,claim_token').maybeSingle();
+  if (claimError) throw deliveryError(claimError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
+  if (!claimed || claimed.claim_token !== claimToken) return { kind: 'locked', status: delivery.status };
+  return { kind: 'claimed', claim: { id: delivery.id, claimToken, userId: delivery.user_id, interactionId: delivery.interaction_id, localDate: delivery.local_date, slot: delivery.slot } };
+}
+
+export async function sendClaimedDelivery(admin: DbClient, claim: DeliveryClaim, waId: string, content: string) {
+  const delivery = await sendWhatsAppText(waId, content);
+  if (delivery.ok) {
+    const { error } = await admin.from('whatsapp_daily_deliveries').update({ status: 'sent', provider_message_id: delivery.providerMessageId, sent_at: new Date().toISOString(), locked_until: null, claim_token: null, last_error: null }).eq('id', claim.id).eq('claim_token', claim.claimToken);
+    if (error) throw deliveryError(error.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
+    return delivery;
+  }
+  const { error } = await admin.from('whatsapp_daily_deliveries').update({ status: 'failed', last_error: delivery.reason, locked_until: null, claim_token: null }).eq('id', claim.id).eq('claim_token', claim.claimToken);
+  if (error) throw deliveryError(error.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
+  return delivery;
 }
 
 export async function runDailyWhatsApp(admin: DbClient, now = new Date(), options: { dryRun?: boolean } = {}) {
@@ -49,14 +88,11 @@ export async function runDailyWhatsApp(admin: DbClient, now = new Date(), option
         results.push({ userId: profile.id, slot: due.slot, status: 'dry_run' });
         continue;
       }
-      const delivery = await sendWhatsAppText(connection.wa_id, String(daily.interaction.content));
+      const deliveryClaim = { id: claim.id, claimToken: claim.claimToken, userId: profile.id, interactionId: String(daily.interaction.id), localDate: due.localDate, slot: due.slot };
+      const delivery = await sendClaimedDelivery(admin, deliveryClaim, connection.wa_id, String(daily.interaction.content));
       if (delivery.ok) {
-        const { error: sentError } = await admin.from('whatsapp_daily_deliveries').update({ status: 'sent', provider_message_id: delivery.providerMessageId, sent_at: new Date().toISOString(), locked_until: null, claim_token: null, last_error: null }).eq('id', claim.id).eq('claim_token', claim.claimToken);
-        if (sentError) throw new Error(sentError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
         results.push({ userId: profile.id, slot: due.slot, status: 'sent', messageIdPresent: Boolean(delivery.providerMessageId) });
       } else {
-        const { error: failedError } = await admin.from('whatsapp_daily_deliveries').update({ status: 'failed', last_error: delivery.reason, locked_until: null, claim_token: null }).eq('id', claim.id).eq('claim_token', claim.claimToken);
-        if (failedError) throw new Error(failedError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
         results.push({ userId: profile.id, slot: due.slot, status: 'failed', reason: delivery.reason });
       }
     }
