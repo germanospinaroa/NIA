@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MvpShell } from '@/components/app/MvpShell';
+import { WhatsAppConnectionPanel, type WhatsAppConnectionState } from '@/components/app/WhatsAppConnectionPanel';
 import { guidedSuggestions, intentionLabel, intentionOptions, type IntentionKey, unclearGuidanceOptions, validCustomIntention } from '@/lib/intention';
 
 type Profile = { first_name?: string; direction_key?: string | null; direction_text?: string | null; desired_change_original?: string | null; message_frequency?: number; message_time_1?: string | null; message_time_2?: string | null; timezone?: string | null };
-type WhatsAppState = { status: 'connected' | 'connecting' | 'not_connected' | 'conflict' | 'not_configured' | 'unavailable'; phone_number?: string | null; deep_link?: string | null; message?: string };
 type Draft = { directionKey: IntentionKey | ''; customText: string; frequency: 1 | 2; time: string; secondTime: string; timezone: string };
 
 function profileDraft(profile: Profile): Draft {
@@ -31,13 +31,11 @@ export default function TuPage() {
   const [guidedStep, setGuidedStep] = useState<0 | 1 | 2 | 3>(0);
   const [guidedFirst, setGuidedFirst] = useState('');
   const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [whatsapp, setWhatsapp] = useState<WhatsAppState>({ status: 'not_connected' });
+  const [whatsapp, setWhatsapp] = useState<WhatsAppConnectionState>({ status: 'not_connected' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
   const [error, setError] = useState('');
-  const [changing, setChanging] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchWhatsApp() {
     const response = await fetch('/api/whatsapp/connection');
@@ -51,17 +49,10 @@ export default function TuPage() {
       if (!profileResponse.ok || !result.profile) throw new Error('profile');
       const next = result.profile as Profile;
       const initial = profileDraft(next);
-      setProfile(next); setEmail(result.email ?? ''); setDraft(initial); setSavedDraft(initial); setWhatsapp(whatsappState as WhatsAppState);
+      setProfile(next); setEmail(result.email ?? ''); setDraft(initial); setSavedDraft(initial); setWhatsapp(whatsappState as WhatsAppConnectionState);
     }).catch(() => setError('No pudimos cargar tu configuración. Vuelve a intentarlo.')).finally(() => setLoading(false));
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return undefined;
   }, []);
-
-  useEffect(() => {
-    if (whatsapp.status !== 'connecting') return;
-    let checks = 0;
-    pollRef.current = setInterval(async () => { checks += 1; setWhatsapp(await fetchWhatsApp() as WhatsAppState); if (checks >= 40 && pollRef.current) clearInterval(pollRef.current); }, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [whatsapp.status]);
 
   const hasChanges = useMemo(() => JSON.stringify(draft) !== JSON.stringify(savedDraft), [draft, savedDraft]);
   const selectedLabel = draft.directionKey === 'custom' ? draft.customText : intentionLabel(draft.directionKey);
@@ -101,14 +92,8 @@ export default function TuPage() {
     } finally { setSaving(false); }
   }
 
-  async function connectWhatsApp() {
-    setError(''); setWhatsapp({ status: 'connecting' });
-    const response = await fetch('/api/whatsapp/link', { method: 'POST' }); const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.deep_link) { setWhatsapp({ status: result.status === 'not_configured' ? 'not_configured' : 'unavailable', message: result.message }); return; }
-    setWhatsapp({ status: 'connecting', deep_link: result.deep_link }); window.open(result.deep_link, '_blank', 'noopener,noreferrer');
-  }
-  async function disconnect() { setChanging(false); const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' }); if (!response.ok) { setError('No pudimos desconectar este WhatsApp. Inténtalo de nuevo.'); return; } setWhatsapp(await fetchWhatsApp() as WhatsAppState); }
-  async function sendTest() { const response = await fetch('/api/whatsapp/test', { method: 'POST' }); const result = await response.json().catch(() => ({})); if (!response.ok) { setError(result.message || 'No pudimos enviar el mensaje de prueba.'); return; } setWhatsapp(current => ({ ...current, message: 'Mensaje de prueba enviado.' })); }
+  async function disconnect() { const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' }); if (!response.ok) { setError('No pudimos desconectar este WhatsApp. Inténtalo de nuevo.'); return; } setWhatsapp(await fetchWhatsApp() as WhatsAppConnectionState); }
+  async function sendTest() { const response = await fetch('/api/whatsapp/test', { method: 'POST' }); const result = await response.json().catch(() => ({})); if (!response.ok) { setError(result.message || 'No pudimos enviar el mensaje de prueba.'); return; } setWhatsapp(current => ({ ...current, message: 'Mensaje enviado.' })); }
 
   if (loading) return <MvpShell title="Tú"><section className="pt-8"><p className="text-[var(--text-secondary)]">Cargando tu configuración…</p></section></MvpShell>;
   return <MvpShell title="Tú"><section className="pt-8 pb-12"><p className="text-[13px] font-semibold uppercase tracking-[.14em] text-[var(--accent)]">TÚ</p><h1 className="mt-5 max-w-[720px] text-[clamp(39px,7vw,76px)] leading-[.94] tracking-[-.06em] [font-family:var(--font-display)]">Lo esencial para que NIA trabaje contigo.</h1>
@@ -119,7 +104,7 @@ export default function TuPage() {
     </section>
     <section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Tus mensajes</h2><p className="mt-3 text-[15px] text-[var(--text-secondary)]">Elige cuántas veces y cuándo quieres recibirlos.</p><div className="mt-5 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setDraft(current => ({ ...current, frequency: 1 }))} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[14px] font-semibold ${draft.frequency === 1 ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)]'}`}>1 vez al día</button><button type="button" onClick={() => setDraft(current => ({ ...current, frequency: 2 }))} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[14px] font-semibold ${draft.frequency === 2 ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)]'}`}>2 veces al día</button></div><div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="text-[12px] font-bold uppercase tracking-[.12em] text-[var(--text-tertiary)]" htmlFor="message-time-1">Hora<input id="message-time-1" type="time" value={draft.time} onChange={event => setDraft(current => ({ ...current, time: event.target.value }))} className="mt-2 block h-12 border-b-2 border-black/20 bg-transparent text-[18px] text-[var(--text-primary)]" /></label>{draft.frequency === 2 && <label className="text-[12px] font-bold uppercase tracking-[.12em] text-[var(--text-tertiary)]" htmlFor="message-time-2">Segunda hora<input id="message-time-2" type="time" value={draft.secondTime} onChange={event => setDraft(current => ({ ...current, secondTime: event.target.value }))} className="mt-2 block h-12 border-b-2 border-black/20 bg-transparent text-[18px] text-[var(--text-primary)]" /></label>}</div></section>
     <div className="sticky bottom-3 z-10 mt-8 flex flex-wrap items-center gap-4 rounded-[var(--radius-card)] border border-black/10 bg-[var(--bg)]/95 p-3 backdrop-blur"><button type="button" disabled={!hasChanges || !customValid || !draft.directionKey || saving} onClick={saveChanges} className="min-h-12 rounded-[var(--radius-button)] bg-[var(--accent)] px-6 text-[14px] font-semibold text-[var(--bg)] disabled:cursor-not-allowed disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar cambios'}</button>{hasChanges && <span className="text-[13px] text-[var(--text-secondary)]">Tienes cambios sin guardar.</span>}{savedMessage && <span role="status" className="text-[13px] text-[var(--accent)]">{savedMessage}</span>}</div>
-    <section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">WhatsApp</h2>{whatsapp.status === 'connected' ? <><p className="mt-3 text-[15px]">Tu WhatsApp ya está conectado con NIA.</p>{whatsapp.phone_number && <p className="mt-2 text-[14px] text-[var(--text-secondary)]">{whatsapp.phone_number}</p>}<button type="button" onClick={sendTest} className="mt-5 min-h-12 rounded-[var(--radius-button)] bg-[var(--accent)] px-5 text-[14px] font-semibold text-[var(--bg)]">Enviar mensaje de prueba</button><button type="button" onClick={() => setChanging(true)} className="ml-4 mt-5 text-[13px] font-semibold underline underline-offset-4">Cambiar WhatsApp</button>{whatsapp.message && <p className="mt-3 text-[13px] text-[var(--accent)]">{whatsapp.message}</p>}</> : whatsapp.status === 'connecting' ? <><p className="mt-3 text-[15px]">Estamos esperando tu mensaje de WhatsApp.</p><p className="mt-2 text-[13px] text-[var(--text-secondary)]">Abre WhatsApp y envía el mensaje preparado. Esta pantalla se actualizará cuando lo recibamos.</p></> : whatsapp.status === 'conflict' ? <p className="mt-3 text-[15px]">Este WhatsApp ya está conectado a otra cuenta de NIA.</p> : whatsapp.status === 'not_configured' ? <><p className="mt-3 text-[15px]">La conexión de WhatsApp todavía no está disponible.</p><p className="mt-2 text-[13px] text-[var(--text-secondary)]">Falta configurar el número oficial y el proveedor de mensajes.</p></> : <><p className="mt-3 text-[15px]">Aquí recibirás tus mensajes de NIA.</p><p className="mt-2 text-[14px] text-[var(--text-secondary)]">Conecta el WhatsApp que quieres usar con NIA. Solo tienes que enviarnos un mensaje desde ese número para comprobar que todo está bien.</p><button type="button" onClick={connectWhatsApp} className="mt-5 min-h-12 rounded-[var(--radius-button)] bg-[var(--accent)] px-5 text-[14px] font-semibold text-[var(--bg)]">Conectar mi WhatsApp →</button></>}{changing && <div className="mt-5 rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] p-4"><p className="text-[15px]">¿Quieres cambiar el WhatsApp donde recibes tus mensajes de NIA?</p><div className="mt-4 flex gap-4"><button type="button" onClick={disconnect} className="font-semibold text-[var(--accent)]">Sí, cambiarlo</button><button type="button" onClick={() => setChanging(false)} className="font-semibold underline underline-offset-4">Cancelar</button></div></div>}</section>
+    <section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">WhatsApp</h2><WhatsAppConnectionPanel value={whatsapp} onChange={setWhatsapp} onError={setError} onSendTest={sendTest} onDisconnect={disconnect} /></section>
     <section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Cuenta</h2><p className="mt-5 text-[18px]">{profile?.first_name || 'Tu cuenta'}</p><p className="mt-2 text-[15px] text-[var(--text-secondary)]">{email}</p></section><section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Privacidad</h2><p className="mt-3 text-[14px] leading-[1.5] text-[var(--text-secondary)]">NIA utiliza lo que decides compartir para hacer sus mensajes más relevantes para ti.</p></section>
   </section></MvpShell>;
 }

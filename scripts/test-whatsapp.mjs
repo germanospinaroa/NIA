@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createLinkCode, extractLinkCode, hashLinkCode, maskPhone, whatsappDeepLink } from '../lib/server/whatsapp.ts';
 
 const first = createLinkCode();
 const second = createLinkCode();
-assert.match(first, /^NIA-[A-F0-9]{6}$/);
-assert.match(second, /^NIA-[A-F0-9]{6}$/);
+assert.match(first, /^NIA-[A-Z0-9]{4}$/);
+assert.match(second, /^NIA-[A-Z0-9]{4}$/);
 assert.notEqual(first, second);
 assert.equal(hashLinkCode(first), hashLinkCode(first.toLowerCase()));
 assert.equal(extractLinkCode(`Hola NIA. Código: ${first}`), first);
@@ -13,5 +14,10 @@ assert.equal(maskPhone('573001231234'), '+57 •••••••234');
 const previous = process.env.WHATSAPP_BUSINESS_NUMBER;
 process.env.WHATSAPP_BUSINESS_NUMBER = '573001231234';
 assert.match(whatsappDeepLink(first), /^https:\/\/wa\.me\/573001231234\?text=/);
+const linkRoute = fs.readFileSync(new URL('../app/api/whatsapp/link/route.ts', import.meta.url), 'utf8');
+const webhookRoute = fs.readFileSync(new URL('../app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8');
+assert.match(linkRoute, /createAdminClient/);
+assert.match(linkRoute, /code, deep_link/);
+assert.match(webhookRoute, /sendWhatsAppText/);
 if (previous === undefined) delete process.env.WHATSAPP_BUSINESS_NUMBER; else process.env.WHATSAPP_BUSINESS_NUMBER = previous;
 console.log('whatsapp contract tests: PASS');

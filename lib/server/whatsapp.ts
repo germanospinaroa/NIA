@@ -7,7 +7,11 @@ export function whatsappProvider() {
 }
 
 export function createLinkCode() {
-  return `NIA-${randomBytes(3).toString('hex').toUpperCase()}`;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(4);
+  let suffix = '';
+  for (let index = 0; index < 4; index += 1) suffix += alphabet[bytes[index] % alphabet.length];
+  return `NIA-${suffix}`;
 }
 
 export function hashLinkCode(code: string) {
@@ -15,7 +19,7 @@ export function hashLinkCode(code: string) {
 }
 
 export function extractLinkCode(text: string) {
-  const match = text.toUpperCase().match(/\bNIA-[A-Z0-9]{6}\b/);
+  const match = text.toUpperCase().match(/\bNIA-[A-Z0-9]{4}\b/);
   return match?.[0] ?? null;
 }
 

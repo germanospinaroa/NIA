@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { extractLinkCode, hashLinkCode, whatsappProvider } from '@/lib/server/whatsapp';
+import { extractLinkCode, hashLinkCode, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -57,6 +57,11 @@ export async function POST(request: Request) {
   const { error: connectionError } = await admin.from('whatsapp_connections').upsert({ user_id: token.user_id, provider, wa_id: from, phone_number: from, status: 'connected', connected_at: now, last_message_at: now, updated_at: now }, { onConflict: 'user_id,provider' });
   if (connectionError) return NextResponse.json({ error: 'connection_save_failed' }, { status: 500 });
   await admin.from('whatsapp_link_tokens').update({ status: 'used', used_at: now }).eq('id', token.id);
+  const { data: profile } = await admin.from('profiles').select('first_name').eq('id', token.user_id).maybeSingle();
   await admin.from('profiles').update({ whatsapp_enabled: true, whatsapp_phone: from }).eq('id', token.user_id);
+  const name = profile?.first_name?.trim();
+  const greeting = name ? `Hola, ${name}.` : 'Hola.';
+  const delivery = await sendWhatsAppText(from, `${greeting}\n\nListo. Ya reconocí este número y quedó conectado con tu cuenta de NIA.\n\nAhora podrás recibir aquí tus mensajes.`);
+  if (!delivery.ok) console.error('whatsapp_link_confirmation_failed', { userId: token.user_id, reason: delivery.reason, status: 'status' in delivery ? delivery.status : undefined });
   return NextResponse.json({ received: true });
 }
