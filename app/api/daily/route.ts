@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { CalibrationRequiredError, resolveIntervention } from '@/lib/server/intervention';
 import { recordEvent, startExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
 import { intentionLabel, invalidIntention, validCustomIntention } from '@/lib/intention';
+import { composeNiaMessage } from '@/lib/server/message-composer';
 
 function localDate(timezone: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -18,7 +19,10 @@ export async function GET() {
   const direction = validCustomIntention(storedDirection) ? storedDirection : intentionLabel(profile.direction_key);
   if (!direction || invalidIntention(direction) || profile.direction_key === 'intention_unclear') return NextResponse.json({ status: 'intention_required', error: 'valid_intention_required' }, { status: 422 });
   const date = localDate(profile.timezone);
-  const { data: existing } = await supabase.from('interactions').select('*').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', date).maybeSingle();
+  const [{ data: existing }, { data: recent }] = await Promise.all([
+    supabase.from('interactions').select('*').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', date).maybeSingle(),
+    supabase.from('interactions').select('content').eq('user_id', user.id).eq('interaction_type', 'daily_message').order('created_at', { ascending: false }).limit(8),
+  ]);
   if (existing) return NextResponse.json({ interaction: existing, local_date: date });
   const idempotencyKey = `daily:${date}`;
   let execution;
@@ -35,7 +39,8 @@ export async function GET() {
     await recordEvent(supabase, { userId: user.id, eventType: 'intervention_failed', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { error: error instanceof Error ? error.message : String(error) } });
     return NextResponse.json({ error: 'daily_unavailable' }, { status: 500 });
   }
-  const { data: created, error } = await supabase.from('interactions').insert({ user_id: user.id, interaction_type: 'daily_message', direction_key: profile.direction_key, content: result.intervention.text, local_date: date }).select('*').single();
+  const message = composeNiaMessage({ content: result.intervention.text, firstName: typeof profile.first_name === 'string' ? profile.first_name : null, timezone: typeof profile.timezone === 'string' ? profile.timezone : null, userKey: user.id, recentContents: (recent ?? []).map(row => row.content).filter((value): value is string => typeof value === 'string') });
+  const { data: created, error } = await supabase.from('interactions').insert({ user_id: user.id, interaction_type: 'daily_message', direction_key: profile.direction_key, content: message, local_date: date }).select('*').single();
   if (!error) return NextResponse.json({ interaction: created, local_date: date });
   await updateExecutionRun(supabase, execution, { status: 'failed', interventionId: result.interventionId, failure: new Error('persistence_error') });
   await recordEvent(supabase, { userId: user.id, eventType: 'intervention_failed', entityType: 'intervention', entityId: result.interventionId, executionRunId: execution.executionId, metadata: { error: 'interaction_persistence_failed' } });

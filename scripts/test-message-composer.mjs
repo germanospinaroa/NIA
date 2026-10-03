@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { closingFor, composeNiaMessage, greetingFor, timeOfDay } from '../lib/server/message-composer.ts';
+
+const bogota = 'America/Bogota';
+const utc = (value) => new Date(value);
+assert.equal(timeOfDay(utc('2026-10-03T13:00:00.000Z'), bogota), 'morning');
+assert.equal(timeOfDay(utc('2026-10-03T18:00:00.000Z'), bogota), 'afternoon');
+assert.equal(timeOfDay(utc('2026-10-04T01:00:00.000Z'), bogota), 'night');
+assert.equal(timeOfDay(utc('2026-10-03T08:00:00.000Z'), 'Europe/Madrid'), 'morning');
+assert.match(greetingFor('Adriana', utc('2026-10-03T13:00:00.000Z'), bogota, 'user-a'), /Adriana|Buenos días/);
+assert.equal(greetingFor(null, utc('2026-10-03T13:00:00.000Z'), bogota, 'user-a').includes('Laura'), false);
+assert.equal(greetingFor(null, utc('2026-10-03T13:00:00.000Z'), bogota, 'user-a'), 'Buenos días.');
+const content = 'Cuando alguien cuestiona una decisión tuya, prueba esta pausa y anota qué cambió realmente.';
+const first = composeNiaMessage({ content, firstName: 'Adriana', timezone: bogota, userKey: 'user-a', now: utc('2026-10-03T13:00:00.000Z') });
+assert.match(first, /Adriana|Buenos días/);
+assert.match(first, /Cuando alguien cuestiona/);
+assert.ok(first.split('\n\n').length === 3);
+const closing = closingFor(content, utc('2026-10-03T13:00:00.000Z'), bogota, 'user-a');
+const nextClosing = closingFor(content, utc('2026-10-04T13:00:00.000Z'), bogota, 'user-a', [closing]);
+assert.notEqual(nextClosing, closing);
+assert.equal(first.includes('Laura'), false);
+assert.equal(first.split(/\s+/).length < 220, true);
+console.log('message composer tests: PASS');
