@@ -6,7 +6,7 @@
 - `middleware.ts` y `app/login/page.tsx` conservan destinos internos seguros; URLs externas o con esquema son descartadas y vuelven a `/app`.
 - La autorización administrativa no cambió: sesión Supabase + email normalizado contra `NIA_ADMIN_EMAILS`; `/admin` sigue devolviendo 403 a usuarios autenticados no autorizados.
 - Añadido `lib/safe-next.ts` y ampliado `test:admin-access`. TypeScript y build pasan; lint conserva cuatro warnings heredados.
-- Pendiente: desplegar este cambio a Production y validar el acceso autenticado desde el navegador del administrador. No se ejecutó ninguna prueba real de NIA.
+- Desplegado a Production en `dpl_8m585xxxKkmULTDaFwghcUcnsMa8` (`READY`) con alias `https://nia.gritlab.pro`. La validación autenticada desde el navegador del administrador queda pendiente. No se ejecutó ninguna prueba real de NIA.
 
 ## Control admin para QA real — 2026-10-03
 - Añadido el control "Prueba real de NIA" en /admin/users/[id], reutilizando la sesión administrativa existente y el endpoint POST /api/admin/qa/daily-intervention.
