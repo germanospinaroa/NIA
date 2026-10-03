@@ -189,7 +189,7 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
     if (structuredCandidates.length !== 3 || !structuredCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
     return structuredCandidates as LlmCandidate[];
   });
-  return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
+  return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), recognition: candidate.recognition, explanation: candidate.explanation, insight: candidate.insight, steps: candidate.steps, action: candidate.action, closing: candidate.closing, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
 }
 
 export function validateCalibrationPrompt(value: unknown): value is CalibrationPrompt {

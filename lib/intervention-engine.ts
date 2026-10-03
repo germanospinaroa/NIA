@@ -94,6 +94,12 @@ export type CandidateAudit = {
 
 export type InterventionCandidate = {
   text: string;
+  recognition?: string;
+  explanation?: string;
+  insight?: string;
+  steps?: string[];
+  action?: string;
+  closing?: string;
   function: InterventionFunction;
   concept: string;
   conceptKey?: string;
@@ -173,6 +179,35 @@ export function lexicalSimilarity(a: string, b: string) {
 }
 
 const genericContexts = new Set(['trabajo', 'pareja', 'familia', 'amigos', 'relaciones', 'decisiones', 'vida personal']);
+const contextStopwords = new Set(['al', 'algo', 'ante', 'con', 'como', 'cuando', 'cual', 'cuales', 'de', 'del', 'desde', 'el', 'ella', 'en', 'es', 'esa', 'ese', 'esta', 'este', 'la', 'las', 'lo', 'los', 'me', 'mi', 'mis', 'no', 'para', 'por', 'que', 'se', 'si', 'sin', 'su', 'sus', 'te', 'tu', 'tus', 'un', 'una', 'uno', 'y', 'ya']);
+
+function stemContextToken(value: string) {
+  return value.replace(/(amientos?|imientos?|aciones?|iciones?|mente|ando|iendo|isteis|iste|amos|emos|imos|es|as|os|en|an|s)$/i, '').replace(/(a|o|e)$/i, '');
+}
+
+const contextFamilies: Array<{ key: string; patterns: RegExp[] }> = [
+  { key: 'questioning', patterns: [/cuestion/, /dud/, /desacuerd/, /objec/, /critic/, /opinion/, /pon.*duda/] },
+  { key: 'decision', patterns: [/decision/, /decid/, /criterio/, /eleg/, /opcion/] },
+  { key: 'boundaries', patterns: [/limit/, /decir.*no/, /negar/, /aceptar/] },
+  { key: 'reaction', patterns: [/respuest/, /reaccion/, /impuls/, /responder/] },
+  { key: 'failure', patterns: [/error/, /fall/, /equivoc/, /salio.*mal/] },
+];
+
+function contextEvidence(value: string) {
+  const normalized = normalize(value);
+  const words = normalized.split(' ').filter(word => word.length > 2 && !contextStopwords.has(word));
+  const stems = new Set(words.map(stemContextToken).filter(word => word.length > 2));
+  const families = new Set(contextFamilies.filter(family => family.patterns.some(pattern => pattern.test(normalized))).map(family => family.key));
+  return { stems, families };
+}
+
+function contextEvidenceMatches(source: string, candidate: string) {
+  const sourceEvidence = contextEvidence(source);
+  const candidateEvidence = contextEvidence(candidate);
+  const sharedStems = [...sourceEvidence.stems].filter(token => candidateEvidence.stems.has(token)).length;
+  const sharedFamilies = [...sourceEvidence.families].filter(family => candidateEvidence.families.has(family)).length;
+  return sharedStems >= 2 || sharedFamilies >= 2 || (sharedStems >= 1 && sharedFamilies >= 1);
+}
 
 function meaningfulContext(value: string | null | undefined) {
   if (!value) return false;
@@ -258,14 +293,6 @@ function desiredConcept(desired: string) {
   return 'desired_change';
 }
 
-function conceptFromText(value: string) {
-  const text = normalize(value);
-  if (text.includes('aprobacion') || text.includes('criterio') || text.includes('decid')) return 'self_trust';
-  if (text.includes('limite') || text.includes('decir que no')) return 'boundaries';
-  if (text.includes('error') || text.includes('salio mal')) return 'self_response_after_failure';
-  return null;
-}
-
 function chooseFunction(brief: InterventionBrief, index: number): InterventionFunction {
   if (brief.function) return brief.function;
   const functions: InterventionFunction[] = ['anticipate', 'distinguish', 'reframe'];
@@ -281,19 +308,24 @@ export function generateCandidates(brief: InterventionBrief): InterventionCandid
     { text: `Cuando ${focus}, quizá no necesitas otra respuesta: quizá necesitas separar información de aprobación. Que alguien cuestione lo que pensabas puede hacer que busques certeza fuera, aunque la decisión ya tuviera razones tuyas.\n\nHazlo así la próxima vez:\n1. Anota en una frase por qué lo habías elegido.\n2. Escribe qué dato concreto cambió.\n3. Si no cambió ningún dato, espera antes de cambiar de opinión.\n\nEsta vez prueba a pedir información solo si la necesitas, no permiso para confiar en tu criterio.`, function: chooseFunction(brief, 1), concept: concept === 'self_trust' ? 'approval_seeking' : concept, angle: 'information_vs_approval', structure: 'distinguish_between' },
     { text: `En ${focus}, no tienes que resolverlo todo en el instante. Una pausa breve puede devolverte la diferencia entre lo que realmente cambió y lo que se volvió incómodo.\n\nPrueba este gesto concreto:\n1. Respira y no respondas de inmediato.\n2. Di: “Lo voy a pensar y te digo”.\n3. Revisa si tu decisión sigue encajando con lo que necesitabas al tomarla.\n\nHoy ensaya la frase en voz baja. Tener una salida pequeña te permite escuchar sin convertir la reacción de otra persona en una orden.`, function: chooseFunction(brief, 2), concept, angle: 'pause_before_replacing_own_view', structure: 'you_can_without' },
   ];
-  return candidates;
+  const insights = [
+    'Escuchar una opinión y convertirla en una razón para cambiar son cosas distintas.',
+    'Una opinión puede pedir precisión sin convertirse por sí sola en una razón para cambiar.',
+    'Una pausa separa el cambio real de la incomodidad inmediata.',
+  ];
+  return candidates.map((candidate, index) => ({ ...candidate, insight: insights[index] }));
 }
 
 export function auditCandidate(candidate: InterventionCandidate, brief: InterventionBrief): CandidateAudit {
   const text = normalize(candidate.text);
   const recent = (brief.recentInterventions ?? []).slice(0, interventionConfig.recentHistoryWindow);
-  const similarities = recent.map(previous => ({ previous, score: Math.max(lexicalSimilarity(text, previous), conceptFromText(text) && conceptFromText(previous) === conceptFromText(text) ? 0.6 : 0) })).filter(item => item.score >= interventionConfig.semanticDuplicateThreshold);
+  const similarities = recent.map(previous => ({ previous, score: lexicalSimilarity(text, previous) })).filter(item => item.score >= interventionConfig.semanticDuplicateThreshold);
   const conceptKey = candidate.conceptKey ?? canonicalConceptKey(candidate.concept);
   const conceptCount = (brief.recentConcepts ?? []).map(canonicalConceptKey).filter(value => value === conceptKey).length;
   const structureCount = (brief.recentStructures ?? []).slice(0, interventionConfig.structureReuseWindow).filter(value => value === candidate.structure).length;
   const reasons: string[] = [];
   const warnings: string[] = [];
-  const hasContext = clauseHasSignal(candidate.text, brief.currentContext);
+  const hasContext = hasContextEvidence(candidate, brief);
   const isGeneric = !hasContext || candidate.text.includes('tu dirección') || candidate.text.includes('tu intención');
   const hasCliche = clichés.some(value => text.includes(normalize(value)));
   const hasForbidden = [...forbidden, ...(brief.forbiddenLanguage ?? [])].some(value => text.includes(normalize(value)));
@@ -306,7 +338,8 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const hasUnsupportedContext = hasUnsupportedPersonalContext(candidate.text, brief);
   const hasParagraph = candidate.text.includes('\n');
   const wordCount = text.split(' ').filter(Boolean).length;
-  const hasInsight = /\b(dos cosas|diferente|diferencia|no es lo mismo|dato nuevo|solo aparecio|solo apareció|informacion|información)\b/i.test(candidate.text);
+  const structuredParts = [candidate.recognition, candidate.explanation, candidate.insight].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
+  const hasInsight = typeof candidate.insight === 'string' && Boolean(candidate.insight.trim()) && !hasInternalRepetition(structuredParts);
   const hasTool = /\b(prueba|anota|escribe|pregunta|separa|elige|respira|revisa|di:)\b/i.test(candidate.text);
   if (isGeneric) reasons.push('generic_or_missing_user_context');
   if (hasCliche) reasons.push('generic_motivation');
@@ -323,7 +356,8 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (!hasInsight) reasons.push('missing_insight');
   if (!hasTool) reasons.push('missing_concrete_tool');
   if (similarities.length) reasons.push('semantic_duplicate');
-  if (conceptCount >= interventionConfig.conceptSaturationThreshold) reasons.push('concept_saturated');
+  if (conceptCount >= interventionConfig.conceptSaturationThreshold) warnings.push('concept_saturated');
+  if (structuredParts.length >= 3 && hasInternalRepetition([candidate.recognition!, candidate.explanation!, candidate.insight!, ...(candidate.steps ?? []), candidate.action ?? '', candidate.closing ?? ''])) reasons.push('internal_repetition');
   if (structureCount >= 1) reasons.push('recent_structure_reuse');
   const excludedAngles = (brief.learningSignals ?? []).flatMap(signal => {
     if (signal.signal !== 'angle_quality' || typeof signal.value !== 'object' || !signal.value) return [];
@@ -344,7 +378,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     generic_motivation: !hasCliche, chatbot_language: !hasChatbotLanguage, coaching_language: !hasCoachingLanguage,
     therapy_language: !hasTherapyLanguage, cliché: !hasCliche, unnecessary_advice: !hasUnnecessaryAdvice, absolute_claim: !hasAbsoluteClaim,
     psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
-    value_structure: hasParagraph && hasInsight && hasTool, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0,
+    value_structure: hasParagraph && hasInsight && hasTool, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
 }
@@ -362,7 +396,7 @@ export function auditSemanticCandidate(candidate: InterventionCandidate, matches
   const duplicateMatches = semanticJudge?.matches.filter(match => match.relationship === 'duplicate') ?? [];
   if (relevantMatches.length > 0 && !semanticJudge) reasons.push('semantic_judge_required');
   if (duplicateMatches.length > 0) reasons.push('semantic_duplicate');
-  if (conceptMatches >= interventionConfig.conceptSaturationThreshold) reasons.push('concept_saturated');
+  if (conceptMatches >= interventionConfig.conceptSaturationThreshold) warnings.push('concept_saturated');
   if (structureMatches >= interventionConfig.structureReuseWindow) reasons.push('semantic_structure_reuse');
   if (similarityBand === 'review_range') warnings.push('semantic_review');
   if (semanticJudge?.matches.some(match => match.relationship === 'same_theme_different_angle')) warnings.push('same_theme_different_angle');
@@ -411,11 +445,12 @@ export function applyLearningSignals(brief: InterventionBrief, signals: Learning
   return { ...brief, learningSignals: active, rejectedPatterns, successfulPatterns, generationConstraints: [...new Set(generationConstraints)], feedbackGoal };
 }
 
-function clauseHasSignal(text: string, context: string) {
-  const contextTokens = [...tokens(situationClause(context))].filter(token => token.length > 3);
-  if (!contextTokens.length) return false;
-  const textTokens = tokens(text);
-  return contextTokens.some(token => textTokens.has(token));
+export function hasContextEvidence(candidate: Pick<InterventionCandidate, 'text' | 'recognition'>, brief: Pick<InterventionBrief, 'currentContext' | 'relevantSituations' | 'desiredChange' | 'contextDomain'>) {
+  const candidateText = [candidate.recognition, candidate.text].filter(Boolean).join(' ');
+  const primarySources = [brief.currentContext, ...(brief.relevantSituations ?? [])].filter((value): value is string => Boolean(value?.trim()));
+  if (primarySources.some(source => contextEvidenceMatches(source, candidateText))) return true;
+  const secondarySources = [brief.contextDomain, brief.desiredChange].filter((value): value is string => Boolean(value?.trim()));
+  return secondarySources.some(source => contextEvidenceMatches(source, candidateText) && contextEvidence(candidateText).families.size >= 1);
 }
 
 export function selectCandidate(brief: InterventionBrief) {

@@ -33,11 +33,10 @@ assert.equal(auditCandidate({ text: composedStructured, function: structuredCand
 const generic = { text: 'Confía en ti.', function: 'remind', concept: 'self_trust', angle: 'generic', structure: 'specific_permission' };
 assert.equal(auditCandidate(generic, base).status, 'rejected');
 assert(auditCandidate(generic, base).reasons.includes('generic_or_missing_user_context'));
-const duplicate = { text: 'No necesitas aprobación para decidir.', function: 'distinguish', concept: 'self_trust', angle: 'approval', structure: 'distinguish_between' };
+const duplicate = { text: 'No necesitas aprobación para decidir.', function: 'distinguish', concept: 'self_trust', angle: 'approval', structure: 'distinguish_between', insight: 'La aprobación no sustituye tus razones.' };
 const duplicateAudit = auditCandidate(duplicate, { ...base, recentInterventions: ['Confía en tu criterio.'] });
-assert.equal(duplicateAudit.status, 'rejected');
-assert(duplicateAudit.reasons.includes('semantic_duplicate'));
-const contextual = { text: 'Cuando tu jefe cuestione una decisión, es fácil confundir una opinión con un dato nuevo.\n\nAntes de tomarla otra vez, anota qué pensabas antes, revisa qué cambió realmente y espera si no cambió ningún hecho. Hoy prueba responder después de esa pausa para seguir decidiendo tú.', function: 'anticipate', concept: 'self_trust', angle: 'context_without_abandonment', structure: 'context_does_not_mean' };
+assert.equal(duplicateAudit.reasons.includes('semantic_duplicate'), false);
+const contextual = { text: 'Cuando tu jefe cuestione una decisión, es fácil confundir una opinión con un dato nuevo.\n\nAntes de tomarla otra vez, anota qué pensabas antes, revisa qué cambió realmente y espera si no cambió ningún hecho. Hoy prueba responder después de esa pausa para seguir decidiendo tú.', recognition: 'Cuando tu jefe cuestiona una decisión que ya tomaste.', explanation: 'Una crítica puede mezclar opinión e información.', insight: 'El dato útil es identificar qué parte concreta cambiaría tus razones.', steps: ['Pregunta qué dato respalda la objeción.', 'Compáralo con la información disponible al decidir.'], action: 'Hoy escribe qué hallazgo justificaría revisar una decisión.', closing: 'Así la revisión depende de evidencia nueva.', function: 'anticipate', concept: 'self_trust', angle: 'context_without_abandonment', structure: 'context_does_not_mean' };
 assert.equal(auditCandidate(contextual, base).status, 'approved');
 assert.equal(learningFromFeedback('context', 'context_changed').triggerRecalibration, true);
 assert.equal(learningFromFeedback('relevance', 'desired_change_changed').signal, 'desired_change_status');
@@ -108,7 +107,8 @@ const saturatedConcept = auditSemanticCandidate(contextual, [
   { intervention_id: '3', text: 'Una opinión ajena no decide por ti.', similarity: 0.41, concept: 'self_trust', angle: 'another_angle' },
   { intervention_id: '4', text: 'Escuchar una crítica no obliga a cambiar.', similarity: 0.43, concept: 'self_trust', angle: 'different_angle' },
 ]);
-assert(saturatedConcept.reasons.includes('concept_saturated'));
+assert.equal(saturatedConcept.reasons.includes('concept_saturated'), false);
+assert(saturatedConcept.warnings.includes('concept_saturated'));
 const semanticPair = (text, similarity, relationship, sameActionable, sameAngle, id = 'pair') => auditSemanticCandidate(contextual, [{ intervention_id: id, text, similarity }], { matches: [{ intervention_id: id, relationship, same_actionable_idea: sameActionable, same_angle: sameAngle, reason: relationship }] });
 assert.equal(semanticPair('Cuando te escriban fuera de horario, puedes dejar la respuesta para tu jornada.', 0.83, 'duplicate', true, true, 't1').status, 'rejected');
 assert.equal(semanticPair('Cuando te propongan un plan para el fin de semana, di lo reviso y te confirmo antes de aceptar.', 0.64, 'same_theme_different_angle', false, false, 't2').status, 'approved');
