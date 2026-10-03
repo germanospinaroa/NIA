@@ -11,6 +11,12 @@
 - Corrección: `/auth/callback` ahora captura y escribe explícitamente en la respuesta de redirección las cookies emitidas por `exchangeCodeForSession`; `/onboarding` queda protegido por sesión real y redirige a acceso si no existe usuario autenticado. No se usa almacenamiento local como sustituto de autenticación.
 - Pendiente de certificación: el buzón/Magic Link del usuario real no está disponible en este entorno, por lo que el clic real del correo y el PATCH autenticado no se pueden marcar como PASS aquí.
 
+## Onboarding — flujo definitivo post-auth — 2026-10-02
+- `/onboarding` ya no inventa nombre, intención ni contexto: si falta nombre pide el nombre; consume `directionText` cuando existe, permite confirmarlo o corregirlo, pide contexto concreto y después horario.
+- Se añadió `/api/calibration` autenticado con GET/POST, validación de opciones, actualización idempotente de `learning_profile.calibration`, `context_history` y campos de contexto del perfil.
+- El flujo separa `PROFILE_SAVE_ERROR`, `DAILY_GENERATION_ERROR`, `CALIBRATION_ERROR` y feedback; conserva la intervención y el feedback para refresh y termina en `ready` antes de `/app`.
+- Middleware usa una única `supabaseResponse` siguiendo el patrón SSR de cookies. El arnés `test:onboarding-auth` permite probar con una sesión guardada de un entorno de test y rechaza explícitamente producción; en esta sesión no hay variables de entorno de test, por lo que su parte autenticada quedó sin ejecutar.
+
 ## Auth — corrección del loop de Magic Link — 2026-10-02
 - Causa confirmada: `/acceso` había usado un endpoint propio basado en `auth.admin.generateLink`; ese enlace devolvía sesión implícita en `#access_token`, mientras `/auth/callback` esperaba `?code=` PKCE. Supabase validaba el enlace, pero la aplicación no establecía la sesión y regresaba a `/acceso`.
 - Corrección: `/acceso` vuelve a `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo, shouldCreateUser: true } })`; el callback único usa `exchangeCodeForSession(code)`, escribe las cookies SSR y redirige a `/onboarding`. No se usa recovery ni `admin.generateLink` para login normal.
