@@ -25,13 +25,14 @@ begin
     raise exception 'nia-cron-secret is not configured in Supabase Vault';
   end if;
 
-  perform net.http_post(
+  perform net.http_get(
     url := 'https://nia.gritlab.pro/api/cron/daily-whatsapp',
+    params := '{}'::jsonb,
     headers := jsonb_build_object(
       'Authorization', 'Bearer ' || cron_secret,
       'Content-Type', 'application/json'
     ),
-    body := '{}'::jsonb
+    timeout_milliseconds := 5000
   );
 end;
 $$;
