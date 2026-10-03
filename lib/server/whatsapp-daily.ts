@@ -22,6 +22,8 @@ async function claimDelivery(admin: DbClient, input: { userId: string; interacti
 }
 
 export async function runDailyWhatsApp(admin: DbClient, now = new Date(), options: { dryRun?: boolean } = {}) {
+  const { error: deliverySchemaError } = await admin.from('whatsapp_daily_deliveries').select('id').limit(1);
+  if (deliverySchemaError) throw new Error(deliverySchemaError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_unavailable');
   const [{ data: profiles, error: profilesError }, { data: connections, error: connectionsError }] = await Promise.all([
     admin.from('profiles').select('id,first_name,timezone,message_frequency,message_time_1,message_time_2,whatsapp_enabled').eq('whatsapp_enabled', true),
     admin.from('whatsapp_connections').select('user_id,wa_id,status').eq('status', 'connected'),
