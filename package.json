@@ -19,6 +19,7 @@
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
     "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",
     "test:message-composer": "node --experimental-strip-types scripts/test-message-composer.mjs",
+    "test:daily-whatsapp": "node --experimental-strip-types scripts/test-daily-whatsapp.mjs",
     "test:intention-value": "node --experimental-strip-types scripts/test-intention-value.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",

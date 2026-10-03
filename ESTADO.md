@@ -1,6 +1,13 @@
 # ESTADO — NIA
 Última actualización: 2026-10-03 | Sesión actual: intención estructurada + mensajes con valor + Evolution — implementación lista, activación externa pendiente
 
+## Envío diario automático por WhatsApp — implementación 2026-10-03
+- Se añadió un generador compartido en `lib/server/daily-message.ts`: `/api/daily` y el job usan la misma interacción diaria persistida y el mismo `message-composer`; no existe una segunda lógica psicológica ni una segunda versión del mensaje.
+- Se añadió `lib/server/whatsapp-daily.ts`, con elegibilidad por `whatsapp_enabled` + conexión `connected`, timezone individual, franjas `message_time_1/message_time_2`, reserva concurrente y estados `pending/sent/failed`.
+- Se añadió `app/api/cron/daily-whatsapp/route.ts`, protegido por `CRON_SECRET`, y `vercel.json` con ejecución cada 15 minutos. La migración `20261003040000_whatsapp_daily_deliveries.sql` crea la idempotencia y el registro del delivery.
+- La migración todavía no está aplicada en Supabase Production: la consulta read-only a `whatsapp_daily_deliveries` devuelve HTTP 404 y el CLI de Supabase no tiene token de administración en este entorno. Hasta aplicarla, el job responde `503 daily_whatsapp_unavailable` de forma segura y no intenta enviar.
+- Verificación local: `test:daily-whatsapp`, tests existentes, typecheck, lint y build pasan. No se realizó envío real de WhatsApp en esta implementación porque el esquema de delivery de producción está pendiente.
+
 ## Intención y mensajes — 2026-10-03
 - `/app/tú` ya no usa textarea ni autosave para la intención principal. Ofrece exactamente ocho intenciones estructuradas, una opción personalizada y un estado `intention_unclear` guiado en dos preguntas. `Guardar cambios` persiste intención, frecuencia, horario y timezone en una sola operación.
 - `/api/profile` rechaza `no se`, `no sé`, vacío, `null`, `undefined` y claves de intención desconocidas; las intenciones estructuradas se normalizan en servidor. `/app` no muestra mensajes ni datos de intención inválidos.
