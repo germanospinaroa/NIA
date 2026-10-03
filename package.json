@@ -17,6 +17,7 @@
     "test:funnel": "node scripts/test-funnel.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
+    "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",
     "semantic:replay": "node scripts/replay-semantic-calibration.mjs"

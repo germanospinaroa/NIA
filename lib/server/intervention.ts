@@ -62,6 +62,7 @@ async function deliverExisting(supabase: DbClient, row: HistoryRow, channel: 'we
 }
 
 export async function buildBrief(supabase: DbClient, userId: string, contextKey: ContextKey): Promise<{ brief: InterventionBrief; history: HistoryRow[]; profile: Record<string, unknown> }> {
+  void contextKey;
   const [{ data: profile, error: profileError }, { data: history }, { data: signals }, { data: contexts }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     supabase.from('interventions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(30),
@@ -71,7 +72,9 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   if (profileError || !profile) throw new Error('profile_unavailable');
   const rows = (history ?? []) as HistoryRow[];
   const rawSignals = (signals ?? []) as SignalRow[];
-  const activeContext = profile.current_context_original || contextKey;
+  const activeContext = typeof profile.current_context_original === 'string' ? profile.current_context_original.trim() : '';
+  const desiredChange = typeof profile.desired_change_original === 'string' ? profile.desired_change_original.trim() : typeof profile.direction_text === 'string' ? profile.direction_text.trim() : '';
+  if (!desiredChange || !activeContext) throw new Error('profile_incomplete');
   const activeRows = rows.filter(row => !row.current_context_snapshot || row.current_context_snapshot === activeContext);
   const calibrationProfile = profile.learning_profile && typeof profile.learning_profile === 'object' ? (profile.learning_profile as Record<string, unknown>).calibration as Record<string, unknown> | undefined : undefined;
   const resolvedCalibrationAt = calibrationProfile?.status === 'resolved' && typeof calibrationProfile.resolved_at === 'string' ? new Date(calibrationProfile.resolved_at).getTime() : null;
@@ -81,7 +84,7 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   }) : rawSignals;
   const brief: InterventionBrief = {
     firstName: profile.first_name,
-    desiredChange: profile.desired_change_original || profile.direction_text || 'Quiero actuar de una manera diferente.',
+    desiredChange,
     currentContext: activeContext,
     contextDomain: profile.current_context_domain,
     relevantSituations: (contexts ?? []).map(row => row.context_original).filter(Boolean),

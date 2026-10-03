@@ -1,5 +1,13 @@
 # ESTADO — NIA
-Última actualización: 2026-10-03 | Sesión actual: auditoría producción onboarding — fallo operativo corregido
+Última actualización: 2026-10-03 | Sesión actual: simplificación app + conexión WhatsApp — implementación lista, activación externa pendiente
+
+## App autenticada — simplificación y WhatsApp — 2026-10-03
+- La navegación de `/app` quedó reducida a `Hoy` y `Tú`; `Punto NIA` y `Evidencia` redirigen a `/app` y no forman parte de la experiencia autenticada. No se modificaron `/` ni `/descubre`.
+- `Hoy` muestra únicamente intención real, próximo horario y estado de WhatsApp. `Tú` permite editar intención, frecuencia/horarios, cuenta, privacidad y conexión WhatsApp sin nombres ni intenciones fallback.
+- Se implementaron endpoints autenticados `/api/whatsapp/connection`, `/link`, `/disconnect`, `/test` y webhook firmado `/api/whatsapp/webhook`; códigos hashados, temporales, de un solo uso y protegidos contra reutilización/takeover.
+- Se añadió `supabase/migrations/20261003010000_whatsapp_connections.sql`. La migración aún debe aplicarse al proyecto Supabase de producción y faltan credenciales Meta/Vercel (`WHATSAPP_*`); hasta entonces la UI muestra `no configurado` y nunca finge una conexión o envío.
+- Se corrigió `middleware.ts` para actualizar cookies del request y copiar las cookies refrescadas a una única respuesta SSR.
+- Verificado localmente: typecheck, lint, tests existentes, contrato WhatsApp y build. QA anónima de `/` y `/descubre` realizada; QA autenticada de `/app` queda pendiente de una sesión de test controlada.
 
 ## Onboarding — primera intervención bloqueada — 2026-10-03
 - Causa real confirmada en producción: `PATCH /api/profile` respondía 200, pero el `GET /api/daily` respondía 500 porque `startGenerationAttempt()` insertaba en `generation_attempts` sin `user_id`. La tabla remota exige ese campo (`PostgreSQL 23502: null value in column "user_id"`). `execution_runs` se creaba y quedaba con `failure_code = generation_attempt_save_failed`; no era un problema de horario, sesión ni `/api/profile`.

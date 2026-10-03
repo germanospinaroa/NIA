@@ -15,7 +15,7 @@ export const directionLabels: Record<DirectionKey, string> = {
 
 export const voiceSamples: Record<VoiceStyle, string> = {
   grounded: 'La duda puede estar aquí sin borrar lo que ya pensabas.',
-  warm: 'Laura, que haya aparecido la duda no significa que tu criterio desapareció con ella.',
+  warm: 'Que haya aparecido la duda no significa que tu criterio desapareció con ella.',
   direct: 'Antes de buscar otra respuesta, vuelve un momento a la que ya tenías.',
 };
 
@@ -50,8 +50,8 @@ export type MvpState = {
 };
 
 export const defaultMvpState: MvpState = {
-  firstName: 'Laura', email: '', directionKey: 'trust_own_judgment', voiceStyle: 'grounded',
-  messageFrequency: 1, messageTime1: '08:00', timezone: 'America/Bogota', whatsappEnabled: false,
+  firstName: '', email: '', directionKey: 'trust_own_judgment', voiceStyle: 'grounded',
+  messageFrequency: 0, messageTime1: '', timezone: '', whatsappEnabled: false,
   onboardingComplete: false, activated: false, evidence: [],
 };
 

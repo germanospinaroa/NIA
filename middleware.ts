@@ -8,8 +8,9 @@ export async function middleware(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll: (items) => {
         items.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request });
-        items.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
+        const response = NextResponse.next({ request });
+        items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        supabaseResponse = response;
       },
     },
   });
