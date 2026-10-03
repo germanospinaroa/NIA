@@ -48,7 +48,18 @@ export async function requestStructuredJsonWithMeta(name: string, schema: Record
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
     const response = await fetch(OPENAI_URL, { method: 'POST', signal: controller.signal, headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: llmModel(), max_completion_tokens: 1200, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } } }) });
-    if (!response.ok) throw new Error(`llm_http_${response.status}`);
+    if (!response.ok) {
+      const bodyText = await response.text();
+      let providerMessage = `HTTP ${response.status}`;
+      try {
+        const body = JSON.parse(bodyText) as { error?: { message?: unknown } };
+        if (typeof body.error?.message === 'string' && body.error.message.trim()) providerMessage = body.error.message;
+      } catch {
+        // Keep the status-only fallback when the provider does not return JSON.
+      }
+      const safeMessage = providerMessage.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]').replace(/(?:sk|sess)-[A-Za-z0-9_-]+/g, '[redacted]').replace(/[\r\n\t]+/g, ' ').slice(0, 500);
+      throw new Error(`llm_http_${response.status}: ${safeMessage}`);
+    }
     const payload = await response.json() as { choices?: { message?: { content?: string } }[]; usage?: Record<string, unknown> };
     const content = payload.choices?.[0]?.message?.content;
     if (!content) throw new Error('llm_empty_response');
@@ -87,7 +98,7 @@ function addUsage(target: StructuredUsage, source?: StructuredUsage) {
   for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens', 'cached_input_tokens', 'cache_write_tokens'] as const) target[key] = (target[key] ?? 0) + (source?.[key] ?? 0);
 }
 
-const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['recognition', 'explanation', 'insight', 'steps', 'action', 'closing', 'function', 'concept', 'angle', 'structure'], properties: { recognition: { type: 'string', minLength: 1, maxLength: 300 }, explanation: { type: 'string', minLength: 1, maxLength: 300 }, insight: { type: 'string', minLength: 1, maxLength: 300 }, steps: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string', minLength: 1, maxLength: 180, pattern: '^\\s*(?!\\d+[.)]\\s)' } }, action: { type: 'string', minLength: 1, maxLength: 240 }, closing: { type: 'string', minLength: 1, maxLength: 160 }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
+export const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['recognition', 'explanation', 'insight', 'steps', 'action', 'closing', 'function', 'concept', 'angle', 'structure'], properties: { recognition: { type: 'string', minLength: 1, maxLength: 300 }, explanation: { type: 'string', minLength: 1, maxLength: 300 }, insight: { type: 'string', minLength: 1, maxLength: 300 }, steps: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' } }, action: { type: 'string', minLength: 1, maxLength: 240 }, closing: { type: 'string', minLength: 1, maxLength: 160 }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
 const auditSchema = { type: 'object', additionalProperties: false, required: ['context_fit', 'specificity', 'generic_motivation', 'chatbot_language', 'coaching_language', 'therapy_language', 'cliché', 'semantic_repetition', 'concept_repetition', 'structure_repetition', 'single_idea', 'natural_voice', 'unnecessary_advice', 'approved', 'reasons'], properties: { context_fit: { type: 'boolean' }, specificity: { type: 'boolean' }, generic_motivation: { type: 'boolean' }, chatbot_language: { type: 'boolean' }, coaching_language: { type: 'boolean' }, therapy_language: { type: 'boolean' }, 'cliché': { type: 'boolean' }, semantic_repetition: { type: 'boolean' }, concept_repetition: { type: 'boolean' }, structure_repetition: { type: 'boolean' }, single_idea: { type: 'boolean' }, natural_voice: { type: 'boolean' }, unnecessary_advice: { type: 'boolean' }, approved: { type: 'boolean' }, reasons: { type: 'array', items: { type: 'string' } } } };
 const calibrationSchema = { type: 'object', additionalProperties: false, required: ['question', 'options', 'allow_free_text', 'reason', 'missing_context_field'], properties: { question: { type: 'string', minLength: 12, maxLength: 180 }, options: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'object', additionalProperties: false, required: ['id', 'label', 'context_value'], properties: { id: { type: 'string', minLength: 2, maxLength: 40 }, label: { type: 'string', minLength: 2, maxLength: 80 }, context_value: { type: 'string', minLength: 2, maxLength: 180 } } } }, allow_free_text: { type: 'boolean', const: true }, reason: { type: 'string', enum: ['too_general', 'missing_context', 'context_changed', 'desired_change_changed'] }, missing_context_field: { type: 'string', enum: ['current_context', 'active_context', 'relevant_situations', 'desired_change'] } } };
 
