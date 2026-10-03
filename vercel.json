@@ -1,3 +1,0 @@
-{
-  "crons": [{"path": "/api/cron/daily-whatsapp", "schedule": "*/15 * * * *"}]
-}
