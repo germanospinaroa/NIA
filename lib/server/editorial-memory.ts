@@ -14,6 +14,7 @@ export type EditorialBlock = { type: EditorialBlockType; text: string };
 
 export type EditorialHistoryItem = {
   id: string;
+  execution_context?: 'production' | 'qa' | null;
   created_at: string;
   topic: string | null;
   concept: string | null;
@@ -133,7 +134,7 @@ export function topicState(count: number, share: number, sameAngleCount: number)
 
 export function buildEditorialMemory(rows: EditorialHistoryItem[], windowDays = 30, now = new Date()): EditorialMemory {
   const cutoff = now.getTime() - windowDays * 24 * 60 * 60 * 1000;
-  const recent = rows.filter(row => !row.created_at || new Date(row.created_at).getTime() >= cutoff).slice(0, 15);
+  const recent = rows.filter(row => row.execution_context !== 'qa' && (!row.created_at || new Date(row.created_at).getTime() >= cutoff)).slice(0, 15);
   const formats = emptyFormats(); const depths = emptyDepths();
   const topicMap = new Map<string, EditorialHistoryItem[]>();
   for (const row of recent) {
@@ -160,7 +161,7 @@ export function buildEditorialMemory(rows: EditorialHistoryItem[], windowDays = 
 }
 
 export async function loadEditorialMemory(admin: SupabaseClient, userId: string, now = new Date(), windowDays = 30): Promise<EditorialMemory> {
-  const { data, error } = await admin.from('interventions').select('id,created_at,topic,concept,angle,structure,intervention_type,depth,editorial_take,editorial_idea,experience_type,territory_key,exercise_present,question_present,feedback_requested,situation,intention,editorial_type,insight_id,functional_emotion,directiveness,closing_type,action_id,saturation_state,slot,local_date').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+  const { data, error } = await admin.from('interventions').select('id,created_at,execution_context,topic,concept,angle,structure,intervention_type,depth,editorial_take,editorial_idea,experience_type,territory_key,exercise_present,question_present,feedback_requested,situation,intention,editorial_type,insight_id,functional_emotion,directiveness,closing_type,action_id,saturation_state,slot,local_date').eq('user_id', userId).or('execution_context.is.null,execution_context.neq.qa').order('created_at', { ascending: false }).limit(30);
   if (error) throw new Error('editorial_memory_unavailable');
   return buildEditorialMemory((data ?? []) as EditorialHistoryItem[], windowDays, now);
 }

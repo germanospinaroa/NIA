@@ -30,6 +30,7 @@
     "test:admin-qa-daily-intervention": "node scripts/test-admin-qa-daily-intervention.mjs",
     "test:execution-run-idempotency": "node scripts/test-execution-run-idempotency.mjs",
     "test:admin-qa-control": "node scripts/test-admin-qa-control.mjs",
+    "test:qa-e2e-orchestration": "node scripts/test-qa-e2e-orchestration.mjs",
     "test:admin-access": "node --experimental-strip-types scripts/test-admin-access.mjs",
     "test:editorial-memory": "node --experimental-strip-types scripts/test-editorial-memory.mjs",
     "test:editorial-planner": "node --experimental-strip-types scripts/test-editorial-planner.mjs",

@@ -19,6 +19,8 @@ export type ExecutionContext = {
   channel: 'web' | 'whatsapp';
   triggerSource: string;
   idempotencyKey?: string;
+  executionContext?: 'production' | 'qa';
+  concurrencyKey?: string;
   startedAt: number;
 };
 
@@ -59,7 +61,7 @@ export function errorCode(error: unknown): string {
 
 export async function startExecutionRun(
   supabase: DbClient,
-  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey?: string; requestId?: string },
+  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey?: string; requestId?: string; executionContext?: 'production' | 'qa'; concurrencyKey?: string },
 ): Promise<ExecutionContext> {
   const requestId = input.requestId ?? crypto.randomUUID();
   const startedAt = Date.now();
@@ -70,22 +72,28 @@ export async function startExecutionRun(
     idempotency_key: input.idempotencyKey ?? null,
     channel: input.channel,
     trigger_source: input.triggerSource,
+    execution_context: input.executionContext ?? null,
+    concurrency_key: input.concurrencyKey ?? null,
     status: 'started',
   }).select('id').single();
   if (error || !data) {
     console.error('[nia-execution-run-save-failed]', { code: error?.code, message: safeMessage(error?.message || 'no execution row returned'), details: safeMessage(error?.details || '') });
     throw new Error('execution_run_save_failed');
   }
-  return { executionId: data.id, requestId, userId: input.userId, channel: input.channel, triggerSource: input.triggerSource, idempotencyKey: input.idempotencyKey, startedAt };
+  return { executionId: data.id, requestId, userId: input.userId, channel: input.channel, triggerSource: input.triggerSource, idempotencyKey: input.idempotencyKey, executionContext: input.executionContext, concurrencyKey: input.concurrencyKey, startedAt };
 }
 
 export async function startIdempotentExecutionRun(
   supabase: DbClient,
-  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey: string; requestId: string },
-): Promise<{ context: ExecutionContext; created: boolean }> {
+  input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey: string; requestId: string; executionContext?: 'production' | 'qa'; concurrencyKey?: string },
+): Promise<{ context: ExecutionContext; created: boolean; active?: boolean }> {
   const db = operationalClient(supabase);
   const existingBeforeInsert = await findExecutionByIdempotencyKey(db, input.userId, input.idempotencyKey);
   if (existingBeforeInsert) return { created: false, context: executionContextFromRow(existingBeforeInsert) };
+  if (input.concurrencyKey) {
+    const active = await findActiveExecutionByConcurrencyKey(db, input.userId, input.concurrencyKey);
+    if (active) return { created: false, active: true, context: executionContextFromRow(active) };
+  }
 
   try {
     return { context: await startExecutionRun(supabase, input), created: true };
@@ -94,8 +102,36 @@ export async function startIdempotentExecutionRun(
     if (!message.includes('execution_run_save_failed')) throw error;
     const existingAfterInsert = await findExecutionByIdempotencyKey(db, input.userId, input.idempotencyKey);
     if (existingAfterInsert) return { created: false, context: executionContextFromRow(existingAfterInsert) };
+    if (input.concurrencyKey) {
+      const active = await findActiveExecutionByConcurrencyKey(db, input.userId, input.concurrencyKey);
+      if (active) return { created: false, active: true, context: executionContextFromRow(active) };
+    }
     throw error;
   }
+}
+
+export async function startQaExecutionRun(
+  supabase: DbClient,
+  input: { userId: string; requestId: string; idempotencyKey: string; concurrencyKey: string },
+): Promise<{ context: ExecutionContext; created: boolean; active: boolean; staleReplaced: boolean }> {
+  const { data, error } = await operationalClient(supabase).rpc('claim_qa_execution_run', {
+    p_user_id: input.userId,
+    p_request_id: input.requestId,
+    p_idempotency_key: input.idempotencyKey,
+    p_concurrency_key: input.concurrencyKey,
+    p_stale_before: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+  });
+  if (error || !Array.isArray(data) || !data[0]) {
+    console.error('[nia-qa-execution-claim-failed]', { code: error?.code, message: safeMessage(error?.message || 'no QA execution row returned') });
+    throw new Error('execution_run_save_failed');
+  }
+  const row = data[0] as { execution_id: string; request_id: string; idempotency_key: string; status: ExecutionStatus; started_at: string; created: boolean; active: boolean; stale_replaced: boolean };
+  return {
+    context: { executionId: row.execution_id, requestId: row.request_id, userId: input.userId, channel: 'whatsapp', triggerSource: 'admin_qa', idempotencyKey: row.idempotency_key, executionContext: 'qa', concurrencyKey: input.concurrencyKey, startedAt: new Date(row.started_at).getTime() },
+    created: row.created,
+    active: row.active,
+    staleReplaced: row.stale_replaced,
+  };
 }
 
 type ExecutionRow = {
@@ -105,6 +141,8 @@ type ExecutionRow = {
   channel: 'web' | 'whatsapp';
   trigger_source: string;
   idempotency_key: string | null;
+  execution_context?: 'production' | 'qa' | null;
+  concurrency_key?: string | null;
   started_at: string | null;
   status: ExecutionStatus;
 };
@@ -112,9 +150,24 @@ type ExecutionRow = {
 async function findExecutionByIdempotencyKey(db: DbClient, userId: string, idempotencyKey: string): Promise<ExecutionRow | null> {
   const { data, error } = await db
     .from('execution_runs')
-    .select('id,user_id,request_id,channel,trigger_source,idempotency_key,started_at,status')
+    .select('id,user_id,request_id,channel,trigger_source,idempotency_key,execution_context,concurrency_key,started_at,status')
     .eq('user_id', userId)
     .eq('idempotency_key', idempotencyKey)
+    .maybeSingle();
+  if (error) throw error;
+  return data as ExecutionRow | null;
+}
+
+async function findActiveExecutionByConcurrencyKey(db: DbClient, userId: string, concurrencyKey: string): Promise<ExecutionRow | null> {
+  const { data, error } = await db
+    .from('execution_runs')
+    .select('id,user_id,request_id,channel,trigger_source,idempotency_key,execution_context,concurrency_key,started_at,status')
+    .eq('user_id', userId)
+    .eq('execution_context', 'qa')
+    .eq('concurrency_key', concurrencyKey)
+    .in('status', ['started', 'generating', 'auditing'])
+    .order('started_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data as ExecutionRow | null;
@@ -128,6 +181,8 @@ function executionContextFromRow(existing: ExecutionRow): ExecutionContext {
     channel: existing.channel,
     triggerSource: existing.trigger_source,
     idempotencyKey: existing.idempotency_key ?? undefined,
+    executionContext: existing.execution_context ?? undefined,
+    concurrencyKey: existing.concurrency_key ?? undefined,
     startedAt: existing.started_at ? new Date(existing.started_at).getTime() : Date.now(),
   };
 }

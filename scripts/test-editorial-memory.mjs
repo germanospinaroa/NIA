@@ -14,4 +14,10 @@ assert.equal(rhythm.last3.length, 3);
 assert.equal(rhythm.experienceCounts.reflection, 5);
 assert.equal(rhythm.dominantExperience, 'reflection');
 assert.equal(rhythm.experienceConcentration, 1);
+const withQa = buildEditorialMemory([
+  { ...row(1, 'produccion', 'real'), execution_context: 'production' },
+  { ...row(2, 'qa-only', 'experimento'), execution_context: 'qa' },
+], 30, now);
+assert.deepEqual(withQa.recent.map(item => item.topic), ['produccion']);
+assert.equal(withQa.topics.some(topic => topic.topic === 'qa-only'), false);
 console.log('editorial memory tests: PASS');

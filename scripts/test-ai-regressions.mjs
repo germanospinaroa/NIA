@@ -28,6 +28,7 @@ function candidate(text, options = {}) {
     interventionType: options.type ?? 'reflection', depth: options.depth ?? 'brief', blocks: block,
     function: options.function ?? 'reframe', concept: options.concept ?? 'self_trust', angle: options.angle ?? 'opinion_vs_decision',
     structure: options.structure ?? 'context_does_not_mean',
+    situation: options.situation,
   };
 }
 
@@ -92,6 +93,8 @@ assert.equal(feedbackPlan.strategy, 'change_angle');
 const structuredMemory = buildEditorialMemory([row(0, { intervention_type: 'step_by_step' }), row(1, { intervention_type: 'step_by_step' })], 30, now);
 assert.notEqual(planEditorial({ desiredChange: brief.desiredChange, currentContext: brief.currentContext, communicationPreference: 'structured', memory: structuredMemory }).preferred_or_recommended_intervention_type, 'step_by_step');
 assert.equal(hasSufficientContext({ currentContext: '', relevantSituations: [], recurringPatterns: [], userLanguage: [], recentInterventions: [], learningSignals: [] }).sufficient, false);
+assert.equal(audit('A veces una opinión pesa demasiado.', { situation: null, idea: 'Una opinión puede pesar demasiado.' }).reasons.includes('generic_or_missing_user_context'), true);
+assert.equal(audit('Cuando alguien cuestiona una decisión que ya tomaste, puedes escuchar sin cambiar automáticamente.', { situation: 'Cuando alguien cuestiona una decisión que ya tomaste', idea: 'Escuchar no obliga a cambiar.' }).reasons.includes('generic_or_missing_user_context'), false);
 
 // 21–24: multi-day saturation and adaptive rhythm, never a weekday calendar.
 const saturated = buildEditorialMemory([row(0), row(1), row(2)], 30, now);

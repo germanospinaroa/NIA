@@ -6,7 +6,8 @@ const detail = fs.readFileSync('app/admin/users/[id]/page.tsx', 'utf8');
 
 assert.ok(component.includes("fetch('/api/admin/qa/daily-intervention'"));
 assert.ok(component.includes('JSON.stringify({ user_id: userId })'));
-assert.ok(component.includes('if (running || result) return'));
+assert.ok(component.includes('if (running) return'));
+assert.ok(component.includes('Ejecutar otra QA completa'));
 assert.ok(component.includes('Esta prueba generará una intervención real'));
 assert.ok(component.includes('Evolution accepted'));
 assert.ok(component.includes('WhatsApp delivery'));

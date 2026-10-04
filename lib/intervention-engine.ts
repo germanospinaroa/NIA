@@ -579,9 +579,10 @@ export function applyLearningSignals(brief: InterventionBrief, signals: Learning
   return { ...brief, learningSignals: active, rejectedPatterns, successfulPatterns, generationConstraints: [...new Set(generationConstraints)], feedbackGoal };
 }
 
-export function hasContextEvidence(candidate: Pick<InterventionCandidate, 'text' | 'recognition'>, brief: Pick<InterventionBrief, 'currentContext' | 'relevantSituations' | 'desiredChange' | 'contextDomain'>) {
+export function hasContextEvidence(candidate: Pick<InterventionCandidate, 'text' | 'recognition' | 'situation'>, brief: Pick<InterventionBrief, 'currentContext' | 'relevantSituations' | 'desiredChange' | 'contextDomain'>) {
   const candidateText = [candidate.recognition, candidate.text].filter(Boolean).join(' ');
   const primarySources = [brief.currentContext, ...(brief.relevantSituations ?? [])].filter((value): value is string => Boolean(value?.trim()));
+  if (candidate.situation?.trim() && primarySources.some(source => contextEvidenceMatches(source, candidate.situation!))) return true;
   if (primarySources.some(source => contextEvidenceMatches(source, candidateText))) return true;
   const secondarySources = [brief.contextDomain, brief.desiredChange].filter((value): value is string => Boolean(value?.trim()));
   return secondarySources.some(source => contextEvidenceMatches(source, candidateText) && contextEvidence(candidateText).families.size >= 1);
