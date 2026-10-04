@@ -35,6 +35,7 @@
     "test:editorial-rhythm": "node --experimental-strip-types scripts/test-editorial-rhythm.mjs",
     "test:editorial-quality": "node --experimental-strip-types scripts/test-editorial-quality.mjs",
     "test:flexible-interventions": "node --experimental-strip-types scripts/test-flexible-interventions.mjs",
+    "test:ai-regressions": "node --experimental-strip-types scripts/test-ai-regressions.mjs",
     "test:intention-value": "node --experimental-strip-types scripts/test-intention-value.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",

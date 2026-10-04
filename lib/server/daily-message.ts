@@ -26,7 +26,7 @@ export async function getOrCreateDailyInteraction(supabase: DbClient, userId: st
   let execution;
   try { execution = await startExecutionRun(supabase, { userId, channel, triggerSource: 'daily', idempotencyKey }); } catch { throw new Error('daily_unavailable'); }
   let result;
-  try { result = await resolveIntervention(supabase, userId, 'intention', channel, idempotencyKey, execution); } catch (error) {
+  try { result = await resolveIntervention(supabase, userId, 'intention', channel, idempotencyKey, execution, { slot, localDate: date }); } catch (error) {
     await updateExecutionRun(supabase, execution, { status: error instanceof CalibrationRequiredError ? 'failed' : error instanceof Error && error.message === 'no_approved_intervention' ? 'no_approved_intervention' : 'failed', failure: error });
     if (error instanceof CalibrationRequiredError) await recordEvent(supabase, { userId, eventType: 'recalibration_started', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { reason: error.calibration.reason } });
     else await recordEvent(supabase, { userId, eventType: 'intervention_failed', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { error: error instanceof Error ? error.message : String(error) } });

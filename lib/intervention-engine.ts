@@ -1,4 +1,6 @@
 import type { VoiceStyle } from './mvp';
+import type { CanonicalEditorialType, ClosingType, Directiveness, EditorialGates, EditorialScore, FunctionalEmotion } from './editorial-contract.ts';
+import { evaluateEditorialGates, sameDayRepetition, scoreEditorialCandidate } from './editorial-contract.ts';
 
 export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distinguish' | 'interrupt' | 'permit' | 'anchor' | 'redirect';
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
@@ -8,7 +10,7 @@ export type EditorialExperienceType = 'brief_insight' | 'reflection' | 'encourag
 export type EditorialDepth = 'brief' | 'medium' | 'deep';
 export type EditorialBlockType = 'idea' | 'recognition' | 'explanation' | 'insight' | 'question' | 'tool' | 'step' | 'example' | 'action' | 'closing';
 export type EditorialBlock = { type: EditorialBlockType; text: string };
-export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; recent_editorial_ideas_to_avoid?: string[]; recent_experiences_to_avoid?: EditorialExperienceType[]; diversity_notes: string };
+export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; recent_editorial_ideas_to_avoid?: string[]; recent_experiences_to_avoid?: EditorialExperienceType[]; diversity_notes: string; recommended_editorial_type?: CanonicalEditorialType; recommended_functional_emotion?: FunctionalEmotion; recommended_directiveness?: Directiveness; recommended_closing_type?: ClosingType };
 
 export type SemanticMatch = {
   intervention_id: string;
@@ -69,6 +71,7 @@ export type InterventionBrief = {
   generationConstraints?: string[];
   communicationPreference?: 'idea' | 'practical' | 'structured' | 'adaptive';
   editorialPlan?: EditorialPlan;
+  sameDayEditorialSignature?: { topic?: string | null; interventionType?: string | null; editorialTake?: string | null; editorialIdea?: string | null; experienceType?: string | null; functionalEmotion?: string | null; directiveness?: string | null; closingType?: string | null; actionId?: string | null; insightId?: string | null; structure?: string | null };
 };
 
 export type CalibrationOption = { id: string; label: string; context_value: string };
@@ -127,10 +130,28 @@ export type InterventionCandidate = {
   conceptKey?: string;
   angle: string;
   structure: InterventionStructure;
+  editorialType?: CanonicalEditorialType;
+  signal?: string;
+  evidenceDirection?: string;
+  movement?: string;
+  openingClosing?: string;
+  situation?: string;
+  intention?: string;
+  insightId?: string;
+  functionalEmotion?: FunctionalEmotion;
+  directiveness?: Directiveness;
+  closingType?: ClosingType;
+  actionId?: string;
+  longitudinalEvidenceRefs?: string[];
+  editorialScore?: EditorialScore | null;
+  gateResults?: EditorialGates;
+  sameDayRepetition?: boolean;
+  saturationState?: 'normal' | 'watch' | 'saturated' | 'paused';
+  regenerationReason?: string;
   audit?: CandidateAudit;
 };
 
-export type FeedbackDimension = 'relevance' | 'specificity' | 'angle' | 'context' | 'moment';
+export type FeedbackDimension = 'relevance' | 'specificity' | 'angle' | 'context' | 'moment' | 'tone' | 'help_type' | 'action';
 export type FeedbackSpec = {
   question: string;
   dimension: FeedbackDimension;
@@ -200,8 +221,9 @@ export function firstReadComprehension(value: string) {
 export function editorialIdeaKey(value: string) {
   const text = normalize(value);
   if (!text) return '';
+  if (/(confia|confiar|criterio).*(cuestion|dud|desacuerd|opinion)|no.*(entreg|camb|aband).*decision.*(dud|desacuerd|opinion)|decision.*(sigue siendo tuya|sigue siendo propia)/.test(text)) return 'disagreement_is_not_evidence_of_error';
   if (/(alguien|otra persona|opinion|desacuerdo|duda).*(equivoc|error|mala decision)|equivoc.*(desacuerdo|opinion)/.test(text)) return 'disagreement_is_not_evidence_of_error';
-  if (/(escuchar|pedir|preguntar).*(opinion|consejo).*(decidir|decision|criterio)|opinion.*(instruccion|orden)|entregar.*decision/.test(text)) return 'seek_input_without_transferring_decision';
+  if (/(escuchar|pedir|preguntar).*(opinion|consejo).*(ceder|entregar|dejar|decidir|decision|criterio)|opinion.*(instruccion|orden)|entregar.*decision/.test(text)) return 'seek_input_without_transferring_decision';
   if (/(dato nuevo|informacion nueva|evidencia).*(cambiar|revisar|modificar).*(decision|criterio)|cambiar.*(decision|criterio).*(dato|evidencia)/.test(text)) return 'new_evidence_can_change_a_decision';
   if (/(pausa|esperar|no responder).*(duda|incomodidad|reaccion)|incomodidad.*(cambio|decision)/.test(text)) return 'pause_separates_reaction_from_change';
   if (/(seguridad|completamente segura|claridad).*(mover|hacer|actuar)|claridad.*(segura|mover)/.test(text)) return 'movement_does_not_require_complete_certainty';
@@ -399,9 +421,10 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   const hasTherapyLanguage = /\b(terapia|terapeut|trauma|sanar|curar|diagnost|ansiedad|depresion)\b/i.test(text);
   const hasUnnecessaryAdvice = /\b(deberias|debes|haz esto|empieza por|intenta)\b/i.test(text);
   const hasAbsoluteClaim = /\b(siempre|nunca|todo|nada|sin duda|garantiza)\b/i.test(text);
-  const hasPsychologicalInterpretation = /\b(en el fondo|tu herida|tu trauma|tu miedo es|eres una persona)\b/i.test(text);
+  const hasPsychologicalInterpretation = /\b(en el fondo|tu herida|tu trauma|tu miedo es|eres una persona|eres perezos[ao]|no respondes porque eres|te autosaboteas|por miedo a)\b/i.test(text);
   const hasUnsupportedContext = hasUnsupportedPersonalContext(candidate.text, brief);
   const repeatedEditorialIdea = (brief.recentEditorialIdeas ?? []).some(previous => sameEditorialIdea(candidate, previous));
+  const sameDay = sameDayRepetition({ topic: candidate.topic, interventionType: candidate.editorialType, editorialTake: candidate.editorialTake, editorialIdea: candidate.editorialIdea, experienceType: candidate.experienceType, functionalEmotion: candidate.functionalEmotion, directiveness: candidate.directiveness, closingType: candidate.closingType, actionId: candidate.actionId, insightId: candidate.insightId, territoryKey: candidate.territoryKey, structure: candidate.structure, depth: candidate.depth }, brief.sameDayEditorialSignature);
   const hasParagraph = candidate.text.includes('\n');
   const wordCount = text.split(' ').filter(Boolean).length;
   const structuredParts = [candidate.recognition, candidate.explanation, candidate.insight].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
@@ -420,6 +443,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (hasPsychologicalInterpretation) reasons.push('psychological_interpretation');
   if (hasUnsupportedContext) reasons.push('unsupported_personal_context');
   if (repeatedEditorialIdea) reasons.push('same_editorial_idea');
+  if (sameDay.repeated) reasons.push('same_day_repetition');
   if (!hasParagraph && blocks.length === 0) reasons.push('missing_structure');
   if (blocks.length === 0 && (wordCount < 45 || wordCount > 180)) reasons.push('insufficient_value_length');
   if (!hasInsight) reasons.push('empty_value');
@@ -429,6 +453,21 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (conceptCount >= interventionConfig.conceptSaturationThreshold) warnings.push('concept_saturated');
   const internalParts = blocks.length ? blocks.map(block => block.text) : [candidate.recognition!, candidate.explanation!, candidate.insight!, ...(candidate.steps ?? []), candidate.action ?? '', candidate.closing ?? ''];
   if (internalParts.length >= 2 && hasInternalRepetition(internalParts)) reasons.push('internal_repetition');
+  const gateResults = evaluateEditorialGates({
+    text: candidate.text,
+    hasTruthfulContext: hasContext,
+    hasUnsupportedContext,
+    hasTherapyLanguage,
+    hasPsychologicalInterpretation,
+    movement: candidate.movement ?? candidate.function,
+    editorialType: candidate.editorialType,
+    longitudinalEvidenceRefs: candidate.longitudinalEvidenceRefs,
+  });
+  if (candidate.editorialType === 'longitudinal_evidence' && gateResults.reasons.includes('longitudinal_evidence_insufficient')) reasons.push('longitudinal_evidence_insufficient');
+  if (!gateResults.safety) reasons.push('safety_gate');
+  if (!gateResults.scope) reasons.push('scope_gate');
+  if (!gateResults.one_move) reasons.push('one_move_gate');
+  if (!gateResults.memory_integrity && !reasons.includes('unsupported_personal_context')) reasons.push('memory_integrity');
   if (structureCount >= 1) warnings.push('recent_structure_reuse');
   if (!firstReadPasses && !hasRoboticLanguage) warnings.push('first_read_comprehension');
   const excludedAngles = (brief.learningSignals ?? []).flatMap(signal => {
@@ -439,7 +478,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (excludedAngles.includes(candidate.angle)) reasons.push('rejected_recent_angle');
   const requiresSpecificContext = (brief.learningSignals ?? []).some(signal => signal.signal === 'specificity' && typeof signal.value === 'object' && signal.value?.value === 'low');
   if (requiresSpecificContext && !hasContext) reasons.push('low_specificity');
-  const checks = {
+  const checks: Record<string, boolean | number | string> = {
     fits_desired_change: Boolean(brief.desiredChange), fits_current_context: hasContext, concept_key: conceptKey,
     uses_real_user_context: hasContext, feels_personal: hasContext,
     duplicate_literal: recent.some(previous => normalize(previous) === text), duplicate_semantic: similarities.length === 0,
@@ -452,6 +491,23 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, first_read_comprehension: firstReadPasses, robotic_or_abstract_language: !hasRoboticLanguage, editorial_novelty: !repeatedEditorialIdea, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
     value_structure: hasValue, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
+  const gates: EditorialGates = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity };
+  const editorialScore = scoreEditorialCandidate({
+    gates,
+    relevant: Boolean(brief.desiredChange),
+    specific: hasContext,
+    useful: hasValue,
+    novel: similarities.length === 0 && !repeatedEditorialIdea,
+    natural: firstReadPasses && !hasChatbotLanguage && !hasCoachingLanguage && !hasRoboticLanguage,
+    autonomy: !hasAbsoluteClaim,
+    timing: !structureCount && !sameDay.repeated,
+    closingFit: true,
+  });
+  if (editorialScore && editorialScore.total < 60) reasons.push('editorial_score_too_low');
+  if (editorialScore) checks.editorial_score = editorialScore.total;
+  checks.truth_gate = gateResults.truth; checks.safety_gate = gateResults.safety; checks.scope_gate = gateResults.scope; checks.one_move_gate = gateResults.one_move; checks.memory_integrity = gateResults.memory_integrity; checks.same_day_repetition = !sameDay.repeated;
+  candidate.gateResults = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity };
+  candidate.editorialScore = editorialScore;
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
 }
 
@@ -501,6 +557,11 @@ export function applyLearningSignals(brief: InterventionBrief, signals: Learning
     const value = typeof signal.value === 'object' && signal.value ? signal.value : {};
     if (signal.signal === 'wording_quality' && value.value === 'negative') rejectedPatterns.push(`wording:${String(value.structure ?? 'recent')}`);
     if (signal.signal === 'angle_quality' && value.value === 'negative') rejectedPatterns.push(`angle:${String(value.angle ?? 'recent')}`);
+    if (signal.signal === 'help_type_quality' && value.value === 'negative') {
+      rejectedPatterns.push(`family:${String(value.family ?? 'recent')}`);
+      generationConstraints.push('Cambia deliberadamente la función editorial; no respondas con otra reformulación del mismo tipo de ayuda.');
+    }
+    if (signal.signal === 'action_feedback' && value.value === 'no_longer_relevant') generationConstraints.push('No reutilices esta microacción: la situación que la justificaba ya no está vigente.');
     if (signal.signal === 'specificity' && value.value === 'high') successfulPatterns.push('specific_context');
     if (signal.signal === 'relevance' && value.value === 'high') successfulPatterns.push('relevant_context');
     if (signal.signal === 'specificity' && value.value === 'low') generationConstraints.push('Ancla la intervención a una situación real confirmada por la usuaria; no introduzcas hechos personales nuevos ni formulaciones universales.');
@@ -512,6 +573,7 @@ export function applyLearningSignals(brief: InterventionBrief, signals: Learning
   if (latest?.signal === 'specificity' && typeof latest.value === 'object' && latest.value?.value === 'low') feedbackGoal = 'specific_context';
   if (latest?.signal === 'wording_quality') feedbackGoal = 'new_wording';
   if (latest?.signal === 'angle_quality') feedbackGoal = 'new_angle';
+  if (latest?.signal === 'help_type_quality') feedbackGoal = 'new_angle';
   if (latest?.signal === 'current_context_status' && typeof latest.value === 'object' && latest.value?.value === 'changed') feedbackGoal = 'recalibration';
   if (latest?.signal === 'desired_change_status' && typeof latest.value === 'object' && latest.value?.value === 'changed') feedbackGoal = 'recalibration';
   return { ...brief, learningSignals: active, rejectedPatterns, successfulPatterns, generationConstraints: [...new Set(generationConstraints)], feedbackGoal };
@@ -536,7 +598,7 @@ export function feedbackFor(candidate: Pick<InterventionCandidate, 'function' | 
   const desiredChangeChanged = { key: 'desired_change_changed', label: 'Ya no quiero trabajar esto' };
   if (candidate.function === 'anticipate' || candidate.function === 'reframe') return { question: '¿Esto sigue teniendo que ver con lo que estás viviendo?', dimension: 'relevance', options: [{ key: 'relevant', label: 'Sí, totalmente' }, { key: 'almost', label: 'Se parece, pero no es eso' }, contextChanged, desiredChangeChanged] };
   if (candidate.function === 'distinguish') return { question: '¿Este enfoque te sirve?', dimension: 'angle', options: [{ key: 'angle_works', label: 'Sí, sigue por aquí' }, { key: 'angle_change', label: 'La idea sirve, prueba otro ángulo' }, { key: 'not_me', label: 'Esto no me representa' }, contextChanged, desiredChangeChanged] };
-  return { question: '¿Esto se sintió realmente tuyo?', dimension: 'specificity', options: [{ key: 'specific', label: 'Sí' }, { key: 'wording_off', label: 'La idea sí, pero la frase no' }, { key: 'too_general', label: 'Sonó demasiado general' }, contextChanged, desiredChangeChanged] };
+  return { question: '¿Esto se sintió realmente tuyo?', dimension: 'specificity', options: [{ key: 'specific', label: 'Sí' }, { key: 'wording_off', label: 'La idea sí, pero la frase no' }, { key: 'too_general', label: 'Sonó demasiado general' }, { key: 'tone_off', label: 'El tono no me sirvió' }, { key: 'help_type_change', label: 'Quiero otro tipo de ayuda' }, contextChanged, desiredChangeChanged] };
 }
 
 export function learningFromFeedback(dimension: FeedbackDimension, option: string) {
@@ -545,6 +607,9 @@ export function learningFromFeedback(dimension: FeedbackDimension, option: strin
   if (option === 'wording_off') return { signal: 'wording_quality', value: 'negative', preserveConcept: true, avoidRecentWordingPattern: true };
   if (option === 'too_general') return { signal: 'specificity', value: 'low', increaseContextWeight: true };
   if (option === 'angle_change') return { signal: 'angle_quality', value: 'negative', preserveConcept: true, avoidAngleForRecentWindow: true };
+  if (option === 'tone_off') return { signal: 'tone_quality', value: 'negative', confidence: 1 };
+  if (option === 'help_type_change') return { signal: 'help_type_quality', value: 'negative', confidence: 1, triggerFunctionChange: true };
+  if (option === 'done' || option === 'not_done' || option === 'no_longer_relevant') return { signal: 'action_feedback', value: option, confidence: 1 };
   if (option === 'relevant' || option === 'specific' || option === 'angle_works') return { signal: dimension, value: 'high', confidence: 1 };
   return { signal: dimension, value: option, confidence: 0.5 };
 }

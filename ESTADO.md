@@ -1,5 +1,16 @@
 # ESTADO — NIA
 
+## Regresiones editoriales y verification loop — 2026-10-03
+- Implementado el contrato editorial final de calidad: SEMA interno, gates truth/safety/scope/one-move/memory, score compuesto previo al ranking, tipos canónicos, emoción funcional, directividad, closing/action metadata, firma editorial, evidencia longitudinal mínima, saturación territorial y conciencia same-day para slot 2.
+- Añadida migración aditiva pendiente `supabase/migrations/20261003150000_editorial_quality_contract.sql`; no modifica históricos ni ha sido aplicada en Production. La persistencia de la nueva firma queda en `interventions`/`intervention_candidates`, sin memoria ni tabla paralela.
+- Ampliados memory/planner, generación estructurada, auditoría determinista, feedback y user-detail admin para conservar/leer la metadata nueva. `test:ai-regressions` cubre 40 regresiones conductuales offline.
+- Se aplicó metodología de verificación tipo ECC sin instalar ECC, copiar skills, añadir MCP/hooks ni modificar la configuración global de Codex.
+- Añadida `scripts/test-ai-regressions.mjs` y el script `test:ai-regressions`, con regresiones comportamentales para repetición de idea/insight, saturación multi-día, variedad de experiencia, slots, flexibilidad, personalización segura, voz humana, abstracción y feedback.
+- Ajustes mínimos: ampliación de claves deterministas de `editorial_idea` para sinónimos del mismo movimiento, rechazo de atribuciones no declaradas como pereza/autosabotaje, saturación desde 3 apariciones concentradas y menor insistencia de `step_by_step` con preferencia estructurada.
+- Verification loop local: tests editoriales y regresiones PASS; suite existente PASS; TypeScript PASS; lint PASS con 4 warnings heredados; build PASS; `npm audit --omit=dev --audit-level=high` reporta 0 vulnerabilidades.
+- Security review y production audit fueron read-only. No se ejecutaron OpenAI, embeddings, semantic judge, LLM audit, Evolution, WhatsApp, cron, Hotmart, deploy ni migraciones remotas.
+- Evidencia faltante: QA autenticada en Production, migraciones/configuración remota, concurrencia multi-instancia y prueba real end-to-end. No declarar Production Ready.
+
 ## Calidad editorial conversacional — 2026-10-03
 - Añadida metadata nullable `editorial_idea` en `interventions` e `intervention_candidates` mediante `supabase/migrations/20261003140000_editorial_idea_voice.sql`; los históricos permanecen NULL.
 - La memoria editorial conserva ideas recientes además de topic, take, angle, experiencia y profundidad. El planner penaliza experiencias concentradas, evita ideas recientes y mantiene la preferencia como peso, no como plantilla.

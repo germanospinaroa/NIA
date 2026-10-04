@@ -27,6 +27,18 @@ export type EditorialHistoryItem = {
   exercise_present?: boolean | null;
   question_present?: boolean | null;
   feedback_requested?: boolean | null;
+  situation?: string | null;
+  intention?: string | null;
+  editorial_type?: string | null;
+  insight_id?: string | null;
+  functional_emotion?: string | null;
+  directiveness?: string | null;
+  closing_type?: string | null;
+  action_id?: string | null;
+  saturation_state?: string | null;
+  slot?: string | null;
+  local_date?: string | null;
+  structure?: string | null;
 };
 export type EditorialRhythm = {
   last3: EditorialHistoryItem[];
@@ -45,6 +57,11 @@ export type EditorialRhythm = {
   repeatedTake: string | null;
   repeatedTerritory: string | null;
   repeatedIdea: string | null;
+  functionalEmotionCounts: Record<string, number>;
+  directivenessCounts: Record<string, number>;
+  closingCounts: Record<string, number>;
+  actionCounts: Record<string, number>;
+  territoryCounts: Record<string, number>;
 };
 export type EditorialTopicSummary = { topic: string; count: number; last_seen: string; share: number; state: 'normal' | 'watch' | 'saturated' | 'refresh'; angles: Array<{ angle: string; count: number; last_seen: string }> };
 export type EditorialMemory = {
@@ -55,6 +72,8 @@ export type EditorialMemory = {
   depths: Record<EditorialDepth, number>;
   totalWithTopic: number;
   rhythm: EditorialRhythm;
+  pausedTerritories: string[];
+  recentSignatures: Array<Pick<EditorialHistoryItem, 'topic' | 'situation' | 'intention' | 'editorial_type' | 'insight_id' | 'editorial_take' | 'angle' | 'experience_type' | 'functional_emotion' | 'directiveness' | 'closing_type' | 'action_id' | 'territory_key' | 'structure' | 'depth'>>;
 };
 
 const emptyFormats = (): Record<EditorialInterventionType, number> => Object.fromEntries(editorialInterventionTypes.map(type => [type, 0])) as Record<EditorialInterventionType, number>;
@@ -83,6 +102,10 @@ export function buildEditorialRhythm(rows: EditorialHistoryItem[], now = new Dat
   const takeCounts: Record<string, number> = {};
   const ideaCounts: Record<string, number> = {};
   const territoryCounts: Record<string, number> = {};
+  const functionalEmotionCounts: Record<string, number> = {};
+  const directivenessCounts: Record<string, number> = {};
+  const closingCounts: Record<string, number> = {};
+  const actionCounts: Record<string, number> = {};
   for (const row of last7To10) {
     const experience = experienceFor(row); if (experience) experienceCounts[experience] += 1;
     if (row.intervention_type) interventionTypeCounts[row.intervention_type] = (interventionTypeCounts[row.intervention_type] ?? 0) + 1;
@@ -91,15 +114,19 @@ export function buildEditorialRhythm(rows: EditorialHistoryItem[], now = new Dat
     if (row.editorial_take) takeCounts[row.editorial_take] = (takeCounts[row.editorial_take] ?? 0) + 1;
     if (row.editorial_idea) ideaCounts[row.editorial_idea] = (ideaCounts[row.editorial_idea] ?? 0) + 1;
     if (row.territory_key) territoryCounts[row.territory_key] = (territoryCounts[row.territory_key] ?? 0) + 1;
+    if (row.functional_emotion) functionalEmotionCounts[row.functional_emotion] = (functionalEmotionCounts[row.functional_emotion] ?? 0) + 1;
+    if (row.directiveness) directivenessCounts[row.directiveness] = (directivenessCounts[row.directiveness] ?? 0) + 1;
+    if (row.closing_type) closingCounts[row.closing_type] = (closingCounts[row.closing_type] ?? 0) + 1;
+    if (row.action_id) actionCounts[row.action_id] = (actionCounts[row.action_id] ?? 0) + 1;
   }
   const ranked = Object.entries(experienceCounts).sort((a, b) => b[1] - a[1]);
   const total = last7To10.length;
   const repeated = (counts: Record<string, number>) => Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[1] >= 2 ? Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] : null;
-  return { last3, last5, last7Days, last7To10, experienceCounts, interventionTypeCounts, depthCounts, topicCounts, takeCounts, ideaCounts, recentIdeas: last7To10.map(row => row.editorial_idea).filter((value): value is string => Boolean(value)), dominantExperience: ranked[0]?.[1] ? ranked[0][0] as EditorialExperienceType : null, experienceConcentration: total ? (ranked[0]?.[1] ?? 0) / total : 0, repeatedTake: repeated(takeCounts), repeatedTerritory: repeated(territoryCounts), repeatedIdea: repeated(ideaCounts) };
+  return { last3, last5, last7Days, last7To10, experienceCounts, interventionTypeCounts, depthCounts, topicCounts, takeCounts, ideaCounts, recentIdeas: last7To10.map(row => row.editorial_idea).filter((value): value is string => Boolean(value)), dominantExperience: ranked[0]?.[1] ? ranked[0][0] as EditorialExperienceType : null, experienceConcentration: total ? (ranked[0]?.[1] ?? 0) / total : 0, repeatedTake: repeated(takeCounts), repeatedTerritory: repeated(territoryCounts), repeatedIdea: repeated(ideaCounts), functionalEmotionCounts, directivenessCounts, closingCounts, actionCounts, territoryCounts };
 }
 
 export function topicState(count: number, share: number, sameAngleCount: number): EditorialTopicSummary['state'] {
-  if (count >= 4 && share >= 0.5 && sameAngleCount >= 2) return 'saturated';
+  if (count >= 3 && share >= 0.5 && sameAngleCount >= 2) return 'saturated';
   if (count >= 3 || (count >= 2 && share >= 0.35)) return 'watch';
   return 'normal';
 }
@@ -123,11 +150,17 @@ export function buildEditorialMemory(rows: EditorialHistoryItem[], windowDays = 
     const angles = [...angleMap.entries()].map(([angle, angleItems]) => ({ angle, count: angleItems.length, last_seen: angleItems[0].created_at })).sort((a, b) => b.count - a.count);
     return { topic, count: items.length, last_seen: items[0].created_at, share: totalWithTopic ? items.length / totalWithTopic : 0, state: topicState(items.length, totalWithTopic ? items.length / totalWithTopic : 0, angles[0]?.count ?? 0), angles };
   }).sort((a, b) => b.count - a.count || b.last_seen.localeCompare(a.last_seen));
-  return { windowDays, recent, topics, formats, depths, totalWithTopic, rhythm: buildEditorialRhythm(recent, now) };
+  const rhythm = buildEditorialRhythm(recent, now);
+  const pausedTerritories = Object.entries(rhythm.territoryCounts).filter(([territory, count]) => {
+    const territoryRows = recent.filter(row => row.territory_key === territory);
+    const situations = new Set(territoryRows.map(row => row.situation).filter(Boolean));
+    return count >= 3 && situations.size <= 1;
+  }).map(([territory]) => territory);
+  return { windowDays, recent, topics, formats, depths, totalWithTopic, rhythm, pausedTerritories, recentSignatures: recent.map(row => ({ topic: row.topic, situation: row.situation, intention: row.intention, editorial_type: row.editorial_type, insight_id: row.insight_id, editorial_take: row.editorial_take, angle: row.angle, experience_type: row.experience_type, functional_emotion: row.functional_emotion, directiveness: row.directiveness, closing_type: row.closing_type, action_id: row.action_id, territory_key: row.territory_key, structure: (row as EditorialHistoryItem & { structure?: string | null }).structure, depth: row.depth })) };
 }
 
 export async function loadEditorialMemory(admin: SupabaseClient, userId: string, now = new Date(), windowDays = 30): Promise<EditorialMemory> {
-  const { data, error } = await admin.from('interventions').select('id,created_at,topic,concept,angle,intervention_type,depth,editorial_take,editorial_idea,experience_type,territory_key,exercise_present,question_present,feedback_requested').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+  const { data, error } = await admin.from('interventions').select('id,created_at,topic,concept,angle,structure,intervention_type,depth,editorial_take,editorial_idea,experience_type,territory_key,exercise_present,question_present,feedback_requested,situation,intention,editorial_type,insight_id,functional_emotion,directiveness,closing_type,action_id,saturation_state,slot,local_date').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
   if (error) throw new Error('editorial_memory_unavailable');
   return buildEditorialMemory((data ?? []) as EditorialHistoryItem[], windowDays, now);
 }
