@@ -25,6 +25,10 @@ assert.doesNotMatch(route, /CRON_SECRET/);
 assert.doesNotMatch(route, /getOrCreateDailyInteraction/);
 assert.match(operational, /requestId = input\.requestId/);
 assert.match(operational, /startIdempotentExecutionRun/);
+assert.match(operational, /findExecutionByIdempotencyKey/);
+assert.match(operational, /eq\('idempotency_key', idempotencyKey\)/);
+assert.match(route, /const requestId = crypto\.randomUUID\(\)/);
+assert.doesNotMatch(route, /const requestId = `admin_qa:/);
 assert.match(intervention, /options\?\.maxGenerationAttempts/);
 assert.match(intervention, /const maxAttempts = options\?\.maxGenerationAttempts/);
 assert.match(intervention, /maxTechnicalAttempts: options\?\.disableTechnicalGenerationRetry \? 1/);
@@ -35,5 +39,10 @@ assert.equal(sends.has(qaKey), false);
 sends.add(qaKey);
 assert.equal(sends.has(qaKey), true, 'same QA execution must be idempotent');
 assert.equal(sends.size, 1, 'QA must allow only one delivery for one execution');
+
+const requestId = crypto.randomUUID();
+assert.match(requestId, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+assert.equal(qaKey, 'admin_qa:user-1:2026-10-03');
+assert.notEqual(requestId, qaKey);
 
 console.log('admin QA daily intervention tests: PASS');

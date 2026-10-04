@@ -80,7 +80,7 @@ export async function POST(request: Request) {
   const now = new Date();
   const date = localDate(profile.timezone, now);
   const idempotencyKey = `admin_qa:${userId}:${date}`;
-  const requestId = `admin_qa:${userId}:${date}`;
+  const requestId = crypto.randomUUID();
   let run;
   try { run = await startIdempotentExecutionRun(admin, { userId, channel: 'whatsapp', triggerSource: 'admin_qa', idempotencyKey, requestId }); } catch { return NextResponse.json({ error: 'qa_execution_unavailable' }, { status: 503 }); }
   if (!run.created) return existingResult(admin, run.context.executionId, userId, date);

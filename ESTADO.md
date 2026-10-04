@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Corrección de idempotencia QA — 2026-10-03
+- Corregido el desajuste entre `request_id` UUID de Production y la clave legible `admin_qa:<user>:<fecha>`. El endpoint QA genera ahora un UUID real para `request_id` y conserva la clave determinista en `idempotency_key`.
+- `startIdempotentExecutionRun()` busca primero por `user_id + idempotency_key` y recupera la ejecución ganadora si una inserción concurrente encuentra una restricción única.
+- Añadida la migración aditiva `supabase/migrations/20261003151000_execution_run_idempotency.sql` para garantizar unicidad por usuario y clave. Debe aplicarse en Production antes de la prueba real.
+- No se modificaron generación, planner, memoria editorial, auditorías, composer, delivery, Evolution, WhatsApp ni cron. La prueba real QA permanece sin ejecutar.
+
 ## Regresiones editoriales y verification loop — 2026-10-03
 - Implementado el contrato editorial final de calidad: SEMA interno, gates truth/safety/scope/one-move/memory, score compuesto previo al ranking, tipos canónicos, emoción funcional, directividad, closing/action metadata, firma editorial, evidencia longitudinal mínima, saturación territorial y conciencia same-day para slot 2.
 - Añadida migración aditiva pendiente `supabase/migrations/20261003150000_editorial_quality_contract.sql`; no modifica históricos ni ha sido aplicada en Production. La persistencia de la nueva firma queda en `interventions`/`intervention_candidates`, sin memoria ni tabla paralela.

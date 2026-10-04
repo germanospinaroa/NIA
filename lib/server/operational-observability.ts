@@ -83,31 +83,53 @@ export async function startIdempotentExecutionRun(
   supabase: DbClient,
   input: { userId: string; channel: 'web' | 'whatsapp'; triggerSource: string; idempotencyKey: string; requestId: string },
 ): Promise<{ context: ExecutionContext; created: boolean }> {
+  const db = operationalClient(supabase);
+  const existingBeforeInsert = await findExecutionByIdempotencyKey(db, input.userId, input.idempotencyKey);
+  if (existingBeforeInsert) return { created: false, context: executionContextFromRow(existingBeforeInsert) };
+
   try {
     return { context: await startExecutionRun(supabase, input), created: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes('execution_run_save_failed')) throw error;
-    const { data: existing, error: lookupError } = await operationalClient(supabase)
-      .from('execution_runs')
-      .select('id,user_id,request_id,channel,trigger_source,idempotency_key,started_at,status')
-      .eq('request_id', input.requestId)
-      .eq('user_id', input.userId)
-      .maybeSingle();
-    if (lookupError || !existing) throw error;
-    return {
-      created: false,
-      context: {
-        executionId: existing.id,
-        requestId: existing.request_id,
-        userId: existing.user_id,
-        channel: existing.channel,
-        triggerSource: existing.trigger_source,
-        idempotencyKey: existing.idempotency_key ?? undefined,
-        startedAt: existing.started_at ? new Date(existing.started_at).getTime() : Date.now(),
-      },
-    };
+    const existingAfterInsert = await findExecutionByIdempotencyKey(db, input.userId, input.idempotencyKey);
+    if (existingAfterInsert) return { created: false, context: executionContextFromRow(existingAfterInsert) };
+    throw error;
   }
+}
+
+type ExecutionRow = {
+  id: string;
+  user_id: string;
+  request_id: string;
+  channel: 'web' | 'whatsapp';
+  trigger_source: string;
+  idempotency_key: string | null;
+  started_at: string | null;
+  status: ExecutionStatus;
+};
+
+async function findExecutionByIdempotencyKey(db: DbClient, userId: string, idempotencyKey: string): Promise<ExecutionRow | null> {
+  const { data, error } = await db
+    .from('execution_runs')
+    .select('id,user_id,request_id,channel,trigger_source,idempotency_key,started_at,status')
+    .eq('user_id', userId)
+    .eq('idempotency_key', idempotencyKey)
+    .maybeSingle();
+  if (error) throw error;
+  return data as ExecutionRow | null;
+}
+
+function executionContextFromRow(existing: ExecutionRow): ExecutionContext {
+  return {
+    executionId: existing.id,
+    requestId: existing.request_id,
+    userId: existing.user_id,
+    channel: existing.channel,
+    triggerSource: existing.trigger_source,
+    idempotencyKey: existing.idempotency_key ?? undefined,
+    startedAt: existing.started_at ? new Date(existing.started_at).getTime() : Date.now(),
+  };
 }
 
 export async function updateExecutionRun(supabase: DbClient, context: ExecutionContext, input: { status: ExecutionStatus; interventionId?: string | null; failure?: unknown; candidateCount?: number; retryCount?: number; stageResults?: Record<string, unknown> }) {
