@@ -51,6 +51,8 @@ export type EditorialGates = {
   one_move: boolean;
   memory_integrity: boolean;
   psychological_progression?: boolean;
+  sema?: boolean;
+  intervention_fidelity?: boolean;
 };
 
 export type EditorialScore = {

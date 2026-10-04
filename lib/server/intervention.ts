@@ -11,6 +11,7 @@ import { planEditorial } from '@/lib/server/editorial-planner';
 import type { EditorialSignature } from '@/lib/editorial-contract';
 import { formulatePsychologicalIntervention } from '@/lib/psychological-contract';
 import { derivePsychologicalProgression, movementKey } from '@/lib/psychological-progression';
+import { buildInterventionBlueprint } from '@/lib/intervention-blueprint';
 
 type DbClient = SupabaseClient;
 type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; execution_context?: 'production' | 'qa' | null; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; editorial_idea?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null; situation?: string | null; intention?: string | null; editorial_type?: string | null; insight_id?: string | null; functional_emotion?: string | null; directiveness?: string | null; closing_type?: string | null; action_id?: string | null; editorial_signature?: EditorialSignature | null; editorial_score?: Record<string, unknown> | null; gate_results?: Record<string, unknown> | null; same_day_repetition?: boolean | null; saturation_state?: string | null; regeneration_reason?: string | null; longitudinal_evidence_refs?: string[] | null; slot?: string | null; local_date?: string | null };
@@ -129,6 +130,8 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   });
   appliedBrief.psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory });
   appliedBrief.editorialPlan = planEditorial({ desiredChange, currentContext: activeContext, communicationPreference: appliedBrief.communicationPreference, memory: editorialMemory, relevantTopics, feedbackGoal: appliedBrief.feedbackGoal, rejectedPatterns: appliedBrief.rejectedPatterns, psychologicalProgression: appliedBrief.psychologicalProgression });
+  appliedBrief.interventionBlueprint = buildInterventionBlueprint(appliedBrief);
+  appliedBrief.sema = appliedBrief.interventionBlueprint?.sema ?? null;
   const calibration = calibrationProfile;
   const recalibratedRecently = calibration?.status === 'resolved' && (calibration.reason === 'context_changed' || calibration.reason === 'desired_change_changed') && typeof calibration.resolved_at === 'string' && Date.now() - new Date(calibration.resolved_at).getTime() < 24 * 60 * 60 * 1000;
   if (recalibratedRecently) appliedBrief.generationConstraints = [...new Set([...(appliedBrief.generationConstraints ?? []), 'Este contexto u objetivo acaba de ser confirmado. Prioriza el dato nuevo y evita repetir el concepto, ángulo o estructura de intervenciones anteriores.'])];
@@ -181,8 +184,11 @@ function psychologicalSignature(candidate: InterventionCandidate, contract?: Int
     optionalAction: candidate.optionalAction ?? null,
     whyNow: candidate.whyNow ?? null,
     riskFlags: candidate.riskFlags ?? [],
-    psychologicalMovementKey: movementKey({ mechanismId: candidate.mechanismId, movement: candidate.psychologicalMove ?? candidate.movement, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }),
+    psychologicalMovementKey: movementKey({ mechanismId: candidate.mechanismId, movement: candidate.interventionBlueprint?.movement ?? candidate.movement ?? candidate.psychologicalMove, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }),
     psychologicalProgression: progression ?? null,
+    interventionBlueprint: candidate.interventionBlueprint ?? null,
+    sema: candidate.sema ?? null,
+    blueprintAudit: candidate.blueprintAudit ?? null,
   };
 }
 

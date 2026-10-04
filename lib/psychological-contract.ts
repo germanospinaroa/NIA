@@ -172,7 +172,8 @@ function hasExternalSituationAnchor(candidateText: string, contractText: string)
   const multipleVoices = /varias|opiniones|mas opiniones|otra opinion|otras personas|los demas|que haria/.test(candidate);
   const sequenceAfterDecision = /despues de (tomar|decidir)|luego de (tomar|decidir)|despues de decidir/.test(candidate);
   const persistenceAfterCriterion = /aunque|aun asi|aun cuando|ya (tien|tom|decid|reconoc)[^.!?]{0,120}(opinion|consult|pregunt)|ya [^.!?]{0,100}(criterio|respuesta|decision)[^.!?]{0,160}(opinion|consult|pregunt)/.test(candidate);
-  return consultation && priorCriterion && (sequenceAfterDecision || (multipleVoices && persistenceAfterCriterion));
+  const conditionAnchor = /condicion|condiciones|opcion.*cumplir|referencia concreta|criterio propio/.test(candidate);
+  return consultation && (priorCriterion || conditionAnchor) && (sequenceAfterDecision || (multipleVoices && (persistenceAfterCriterion || conditionAnchor)));
 }
 
 export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInput, contract: PsychologicalInterventionContract) {

@@ -3,6 +3,7 @@ import type { CanonicalEditorialType, ClosingType, Directiveness, EditorialGates
 import { evaluateEditorialGates, sameDayRepetition, scoreEditorialCandidate } from './editorial-contract.ts';
 import { evaluatePsychologicalValue, type PsychologicalInterventionContract } from './psychological-contract.ts';
 import { progressionForCandidate, type PsychologicalProgression } from './psychological-progression.ts';
+import { auditBlueprintFidelity, type BlueprintAudit, type InterventionBlueprint, type SemaContract } from './intervention-blueprint.ts';
 
 export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distinguish' | 'interrupt' | 'permit' | 'anchor' | 'redirect';
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
@@ -76,6 +77,8 @@ export type InterventionBrief = {
   sameDayEditorialSignature?: { topic?: string | null; interventionType?: string | null; editorialTake?: string | null; editorialIdea?: string | null; experienceType?: string | null; functionalEmotion?: string | null; directiveness?: string | null; closingType?: string | null; actionId?: string | null; insightId?: string | null; structure?: string | null };
   psychologicalContract?: PsychologicalInterventionContract;
   psychologicalProgression?: PsychologicalProgression;
+  interventionBlueprint?: InterventionBlueprint | null;
+  sema?: SemaContract | null;
 };
 
 export type CalibrationOption = { id: string; label: string; context_value: string };
@@ -158,6 +161,9 @@ export type InterventionCandidate = {
   riskFlags?: string[];
   psychologicalValue?: ReturnType<typeof evaluatePsychologicalValue>;
   psychologicalProgression?: { approved: boolean; key: string | null; reason: string | null; validDeepening: boolean };
+  interventionBlueprint?: InterventionBlueprint | null;
+  blueprintAudit?: BlueprintAudit;
+  sema?: SemaContract | null;
   editorialScore?: EditorialScore | null;
   gateResults?: EditorialGates;
   sameDayRepetition?: boolean;
@@ -485,7 +491,16 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (!gateResults.memory_integrity && !reasons.includes('unsupported_personal_context')) reasons.push('memory_integrity');
   const psychologicalValue = brief.psychologicalContract ? evaluatePsychologicalValue(candidate, brief.psychologicalContract) : null;
   if (psychologicalValue && !psychologicalValue.approved) reasons.push(...psychologicalValue.reasons);
-  const progression = progressionForCandidate({ mechanismId: candidate.mechanismId, movement: candidate.psychologicalMove ?? candidate.movement, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }, brief.psychologicalProgression);
+  // Legacy/unit briefs without a psychological contract remain testable; all
+  // production briefs with sufficient context receive the server blueprint.
+  const blueprintAudit = brief.interventionBlueprint
+    ? auditBlueprintFidelity(candidate, brief.interventionBlueprint)
+    : { sema: true, fidelity: true, reasons: [] };
+  if (!blueprintAudit.sema) reasons.push('sema_gate');
+  if (!blueprintAudit.fidelity) reasons.push(...blueprintAudit.reasons.map(reason => `intervention_fidelity_${reason}`));
+  // Keep the machine-readable trajectory key separate from the human-facing
+  // movement description used by the one-move/value checks.
+  const progression = progressionForCandidate({ mechanismId: candidate.mechanismId, movement: candidate.interventionBlueprint?.movement ?? candidate.movement ?? candidate.psychologicalMove, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }, brief.psychologicalProgression);
   if (!progression.approved && progression.reason) reasons.push(`psychological_progression_${progression.reason}`);
   if (structureCount >= 1) warnings.push('recent_structure_reuse');
   if (!firstReadPasses && !hasRoboticLanguage) warnings.push('first_read_comprehension');
@@ -510,7 +525,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, first_read_comprehension: firstReadPasses, robotic_or_abstract_language: !hasRoboticLanguage, editorial_novelty: !repeatedEditorialIdea, acceptable_length: wordCount <= 220, no_unnecessary_question: true,
     value_structure: hasValue, psychological_value: psychologicalValue?.approved ?? true, why_this_message: Boolean(psychologicalValue?.whyThisMessage || !brief.psychologicalContract), counterfactual_specificity: psychologicalValue?.counterfactual_passed ?? true, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
-  const gates: EditorialGates = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity, psychological_progression: progression.approved };
+  const gates: EditorialGates = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity, psychological_progression: progression.approved, sema: blueprintAudit.sema, intervention_fidelity: blueprintAudit.fidelity };
   const editorialScore = scoreEditorialCandidate({
     gates,
     relevant: Boolean(brief.desiredChange),
@@ -520,13 +535,15 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     natural: firstReadPasses && !hasChatbotLanguage && !hasCoachingLanguage && !hasRoboticLanguage,
     autonomy: !hasAbsoluteClaim,
     timing: !structureCount && !sameDay.repeated,
-    closingFit: true,
+    closingFit: blueprintAudit.fidelity,
   });
   if (editorialScore && editorialScore.total < 60) reasons.push('editorial_score_too_low');
   if (editorialScore) checks.editorial_score = editorialScore.total;
-  checks.truth_gate = gateResults.truth; checks.safety_gate = gateResults.safety; checks.scope_gate = gateResults.scope; checks.one_move_gate = gateResults.one_move; checks.memory_integrity = gateResults.memory_integrity; checks.same_day_repetition = !sameDay.repeated; checks.psychological_progression = progression.approved; checks.psychological_movement_key = progression.key ?? 'none';
+  checks.truth_gate = gateResults.truth; checks.safety_gate = gateResults.safety; checks.scope_gate = gateResults.scope; checks.one_move_gate = gateResults.one_move; checks.memory_consent_gate = gateResults.memory_integrity; checks.sema_gate = blueprintAudit.sema; checks.intervention_fidelity_gate = blueprintAudit.fidelity; checks.memory_integrity = gateResults.memory_integrity; checks.same_day_repetition = !sameDay.repeated; checks.psychological_progression = progression.approved; checks.psychological_movement_key = progression.key ?? 'none';
   candidate.gateResults = gates;
   candidate.psychologicalProgression = progression;
+  candidate.interventionBlueprint = brief.interventionBlueprint ?? null;
+  candidate.blueprintAudit = blueprintAudit;
   candidate.psychologicalValue = psychologicalValue ?? undefined;
   candidate.editorialScore = editorialScore;
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };

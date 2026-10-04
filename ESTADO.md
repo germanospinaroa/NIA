@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Motor real de intervenciones — 2026-10-04
+- Añadido blueprint server-side y contrato SEMA antes de la generación: señal, enlace, movimiento, apertura, insight, herramienta/microacción, transferencia, evidencia, timing y prohibiciones.
+- Integrados los 10 tipos canónicos (`espejo_contextual`, `reencuadre`, `distincion`, `pregunta_precision`, `preparacion_situacional`, `microaccion`, `interrupcion_breve`, `recuperacion_posterior`, `evidencia_longitudinal`, `recalibracion`) y gates `sema`/`intervention_fidelity`; la metadata se conserva en `editorial_signature`, sin migración.
+- El LLM recibe el blueprint como contrato autoritativo; la clave interna de progresión queda separada de la descripción humana del movimiento para no romper `one_move` ni la trayectoria.
+- Regresiones de blueprint, progresión, psychological value, context anchoring, AI y E2E controlado pasan. La aceptación real de generación final `4b56de25-8810-4c8d-b169-83b6f0eef487` produjo 3 candidatas y seleccionó la intervención `7a15062d-06c0-464e-94ad-fd746ab12d0c`; OpenAI gpt-6-luna, sin composer/delivery/Evolution/WhatsApp por diseño.
+- Deployment pendiente de commit y publicación.
+
 ## Progresión psicológica — 2026-10-04
 - Añadida una trayectoria determinista dentro del brief y de la firma editorial: objetivo, patrón, estado actual, movimientos completados/recientes, siguiente movimiento, razones y takeaways recientes.
 - El planner ahora expone `target_movement`, `builds_on_previous`, `intentionally_not_repeating` y `expected_progression`; el prompt recibe esa trayectoria y el gate `psychological_progression` rechaza repetición de movimiento o takeaway aunque cambie el wording.
