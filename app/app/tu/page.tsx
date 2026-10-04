@@ -9,6 +9,8 @@ import { guidedSuggestions, intentionLabel, intentionOptions, type IntentionKey,
 type CommunicationPreference = 'idea' | 'practical' | 'structured' | 'adaptive';
 type Profile = { first_name?: string; direction_key?: string | null; direction_text?: string | null; desired_change_original?: string | null; communication_preference?: CommunicationPreference | null; message_frequency?: number; message_time_1?: string | null; message_time_2?: string | null; timezone?: string | null };
 type Subscription = { plan_name?: string | null; plan_key?: string | null; status?: string | null; trial?: boolean | null; trial_ends_at?: string | null; current_period_end?: string | null; next_billing_at?: string | null; access_until?: string | null; cancel_requested_at?: string | null };
+type CalibrationOption = { id: string; label: string; context_value: string };
+type CalibrationPrompt = { question: string; options: CalibrationOption[]; allow_free_text?: boolean };
 type Draft = { directionKey: IntentionKey | ''; customText: string; communicationPreference: CommunicationPreference; frequency: 1 | 2; time: string; secondTime: string; timezone: string };
 
 function profileDraft(profile: Profile): Draft {
@@ -30,6 +32,8 @@ export default function TuPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState('');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [calibration, setCalibration] = useState<CalibrationPrompt | null>(null);
+  const [calibrationText, setCalibrationText] = useState('');
   const [draft, setDraft] = useState<Draft>({ directionKey: '', customText: '', communicationPreference: 'adaptive', frequency: 1, time: '', secondTime: '', timezone: 'UTC' });
   const [savedDraft, setSavedDraft] = useState<Draft | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
@@ -39,6 +43,7 @@ export default function TuPage() {
   const [whatsapp, setWhatsapp] = useState<WhatsAppConnectionState>({ status: 'not_connected' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [calibrationSaving, setCalibrationSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -50,13 +55,15 @@ export default function TuPage() {
   }
 
   useEffect(() => {
-    Promise.all([fetch('/api/profile'), fetchWhatsApp(), fetch('/api/subscription'), fetch('/api/admin/access')]).then(async ([profileResponse, whatsappState, subscriptionResponse, adminResponse]) => {
+    Promise.all([fetch('/api/profile'), fetchWhatsApp(), fetch('/api/subscription'), fetch('/api/admin/access'), fetch('/api/calibration')]).then(async ([profileResponse, whatsappState, subscriptionResponse, adminResponse, calibrationResponse]) => {
       const result = await profileResponse.json().catch(() => ({}));
       const subscriptionResult = await subscriptionResponse.json().catch(() => ({}));
+      const calibrationResult = await calibrationResponse.json().catch(() => ({}));
       if (!profileResponse.ok || !result.profile) throw new Error('profile');
       const next = result.profile as Profile;
       const initial = profileDraft(next);
       setProfile(next); setEmail(result.email ?? ''); setDraft(initial); setSavedDraft(initial); setWhatsapp(whatsappState as WhatsAppConnectionState); setSubscription(subscriptionResult.subscription ?? null); setIsAdmin(adminResponse.ok);
+      setCalibration(calibrationResult.status === 'calibration_required' ? calibrationResult.calibration ?? null : null);
     }).catch(() => setError('No pudimos cargar tu configuración. Vuelve a intentarlo.')).finally(() => setLoading(false));
     return undefined;
   }, []);
@@ -100,6 +107,20 @@ export default function TuPage() {
     } finally { setSaving(false); }
   }
 
+  async function submitCalibration(option?: CalibrationOption) {
+    const freeText = calibrationText.trim();
+    if (!option && !freeText) return;
+    setCalibrationSaving(true); setError('');
+    try {
+      const response = await fetch('/api/calibration', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ selected_option: option?.id, free_text: freeText || undefined }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'CALIBRATION_ERROR');
+      if (result.profile) setProfile(result.profile);
+      setCalibration(null); setCalibrationText(''); setSavedMessage('Contexto guardado. NIA ya puede trabajar con esta situación.');
+    } catch { setError('No pudimos guardar este contexto. Inténtalo de nuevo.'); }
+    finally { setCalibrationSaving(false); }
+  }
+
   async function disconnect() { const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' }); if (!response.ok) { setError('No pudimos desconectar este WhatsApp. Inténtalo de nuevo.'); return; } setWhatsapp(await fetchWhatsApp() as WhatsAppConnectionState); }
   async function sendTest() { const response = await fetch('/api/whatsapp/test', { method: 'POST' }); const result = await response.json().catch(() => ({})); if (!response.ok) { setError(result.message || 'No pudimos enviar el mensaje de prueba.'); return; } setWhatsapp(current => ({ ...current, message: 'Mensaje enviado.' })); }
   async function cancelSubscription() { if (!window.confirm('¿Quieres cancelar tu suscripción? Hotmart mantendrá tu acceso hasta la fecha indicada.')) return; const response = await fetch('/api/subscription/cancel', { method: 'POST' }); const result = await response.json().catch(() => ({})); if (!response.ok) { setError(result.error === 'cancellation_not_configured' ? 'La cancelación todavía no está configurada.' : 'No pudimos solicitar la cancelación. Inténtalo de nuevo.'); return; } setSubscription(result.subscription); }
@@ -119,6 +140,7 @@ export default function TuPage() {
   return <MvpShell><section className="pt-8 pb-12 sm:pt-12"><h1 className="max-w-[720px] text-[clamp(39px,7vw,76px)] leading-[.94] tracking-[-.06em] [font-family:var(--font-display)]">Lo esencial para que NIA trabaje contigo.</h1>
     {error && <p role="alert" className="mt-6 border-l-2 border-red-700 pl-4 text-[14px] text-red-800">{error}</p>}
     <section className="mt-12 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Tu cuenta</h2><div className="mt-5 border-l-2 border-[var(--accent)] pl-5"><p className="text-[21px] [font-family:var(--font-display)]">{profile?.first_name || 'Tu cuenta'}</p><p className="mt-2 text-[15px] text-[var(--text-secondary)]">{email}</p>{isAdmin && <Link href="/admin" className="mt-5 inline-flex min-h-11 items-center rounded-[var(--radius-button)] bg-[var(--text-primary)] px-4 py-3 text-[13px] font-semibold text-[var(--bg)]">Administración</Link>}</div></section>
+    {calibration && <section className="mt-10 border-t border-black/10 pt-8" aria-labelledby="calibration-title"><h2 id="calibration-title" className="text-[28px] [font-family:var(--font-display)]">Cuéntame un poco más</h2><p className="mt-3 max-w-[620px] text-[15px] text-[var(--text-secondary)]">{calibration.question}</p><div className="mt-5 grid max-w-[620px] gap-2">{calibration.options.map(option => <button key={option.id} type="button" disabled={calibrationSaving} onClick={() => submitCalibration(option)} className="min-h-14 rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] p-4 text-left text-[15px] transition-colors hover:border-[var(--accent)] disabled:opacity-50">{option.label}</button>)}</div>{calibration.allow_free_text !== false && <div className="mt-5 max-w-[620px]"><label htmlFor="calibration-context" className="text-[12px] font-bold uppercase tracking-[.12em] text-[var(--text-tertiary)]">O cuéntamelo con tus palabras</label><textarea id="calibration-context" value={calibrationText} onChange={event => setCalibrationText(event.target.value)} maxLength={500} placeholder="Por ejemplo: cuando alguien cuestiona una decisión que ya tomé…" className="mt-2 min-h-24 w-full resize-y rounded-[var(--radius-card)] border border-black/10 bg-[var(--bg)] p-4 text-[16px] outline-none focus:border-[var(--accent)]" /><button type="button" disabled={!calibrationText.trim() || calibrationSaving} onClick={() => submitCalibration()} className="mt-3 min-h-11 rounded-[var(--radius-button)] bg-[var(--accent)] px-5 text-[13px] font-semibold text-[var(--bg)] disabled:opacity-40">{calibrationSaving ? 'Guardando…' : 'Guardar contexto'}</button></div>}</section>}
     <section className="mt-12 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">Tu plan</h2><div className="mt-5 max-w-[620px] border-l-2 border-[var(--accent)] pl-5"><p className="text-[21px] [font-family:var(--font-display)]">{subscription?.plan_name || subscription?.plan_key || 'Plan no disponible'}</p><p className="mt-2 text-[14px] font-semibold text-[var(--accent)]">{plan.label}</p><p className="mt-2 text-[14px] text-[var(--text-secondary)]">{plan.detail}</p>{plan.billing && <p className="mt-2 text-[14px] text-[var(--text-secondary)]">{plan.billing}</p>}{subscription && !['canceled','cancelled','overdue','past_due'].includes(subscription.status || '') && !subscription.cancel_requested_at && <button type="button" onClick={cancelSubscription} className="mt-5 min-h-11 rounded-[var(--radius-button)] border border-black/15 px-4 text-[13px] font-semibold">Cancelar suscripción</button>}</div></section>
     <section className="mt-10 border-t border-black/10 pt-8"><h2 className="text-[28px] [font-family:var(--font-display)]">¿Qué te gustaría empezar a cambiar en ti?</h2><p className="mt-3 max-w-[620px] text-[15px] text-[var(--text-secondary)]">Elige aquello en lo que quieres que NIA te apoye.</p><div className="mt-6 grid gap-2">{intentionOptions.map(option => <button key={option.key} type="button" onClick={() => chooseIntention(option.key)} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[15px] transition-colors ${draft.directionKey === option.key ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)] hover:border-[var(--accent)]/60'}`}>{option.label}</button>)}<button type="button" onClick={() => chooseIntention('custom')} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[15px] ${draft.directionKey === 'custom' ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)]'}`}>Hay algo más que quiero trabajar.</button><button type="button" onClick={() => chooseIntention('intention_unclear')} className={`min-h-14 rounded-[var(--radius-card)] border p-4 text-left text-[15px] ${draft.directionKey === 'intention_unclear' ? 'border-[var(--accent)] bg-[var(--chip-bg)]' : 'border-black/10 bg-[var(--surface)]'}`}>Todavía no sé qué quiero trabajar.</button></div>
       {customOpen && <div className="mt-6 rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] p-5"><h3 className="text-[22px] [font-family:var(--font-display)]">Cuéntame qué quieres trabajar.</h3><p className="mt-2 text-[14px] text-[var(--text-secondary)]">No tienes que explicarlo perfecto. Escríbelo como se lo contarías a una amiga.</p><textarea value={draft.customText} onChange={event => setDraft(current => ({ ...current, directionKey: 'custom', customText: event.target.value }))} placeholder="Quiero empezar a..." className="mt-4 min-h-28 w-full resize-none rounded-[var(--radius-card)] border border-black/10 bg-[var(--bg)] p-4 text-[16px] outline-none focus:border-[var(--accent)]" /><p className="mt-4 text-[12px] text-[var(--text-secondary)]">Guarda los cambios cuando estés lista.</p></div>}

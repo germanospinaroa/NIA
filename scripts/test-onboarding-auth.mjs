@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const page = fs.readFileSync('app/onboarding/page.tsx', 'utf8');
+const settingsPage = fs.readFileSync('app/app/tu/page.tsx', 'utf8');
 const middleware = fs.readFileSync('middleware.ts', 'utf8');
 const calibration = fs.readFileSync('app/api/calibration/route.ts', 'utf8');
 
@@ -19,6 +20,9 @@ assert.match(middleware, /return supabaseResponse/);
 assert.match(calibration, /export async function GET/);
 assert.match(calibration, /export async function POST/);
 assert.match(calibration, /success: true/);
+assert.match(settingsPage, /fetch\('\/api\/calibration'\)/);
+assert.match(settingsPage, /submitCalibration/);
+assert.match(settingsPage, /Guardar contexto/);
 
 const baseUrl = process.env.NIA_TEST_BASE_URL;
 const statePath = process.env.NIA_TEST_STORAGE_STATE;

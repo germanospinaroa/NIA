@@ -36,11 +36,13 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
   const providerEvidence = (rows: NonNullable<typeof providerCalls>) => rows.length ? rows.map(row => `${row.operation}: ${row.status}${row.model ? ` (${row.model})` : ''}${row.error_code ? ` · ${row.error_code}` : ''}${row.error_message ? ` · ${row.error_message}` : ''}`) : [];
   const hasEvent = (eventType: string) => (events ?? []).some(row => row.event_type === eventType);
   const stage = (name: string, status: QaStageStatus, evidence: string[] = []) => ({ stage: name, status, evidence });
+  const psychologicalStage = stageResults.psychological_contract && typeof stageResults.psychological_contract === 'object' ? stageResults.psychological_contract as Record<string, unknown> : null;
   const stages: QaStage[] = [
     stage('Execution run', execution ? 'PASS' : 'FAIL', execution ? [`status=${execution.status}`, `execution_id=${execution.id}`] : []),
     stage('Brief', stageResults.brief ? 'PASS' : hasEvent('generation_started') ? 'PASS' : 'NOT REACHED', stageResults.brief ? ['recorded'] : hasEvent('generation_started') ? ['generation_started confirms brief completed'] : []),
     stage('Editorial memory', stageResults.editorial_memory ? 'PASS' : hasEvent('generation_started') ? 'PASS' : 'NOT REACHED', stageResults.editorial_memory ? ['recorded'] : hasEvent('generation_started') ? ['generation_started confirms memory stage completed'] : []),
     stage('Planner', stageResults.planner ? 'PASS' : hasEvent('generation_started') ? 'PASS' : 'NOT REACHED', stageResults.planner ? ['recorded'] : hasEvent('generation_started') ? ['generation_started confirms planner completed'] : []),
+    stage('Psychological contract', psychologicalStage ? (psychologicalStage.sufficient === false ? 'FAIL' : 'PASS') : 'NOT REACHED', psychologicalStage ? [`sufficient=${String(psychologicalStage.sufficient)}`, `mechanism=${String(psychologicalStage.mechanism_id ?? 'NOT AVAILABLE')}`] : []),
     stage('OpenAI', generationCall.some(row => row.status === 'success') ? 'PASS' : generationCall.length ? 'FAIL' : 'NOT REACHED', providerEvidence(generationCall)),
     stage('Candidates', evaluated > 0 ? 'PASS' : 'NOT REACHED', evaluated > 0 ? [`${evaluated} evaluated`] : []),
     stage('Gates', evaluated > 0 ? 'PASS' : 'NOT REACHED', evaluated > 0 ? [`${approved} approved`, `${Math.max(0, evaluated - approved)} rejected`] : []),
@@ -216,11 +218,14 @@ export async function POST(request: Request) {
   }
   const slot = qaSlot(run.context.executionId);
 
+  let preparedBrief: Awaited<ReturnType<typeof buildBrief>>['brief'] | null = null;
   try {
     const [{ brief }, memory] = await Promise.all([buildBrief(admin, userId, 'intention'), loadEditorialMemory(admin, userId, now)]);
+    preparedBrief = brief;
     await recordExecutionStage(admin, run.context, 'brief', { status: 'completed' });
     await recordExecutionStage(admin, run.context, 'editorial_memory', { status: 'completed', recent_count: memory.recent.length });
     await recordExecutionStage(admin, run.context, 'planner', { status: 'completed', strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null });
+    await recordExecutionStage(admin, run.context, 'psychological_contract', { status: brief.psychologicalContract?.sufficient ? 'completed' : 'insufficient', sufficient: brief.psychologicalContract?.sufficient ?? false, situation: brief.psychologicalContract?.situation ?? null, observable_pattern: brief.psychologicalContract?.observable_pattern ?? null, mechanism_id: brief.psychologicalContract?.mechanism_id ?? null, psychological_move: brief.psychologicalContract?.psychological_move ?? null, expected_movement: brief.psychologicalContract?.expected_movement ?? null, why_now: brief.psychologicalContract?.why_now ?? null });
     await recordAdminAudit(admin, {
       adminUserId: access.user.id,
       action: 'plan_qa_daily_intervention',
@@ -280,6 +285,9 @@ export async function POST(request: Request) {
     await updateExecutionRun(admin, run.context, { status: 'failed', failure: error });
     const trace = await qaTrace(admin, run.context.executionId, userId, run.context.startedAt);
     console.error('[admin-qa-daily-intervention] failed', { executionId: run.context.executionId, userId, reason: error instanceof Error ? error.message : 'unknown' });
-    return NextResponse.json({ error: 'qa_execution_failed', execution_run_id: run.context.executionId, qa_trace: trace }, { status: 500 });
+    const contract = preparedBrief?.psychologicalContract;
+    const psychologicalContract = contract ? { situation: contract.situation, observable_pattern: contract.observable_pattern, user_direction: contract.user_direction, friction: contract.friction, mechanism_id: contract.mechanism_id, mechanism_confidence: contract.mechanism_confidence, intervention_purpose: contract.intervention_purpose, psychological_move: contract.psychological_move, expected_movement: contract.expected_movement, takeaway: contract.takeaway, why_now: contract.why_now, sufficient: contract.sufficient, risk_flags: contract.risk_flags } : null;
+    const failureStage = error instanceof Error && error.message === 'insufficient_intervention_basis' ? 'Psychological contract' : 'Editorial pipeline';
+    return NextResponse.json({ error: 'qa_execution_failed', execution_run_id: run.context.executionId, editorial_status: 'failed', editorial: preparedBrief?.editorialPlan ? { strategy: preparedBrief.editorialPlan.strategy, topic: preparedBrief.editorialPlan.recommended_topic, intervention_type: preparedBrief.editorialPlan.preferred_or_recommended_intervention_type, depth: preparedBrief.editorialPlan.recommended_depth } : null, psychological_contract: psychologicalContract, failure_stage: failureStage, qa_trace: trace }, { status: 500 });
   }
 }

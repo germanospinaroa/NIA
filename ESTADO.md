@@ -1,5 +1,17 @@
 # ESTADO — NIA
 
+## QA y calibración accesible — 2026-10-04
+- La trazabilidad de `/api/admin/qa/daily-intervention` ahora conserva y devuelve planner, contrato psicológico y primera etapa fallida cuando una QA termina antes de generación; la UI ya no depende de un estado `approved` implícito en ese error.
+- `/app/tú` reutiliza `/api/calibration` para que cuentas existentes completen `relevant_situations` mediante opciones o texto libre. La API guarda `context_history`, actualiza `profiles.current_context_original` y resuelve `learning_profile.calibration`.
+- No se modificaron el contrato psicológico, gates, generación, delivery, WhatsApp, Evolution, cron ni esquema. No deployment ni QA real.
+
+## Corrección de ambigüedad en claim QA — 2026-10-03
+- Creada la migración aditiva `supabase/migrations/20261004160000_fix_claim_qa_execution_run_ambiguity.sql`.
+- Reemplaza únicamente `public.claim_qa_execution_run()` y califica todas las referencias a `execution_runs` para evitar colisiones con los nombres de salida de `RETURNS TABLE`.
+- Mantiene idempotencia QA, concurrencia de una ejecución activa, stale a 15 minutos y permisos `service_role`.
+- Tests QA, idempotencia, observabilidad, TypeScript y build pasan; lint conserva cuatro warnings heredados. `test:intervention` y `test:flexible-interventions` siguen con sus fallos preexistentes.
+- Deployment: NOT DEPLOYED. Production: SIN CAMBIOS. QA real: NO EJECUTADA.
+
 ## Corrección de idempotencia QA — 2026-10-03
 - Corregido el desajuste entre `request_id` UUID de Production y la clave legible `admin_qa:<user>:<fecha>`. El endpoint QA genera ahora un UUID real para `request_id` y conserva la clave determinista en `idempotency_key`.
 - `startIdempotentExecutionRun()` busca primero por `user_id + idempotency_key` y recupera la ejecución ganadora si una inserción concurrente encuentra una restricción única.
@@ -787,3 +799,12 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - `/api/daily` persiste el mensaje completo ya compuesto; `/app` reutiliza ese mismo contenido, sin una versión distinta para web. La intervención base, auditoría y selección del motor no cambian.
 - Tests de compositor: franjas Bogotá, timezone alternativo, nombre ausente sin fallback, cierres y no repetición inmediata. Producción desplegada; `/` y `/descubre` siguen respondiendo 200.
 - Limitación real: el repositorio no contiene actualmente un job/ruta que envíe intervenciones diarias por WhatsApp; solo existen outbound de confirmación y mensaje de prueba. No se afirma que el envío diario esté activo.
+
+## Fase 4H — Separación de idempotencia QA/producción — 2026-10-03
+- QA ya no usa una clave diaria compartida. Cada ejecución genera su propio `admin_qa:<qa_run_id>` y su propio slot `qa:<execution_run_id>`, por lo que varias pruebas terminadas pueden coexistir sin consumir los slots ni la idempotencia diaria de producción.
+- La concurrencia accidental se limita con `execution_runs.execution_context`, `concurrency_key` y un índice único parcial para estados activos (`started`, `generating`, `auditing`). Al terminar una QA, el bloqueo desaparece.
+- Las intervenciones y candidatas nuevas conservan `execution_context` (`production` o `qa`). La memoria editorial y el brief productivo excluyen QA; el composer también excluye interacciones con slots `qa:`. El feedback QA se persiste como feedback, pero no crea `learning_signals` productivos.
+- La UI de `/admin/users/[id]` vuelve a habilitar `Ejecutar otra prueba` después de una ejecución terminada; solo bloquea mientras hay una ejecución activa.
+- Migración pendiente de aplicar: `supabase/migrations/20261003153000_qa_execution_context.sql`. No se hizo deployment ni prueba real; OpenAI, Evolution, WhatsApp y cron: 0.
+- QA usa el mismo `composeNiaMessage()` de producción. La exclusión ocurre después: memoria/interacciones productivas ignoran QA y el feedback QA no crea `learning_signals` productivos.
+- La reclamación QA es transaccional mediante `claim_qa_execution_run`: una ejecución activa menor o igual a 15 minutos bloquea la siguiente; una mayor se marca `failed` con `qa_stale_execution`, conserva trazabilidad y permite crear la nueva. Producción no entra en esta función.
