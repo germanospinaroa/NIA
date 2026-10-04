@@ -153,6 +153,19 @@ function hasFillerClosing(candidate: PsychologicalCandidateInput, candidateText:
   return Boolean((closing && filler.test(closing)) || /(?:descansa\.?\s*manana seguimos|nos leemos manana|aqui estare|pruebalo cuando tengas oportunidad)\s*[.!]*$/i.test(candidateText));
 }
 
+function hasExternalSituationAnchor(candidateText: string, contractText: string) {
+  const candidate = normalized(candidateText);
+  const contract = normalized(contractText);
+  const questioningInContext = /cuestion|desacuerdo/.test(contract);
+  const questioningInMessage = /cuestion|desacuerdo/.test(candidate);
+  if (questioningInContext && questioningInMessage) return true;
+  const consultation = /opinion|consejo|consult|pregunt/.test(candidate);
+  const priorCriterion = /ya (tien|tom|decid)|criterio|respuesta propia|despues de (tomar|decidir)|antes de (volver a )?pregunt/.test(candidate);
+  const multipleVoices = /varias|mas opiniones|otra opinion|otras personas|los demas|que haria/.test(candidate);
+  const sequenceAfterDecision = /despues de (tomar|decidir)|luego de (tomar|decidir)|despues de decidir/.test(candidate);
+  return consultation && priorCriterion && (multipleVoices || sequenceAfterDecision);
+}
+
 export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInput, contract: PsychologicalInterventionContract) {
   const mechanism = psychologicalMechanisms.find(item => item.id === candidate.mechanismId);
   const candidateText = normalized(candidate.text);
@@ -164,7 +177,9 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
   const situationAnchors = [...context].filter(token => token.length >= 5 && !['alguien', 'cuando', 'tienes', 'tomaste', 'otra', 'persona'].includes(token));
   const situationAnchorHits = situationAnchors.filter(token => candidateText.includes(token)).length;
   const transferSignal = hasTransferSignal(candidate, candidateText);
-  const contextAnchorSpecificity = situationAnchors.length < 3 || situationAnchorHits >= 3 || (situationMatches && situationAnchorHits >= 2 && transferSignal);
+  const contextAnchorSpecificity = contract.mechanism_id === 'external_validation'
+    ? hasExternalSituationAnchor(candidate.text, `${contract.situation} ${contract.observable_pattern}`)
+    : situationAnchors.length < 3 || situationAnchorHits >= 3 || (situationMatches && situationAnchorHits >= 2 && transferSignal);
   const takeaway = candidate.takeaway?.trim() ?? '';
   const genericTakeaways = /^(confia en ti|recuerda que eres capaz|escucha lo que necesitas|date permiso para confiar|la duda no significa que estes equivocada|una duda no define quien eres)[.! ]*$/i.test(takeaway) || /frase bonita|frase general|sentirte mejor|seguir adelante|todo estara bien/i.test(takeaway);
   const movement = candidate.psychologicalMove?.trim() ?? '';
