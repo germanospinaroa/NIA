@@ -12,6 +12,9 @@ const structuredCandidate = {
   topic: 'criterio propio', editorial_take: 'Escuchar una objeción no convierte la duda en evidencia.', editorial_idea: 'Una objeción no es evidencia de error.', experience_type: 'exercise', intervention_type: 'step_by_step', depth: 'medium',
   blocks: [{ type: 'recognition', text: 'Cuando tu jefe cuestiona una decisión, notas que empiezas a mirar tu criterio con sus ojos.' }, { type: 'step', text: 'Anota qué pensabas antes de escucharla.' }, { type: 'step', text: 'Revisa si apareció un dato nuevo o solo una opinión diferente.' }],
   function: 'anticipate', concept: 'self_trust', angle: 'revisar datos antes de cambiar', structure: 'when_then',
+  editorial_type: 'situational_preparation', functional_emotion: 'claridad', directiveness: 'suggestive', closing_type: 'none',
+  signal: 'Alguien cuestiona una decisión ya tomada.', evidence_direction: 'Comprobar si apareció un dato nuevo.', movement: 'Distinguir información de opinión.', opening_closing: 'La revisión empieza separando opinión y evidencia.',
+  mechanism_id: 'external_validation', mechanism_confidence: 'medium', intervention_purpose: 'Separar información de entregar la decisión.', psychological_move: 'Distinguir información de entregar la decisión.', expected_movement: 'Podrás revisar qué cambió antes de decidir.', takeaway: 'Escuchar información no equivale a entregar la decisión.', optional_action: null, why_now: 'Una decisión fue cuestionada y hay que distinguir opinión de información.', risk_flags: [],
 };
 const composedStructured = composeCandidateText(structuredCandidate);
 assert.equal(composedStructured.split('\n').filter(line => /^\d+\. /.test(line)).length, 2);

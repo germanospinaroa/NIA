@@ -40,6 +40,7 @@
     "test:flexible-interventions": "node --experimental-strip-types scripts/test-flexible-interventions.mjs",
     "test:ai-regressions": "node --experimental-strip-types scripts/test-ai-regressions.mjs",
     "test:intention-value": "node --experimental-strip-types scripts/test-intention-value.mjs",
+    "test:psychological-value": "node --experimental-strip-types scripts/test-psychological-value.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",
     "semantic:replay": "node scripts/replay-semantic-calibration.mjs"

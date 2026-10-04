@@ -30,6 +30,16 @@ export type EditorialSignature = {
   territoryKey?: string | null;
   structure?: string | null;
   depth?: string | null;
+  psychologicalContract?: Record<string, unknown> | null;
+  mechanismId?: string | null;
+  mechanismConfidence?: string | null;
+  interventionPurpose?: string | null;
+  psychologicalMove?: string | null;
+  expectedMovement?: string | null;
+  takeaway?: string | null;
+  optionalAction?: string | null;
+  whyNow?: string | null;
+  riskFlags?: string[] | null;
 };
 
 export type EditorialGates = {

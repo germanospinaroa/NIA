@@ -1,6 +1,7 @@
 import type { VoiceStyle } from './mvp';
 import type { CanonicalEditorialType, ClosingType, Directiveness, EditorialGates, EditorialScore, FunctionalEmotion } from './editorial-contract.ts';
 import { evaluateEditorialGates, sameDayRepetition, scoreEditorialCandidate } from './editorial-contract.ts';
+import { evaluatePsychologicalValue, type PsychologicalInterventionContract } from './psychological-contract.ts';
 
 export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distinguish' | 'interrupt' | 'permit' | 'anchor' | 'redirect';
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
@@ -72,6 +73,7 @@ export type InterventionBrief = {
   communicationPreference?: 'idea' | 'practical' | 'structured' | 'adaptive';
   editorialPlan?: EditorialPlan;
   sameDayEditorialSignature?: { topic?: string | null; interventionType?: string | null; editorialTake?: string | null; editorialIdea?: string | null; experienceType?: string | null; functionalEmotion?: string | null; directiveness?: string | null; closingType?: string | null; actionId?: string | null; insightId?: string | null; structure?: string | null };
+  psychologicalContract?: PsychologicalInterventionContract;
 };
 
 export type CalibrationOption = { id: string; label: string; context_value: string };
@@ -143,6 +145,16 @@ export type InterventionCandidate = {
   closingType?: ClosingType;
   actionId?: string;
   longitudinalEvidenceRefs?: string[];
+  mechanismId?: string;
+  mechanismConfidence?: 'high' | 'medium' | 'low';
+  interventionPurpose?: string;
+  psychologicalMove?: string;
+  expectedMovement?: string;
+  takeaway?: string;
+  optionalAction?: string | null;
+  whyNow?: string;
+  riskFlags?: string[];
+  psychologicalValue?: ReturnType<typeof evaluatePsychologicalValue>;
   editorialScore?: EditorialScore | null;
   gateResults?: EditorialGates;
   sameDayRepetition?: boolean;
@@ -445,7 +457,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (repeatedEditorialIdea) reasons.push('same_editorial_idea');
   if (sameDay.repeated) reasons.push('same_day_repetition');
   if (!hasParagraph && blocks.length === 0) reasons.push('missing_structure');
-  if (blocks.length === 0 && (wordCount < 45 || wordCount > 180)) reasons.push('insufficient_value_length');
+  if (blocks.length === 0 && wordCount > 220) reasons.push('excessive_value_length');
   if (!hasInsight) reasons.push('empty_value');
   if (candidate.interventionType === 'step_by_step' && blocks.filter(block => block.type === 'step').length < 2) reasons.push('missing_steps_for_type');
   if (candidate.interventionType === 'tool' && !blocks.some(block => block.type === 'tool')) reasons.push('missing_tool_for_type');
@@ -468,6 +480,8 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (!gateResults.scope) reasons.push('scope_gate');
   if (!gateResults.one_move) reasons.push('one_move_gate');
   if (!gateResults.memory_integrity && !reasons.includes('unsupported_personal_context')) reasons.push('memory_integrity');
+  const psychologicalValue = brief.psychologicalContract ? evaluatePsychologicalValue(candidate, brief.psychologicalContract) : null;
+  if (psychologicalValue && !psychologicalValue.approved) reasons.push(...psychologicalValue.reasons);
   if (structureCount >= 1) warnings.push('recent_structure_reuse');
   if (!firstReadPasses && !hasRoboticLanguage) warnings.push('first_read_comprehension');
   const excludedAngles = (brief.learningSignals ?? []).flatMap(signal => {
@@ -488,15 +502,15 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     sounds_human: !hasChatbotLanguage && !hasCoachingLanguage && !hasRoboticLanguage, sounds_like_nia: !hasCliche && !hasForbidden, sounds_specific_to_user: hasContext,
     generic_motivation: !hasCliche, chatbot_language: !hasChatbotLanguage, coaching_language: !hasCoachingLanguage,
     therapy_language: !hasTherapyLanguage, cliché: !hasCliche, unnecessary_advice: !hasUnnecessaryAdvice, absolute_claim: !hasAbsoluteClaim,
-    psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, first_read_comprehension: firstReadPasses, robotic_or_abstract_language: !hasRoboticLanguage, editorial_novelty: !repeatedEditorialIdea, acceptable_length: wordCount >= 45 && wordCount <= 180, no_unnecessary_question: true,
-    value_structure: hasValue, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
+    psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, first_read_comprehension: firstReadPasses, robotic_or_abstract_language: !hasRoboticLanguage, editorial_novelty: !repeatedEditorialIdea, acceptable_length: wordCount <= 220, no_unnecessary_question: true,
+    value_structure: hasValue, psychological_value: psychologicalValue?.approved ?? true, why_this_message: Boolean(psychologicalValue?.whyThisMessage || !brief.psychologicalContract), counterfactual_specificity: psychologicalValue?.counterfactual_passed ?? true, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
   const gates: EditorialGates = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity };
   const editorialScore = scoreEditorialCandidate({
     gates,
     relevant: Boolean(brief.desiredChange),
     specific: hasContext,
-    useful: hasValue,
+    useful: hasValue && (psychologicalValue ? psychologicalValue.approved : true),
     novel: similarities.length === 0 && !repeatedEditorialIdea,
     natural: firstReadPasses && !hasChatbotLanguage && !hasCoachingLanguage && !hasRoboticLanguage,
     autonomy: !hasAbsoluteClaim,
@@ -507,6 +521,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (editorialScore) checks.editorial_score = editorialScore.total;
   checks.truth_gate = gateResults.truth; checks.safety_gate = gateResults.safety; checks.scope_gate = gateResults.scope; checks.one_move_gate = gateResults.one_move; checks.memory_integrity = gateResults.memory_integrity; checks.same_day_repetition = !sameDay.repeated;
   candidate.gateResults = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity };
+  candidate.psychologicalValue = psychologicalValue ?? undefined;
   candidate.editorialScore = editorialScore;
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
 }

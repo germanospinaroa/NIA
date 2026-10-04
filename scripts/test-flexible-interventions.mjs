@@ -2,6 +2,25 @@ import assert from 'node:assert/strict';
 import { auditCandidate } from '../lib/intervention-engine.ts';
 import { composeCandidateText, validateLlmCandidate } from '../lib/server/llm-intervention.ts';
 const brief = { desiredChange: 'Confiar más en mi criterio', currentContext: 'Cuando alguien cuestiona una decisión', recentInterventions: [], recentConcepts: [], recentAngles: [], recentStructures: [] };
+const psychologicalFields = {
+  editorial_type: 'distinction',
+  functional_emotion: 'claridad',
+  directiveness: 'suggestive',
+  closing_type: 'none',
+  signal: 'Alguien cuestiona una decisión que ya estaba tomada.',
+  evidence_direction: 'Revisar si apareció un dato nuevo o solo una opinión.',
+  movement: 'Distinguir información de entregar la decisión.',
+  opening_closing: 'La revisión puede empezar separando opinión y evidencia.',
+  mechanism_id: 'external_validation',
+  mechanism_confidence: 'medium',
+  intervention_purpose: 'Separar información de entregar la decisión.',
+  psychological_move: 'Distinguir información de entregar la decisión.',
+  expected_movement: 'Podrás revisar qué cambió antes de decidir.',
+  takeaway: 'Escuchar información no equivale a entregar la decisión.',
+  optional_action: null,
+  why_now: 'La situación confirma una opinión alrededor de una decisión.',
+  risk_flags: [],
+};
 const fixtures = [
   { topic: 'criterio', editorial_take: 'Una opinión puede aportar información sin decidir por ti.', editorial_idea: 'Puedes escuchar una opinión sin entregarle la decisión.', experience_type: 'brief_insight', intervention_type: 'brief_insight', depth: 'brief', blocks: [{ type: 'idea', text: 'Una opinión puede aportar información sin decidir por ti.' }] },
   { topic: 'criterio', editorial_take: 'La duda y el cambio de información no son lo mismo.', editorial_idea: 'La duda sola no es información nueva.', experience_type: 'question', intervention_type: 'reflection', depth: 'medium', blocks: [{ type: 'insight', text: 'La duda y el cambio de información no son lo mismo.' }, { type: 'question', text: '¿Qué dato nuevo apareció realmente?' }] },
@@ -10,7 +29,7 @@ const fixtures = [
   { topic: 'criterio', editorial_take: 'Una objeción amplia se vuelve útil cuando puedes revisar sus partes.', editorial_idea: 'Pedir precisión convierte una crítica amplia en información útil.', experience_type: 'concrete_example', intervention_type: 'deep_dive', depth: 'deep', blocks: [{ type: 'recognition', text: 'Cuando cuestionan una decisión, la revisión puede empezar demasiado pronto.' }, { type: 'explanation', text: 'Una objeción mezcla opinión, datos y consecuencias posibles.' }, { type: 'example', text: 'Pedir precisión cambia una crítica amplia en información revisable.' }, { type: 'action', text: 'Hoy separa esas tres partes en una decisión reciente.' }] },
 ];
 for (const fixture of fixtures) {
-  const candidate = { ...fixture, function: 'distinguish', concept: 'criterio', angle: fixture.intervention_type, structure: 'distinguish_between', text: composeCandidateText(fixture) };
+  const candidate = { ...fixture, ...psychologicalFields, function: 'distinguish', concept: 'criterio', angle: fixture.intervention_type, structure: 'distinguish_between', text: composeCandidateText(fixture) };
   assert.equal(validateLlmCandidate(candidate), true);
   assert.equal(auditCandidate(candidate, brief).reasons.includes('missing_insight'), false);
 }
