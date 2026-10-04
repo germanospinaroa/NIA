@@ -182,6 +182,22 @@ function enrichAudit(candidate: InterventionCandidate, deterministic: ReturnType
   };
 }
 
+export function alignCandidateToPsychologicalContract(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract']): InterventionCandidate {
+  if (!contract?.sufficient) return candidate;
+  return {
+    ...candidate,
+    mechanismId: contract.mechanism_id,
+    mechanismConfidence: contract.mechanism_confidence,
+    interventionPurpose: contract.intervention_purpose,
+    psychologicalMove: contract.psychological_move,
+    expectedMovement: contract.expected_movement,
+    whyNow: contract.why_now,
+    riskFlags: contract.risk_flags,
+    situation: candidate.situation ?? contract.situation,
+    intention: candidate.intention ?? contract.user_direction,
+  };
+}
+
 function psychologicalSignature(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract'], progression?: InterventionBrief['psychologicalProgression']) {
   const sourceMechanism = contract?.mechanism_id ?? candidate.mechanismId ?? null;
   const sourceMovement = contract?.psychological_move ?? candidate.psychologicalMove ?? candidate.movement ?? null;
@@ -282,21 +298,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     const auditStarted = Date.now();
     for (const candidate of generated) {
       if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_generated', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, candidateIndex: attemptCandidates.length } }));
-      const psychologicalAlignedCandidate: InterventionCandidate = attemptBrief.psychologicalContract?.sufficient
-      ? {
-          ...candidate,
-          mechanismId: attemptBrief.psychologicalContract.mechanism_id,
-          mechanismConfidence: attemptBrief.psychologicalContract.mechanism_confidence,
-          interventionPurpose: attemptBrief.psychologicalContract.intervention_purpose,
-          psychologicalMove: attemptBrief.psychologicalContract.psychological_move,
-          expectedMovement: attemptBrief.psychologicalContract.expected_movement,
-          whyNow: attemptBrief.psychologicalContract.why_now,
-          riskFlags: attemptBrief.psychologicalContract.risk_flags,
-          situation: candidate.situation ?? attemptBrief.psychologicalContract.situation,
-          intention: candidate.intention ?? attemptBrief.psychologicalContract.user_direction,
-        }
-      : candidate;
-    const normalizedCandidate = psychologicalAlignedCandidate;
+      const normalizedCandidate = alignCandidateToPsychologicalContract(candidate, attemptBrief.psychologicalContract);
     const deterministic = auditCandidate(normalizedCandidate, {
         ...attemptBrief,
         recentEditorialIdeas: [
