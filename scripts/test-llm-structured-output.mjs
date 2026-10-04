@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { candidateSchema, isRetryableLlmError, requestStructuredJsonWithMeta, strictSchemaErrors, validateLlmCandidate, withTechnicalJsonRetryMeta } from '../lib/server/llm-intervention.ts';
 
 const blocksSchema = candidateSchema.properties.candidates.items.properties.blocks;
+assert.match(fs.readFileSync(new URL('../lib/server/llm-intervention.ts', import.meta.url), 'utf8'), /timedOut = true; controller\.abort\(\); \}, 45_000/);
 assert.equal(blocksSchema.items.properties.type.type, 'string');
 assert.equal(blocksSchema.items.properties.text.type, 'string');
 assert.deepEqual(strictSchemaErrors(candidateSchema), []);

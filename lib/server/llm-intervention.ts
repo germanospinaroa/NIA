@@ -78,7 +78,7 @@ export async function requestStructuredJsonWithMeta(name: string, schema: Record
   if (!key) throw new Error('llm_not_configured');
   const controller = new AbortController();
   let timedOut = false;
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 45_000);
   try {
     let response: Response;
     try {

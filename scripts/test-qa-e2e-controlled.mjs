@@ -142,7 +142,7 @@ assert.ok(counts.openai >= 4, `expected generation, embedding and audit provider
 // Execution B proves that a provider timeout cannot inherit A's downstream state.
 failNextGeneration = true;
 const realSetTimeout = globalThis.setTimeout;
-globalThis.setTimeout = ((callback, delay, ...args) => delay === 30_000 ? (callback(...args), 0) : realSetTimeout(callback, delay, ...args));
+globalThis.setTimeout = ((callback, delay, ...args) => delay === 45_000 ? (callback(...args), 0) : realSetTimeout(callback, delay, ...args));
 const timeoutExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_timeout', idempotencyKey: `qa-timeout:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_timeout:${userId}` });
 await assert.rejects(
   resolveIntervention(db, userId, 'intention', 'whatsapp', timeoutExecution.idempotencyKey, timeoutExecution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${timeoutExecution.executionId}`, localDate: '2026-10-04' }),
