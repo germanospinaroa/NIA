@@ -122,7 +122,7 @@ function contextTokens(value: string) {
   return new Set(normalized(value).split(/\s+/).filter(token => token.length > 3 && !['cuando', 'esta', 'para', 'esto', 'tiene', 'como', 'porque'].includes(token)));
 }
 
-type MovementFamily = 'external_input_vs_decision' | 'uncertainty_clarification' | 'decision_criteria' | 'situational_preparation' | 'other';
+type MovementFamily = 'external_input_vs_decision' | 'decision_criteria' | 'uncertainty_clarification' | 'situational_preparation' | 'other';
 
 function hasMultipleMoves(value: string) {
   const text = normalized(value);
@@ -137,6 +137,7 @@ function movementFamily(value: string | null | undefined, mechanismId: string) :
   if (mechanismId === 'external_validation' &&
       /(opinion|informacion|consejo|escuchar|escuch|cuestion|voz|desacuerdo|consult|preguntar|aporte|separar)/.test(text) &&
       /(decision|decidir|criterio|entregar|ceder|cambiar|sustit|votacion|eleccion|elegir|consenso|dato|pregunta)/.test(text)) return 'external_input_vs_decision';
+  if (mechanismId === 'external_validation' && /(criterio|regla|condicion|resultado|prioridad|pesa|suficiente|umbral|reconsider|cumplir|cambiar)/.test(text) && /(definir|expresar|nombrar|elegir|prioridad|pesa|resultado|condicion|criterio|cumplir|cambiar)/.test(text)) return 'decision_criteria';
   if (mechanismId === 'uncertainty_clarification' && /(duda|incertidumbre|claro|concreto|punto|pregunta)/.test(text)) return 'uncertainty_clarification';
   if (mechanismId === 'decision_criteria' && /(dato|criterio|revisar|cambiar|decision|decidir)/.test(text)) return 'decision_criteria';
   if ((mechanismId === 'implementation_intention' || mechanismId === 'avoidance_preparation') && /(prepar|respuesta|situacion|ocurra|cuando)/.test(text)) return 'situational_preparation';
@@ -168,9 +169,10 @@ function hasExternalSituationAnchor(candidateText: string, contractText: string)
   if (questioningInContext && questioningInMessage) return true;
   const consultation = /opinion|consejo|consult|pregunt/.test(candidate);
   const priorCriterion = /ya (tien|tom|decid)|criterio|respuesta propia|despues de (tomar|decidir)|antes de (volver a )?pregunt/.test(candidate);
-  const multipleVoices = /varias|mas opiniones|otra opinion|otras personas|los demas|que haria/.test(candidate);
+  const multipleVoices = /varias|opiniones|mas opiniones|otra opinion|otras personas|los demas|que haria/.test(candidate);
   const sequenceAfterDecision = /despues de (tomar|decidir)|luego de (tomar|decidir)|despues de decidir/.test(candidate);
-  return consultation && priorCriterion && (multipleVoices || sequenceAfterDecision);
+  const persistenceAfterCriterion = /aunque|aun asi|aun cuando|ya (tien|tom|decid|reconoc)[^.!?]{0,120}(opinion|consult|pregunt)|ya [^.!?]{0,100}(criterio|respuesta|decision)[^.!?]{0,160}(opinion|consult|pregunt)/.test(candidate);
+  return consultation && priorCriterion && (sequenceAfterDecision || (multipleVoices && persistenceAfterCriterion));
 }
 
 export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInput, contract: PsychologicalInterventionContract) {
@@ -204,11 +206,15 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
     context_anchor_specificity: contextAnchorSpecificity,
     filler_closing: !hasFillerClosing(candidate, candidateText),
     no_invented_psychology: !(candidate.riskFlags ?? []).some(flag => /diagnos|invent|clin|miedo|pereza|autosabotaje/i.test(flag)),
-    one_move: Boolean(
-      contract.psychological_move &&
-      movementFamily(movement, contract.mechanism_id) &&
-      movementFamily(movement, contract.mechanism_id) === movementFamily(contract.psychological_move, contract.mechanism_id),
-    ),
+    one_move: Boolean((() => {
+      const candidateFamily = movementFamily(movement, contract.mechanism_id);
+      const contractFamily = movementFamily(contract.psychological_move, contract.mechanism_id);
+      if (!candidateFamily || !contractFamily) return false;
+      // A later, single movement in the same mechanism can be a legitimate
+      // phase change. Progression, not literal contract wording, decides
+      // whether that phase is timely.
+      return candidateFamily === contractFamily || (contract.mechanism_id === 'external_validation' && candidateFamily === 'decision_criteria');
+    })()),
   };
   for (const [key, passed] of Object.entries(checks)) if (!passed) reasons.push(`psychological_value_${key}`);
   const whyThisMessage = checks.contextual_relevance && checks.mechanism_validity && checks.intervention_purpose && checks.psychological_movement ? `Porque la situación confirmada (${contract.situation}) y la dirección (${contract.user_direction}) justifican usar ${mechanism?.name ?? contract.mechanism_id} para ${contract.intervention_purpose.toLowerCase()}` : '';

@@ -40,6 +40,8 @@ export type EditorialSignature = {
   optionalAction?: string | null;
   whyNow?: string | null;
   riskFlags?: string[] | null;
+  psychologicalMovementKey?: string | null;
+  psychologicalProgression?: Record<string, unknown> | null;
 };
 
 export type EditorialGates = {
@@ -48,6 +50,7 @@ export type EditorialGates = {
   scope: boolean;
   one_move: boolean;
   memory_integrity: boolean;
+  psychological_progression?: boolean;
 };
 
 export type EditorialScore = {

@@ -2,6 +2,7 @@ import type { VoiceStyle } from './mvp';
 import type { CanonicalEditorialType, ClosingType, Directiveness, EditorialGates, EditorialScore, FunctionalEmotion } from './editorial-contract.ts';
 import { evaluateEditorialGates, sameDayRepetition, scoreEditorialCandidate } from './editorial-contract.ts';
 import { evaluatePsychologicalValue, type PsychologicalInterventionContract } from './psychological-contract.ts';
+import { progressionForCandidate, type PsychologicalProgression } from './psychological-progression.ts';
 
 export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distinguish' | 'interrupt' | 'permit' | 'anchor' | 'redirect';
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
@@ -11,7 +12,7 @@ export type EditorialExperienceType = 'brief_insight' | 'reflection' | 'encourag
 export type EditorialDepth = 'brief' | 'medium' | 'deep';
 export type EditorialBlockType = 'idea' | 'recognition' | 'explanation' | 'insight' | 'question' | 'tool' | 'step' | 'example' | 'action' | 'closing';
 export type EditorialBlock = { type: EditorialBlockType; text: string };
-export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; recent_editorial_ideas_to_avoid?: string[]; recent_experiences_to_avoid?: EditorialExperienceType[]; diversity_notes: string; recommended_editorial_type?: CanonicalEditorialType; recommended_functional_emotion?: FunctionalEmotion; recommended_directiveness?: Directiveness; recommended_closing_type?: ClosingType };
+export type EditorialPlan = { strategy: string; recommended_topic: string; topic_reason: string; preferred_or_recommended_intervention_type: EditorialInterventionType; recommended_experience_type?: EditorialExperienceType; recommended_depth: EditorialDepth; recent_topics_to_avoid: string[]; recent_angles_to_avoid: string[]; recent_concepts_to_avoid: string[]; recent_editorial_ideas_to_avoid?: string[]; recent_experiences_to_avoid?: EditorialExperienceType[]; diversity_notes: string; recommended_editorial_type?: CanonicalEditorialType; recommended_functional_emotion?: FunctionalEmotion; recommended_directiveness?: Directiveness; recommended_closing_type?: ClosingType; target_movement?: string | null; builds_on_previous?: string | null; intentionally_not_repeating?: string[]; expected_progression?: string };
 
 export type SemanticMatch = {
   intervention_id: string;
@@ -74,6 +75,7 @@ export type InterventionBrief = {
   editorialPlan?: EditorialPlan;
   sameDayEditorialSignature?: { topic?: string | null; interventionType?: string | null; editorialTake?: string | null; editorialIdea?: string | null; experienceType?: string | null; functionalEmotion?: string | null; directiveness?: string | null; closingType?: string | null; actionId?: string | null; insightId?: string | null; structure?: string | null };
   psychologicalContract?: PsychologicalInterventionContract;
+  psychologicalProgression?: PsychologicalProgression;
 };
 
 export type CalibrationOption = { id: string; label: string; context_value: string };
@@ -155,6 +157,7 @@ export type InterventionCandidate = {
   whyNow?: string;
   riskFlags?: string[];
   psychologicalValue?: ReturnType<typeof evaluatePsychologicalValue>;
+  psychologicalProgression?: { approved: boolean; key: string | null; reason: string | null; validDeepening: boolean };
   editorialScore?: EditorialScore | null;
   gateResults?: EditorialGates;
   sameDayRepetition?: boolean;
@@ -482,6 +485,8 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   if (!gateResults.memory_integrity && !reasons.includes('unsupported_personal_context')) reasons.push('memory_integrity');
   const psychologicalValue = brief.psychologicalContract ? evaluatePsychologicalValue(candidate, brief.psychologicalContract) : null;
   if (psychologicalValue && !psychologicalValue.approved) reasons.push(...psychologicalValue.reasons);
+  const progression = progressionForCandidate({ mechanismId: candidate.mechanismId, movement: candidate.psychologicalMove ?? candidate.movement, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }, brief.psychologicalProgression);
+  if (!progression.approved && progression.reason) reasons.push(`psychological_progression_${progression.reason}`);
   if (structureCount >= 1) warnings.push('recent_structure_reuse');
   if (!firstReadPasses && !hasRoboticLanguage) warnings.push('first_read_comprehension');
   const excludedAngles = (brief.learningSignals ?? []).flatMap(signal => {
@@ -505,7 +510,7 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
     psychological_interpretation: !hasPsychologicalInterpretation, unsupported_personal_context: !hasUnsupportedContext, first_read_comprehension: firstReadPasses, robotic_or_abstract_language: !hasRoboticLanguage, editorial_novelty: !repeatedEditorialIdea, acceptable_length: wordCount <= 220, no_unnecessary_question: true,
     value_structure: hasValue, psychological_value: psychologicalValue?.approved ?? true, why_this_message: Boolean(psychologicalValue?.whyThisMessage || !brief.psychologicalContract), counterfactual_specificity: psychologicalValue?.counterfactual_passed ?? true, no_multi_step_instruction: true, no_paragraph: !hasParagraph, no_repetition: similarities.length === 0 && !reasons.includes('internal_repetition'), internal_repetition: !reasons.includes('internal_repetition'),
   };
-  const gates: EditorialGates = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity };
+  const gates: EditorialGates = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity, psychological_progression: progression.approved };
   const editorialScore = scoreEditorialCandidate({
     gates,
     relevant: Boolean(brief.desiredChange),
@@ -519,8 +524,9 @@ export function auditCandidate(candidate: InterventionCandidate, brief: Interven
   });
   if (editorialScore && editorialScore.total < 60) reasons.push('editorial_score_too_low');
   if (editorialScore) checks.editorial_score = editorialScore.total;
-  checks.truth_gate = gateResults.truth; checks.safety_gate = gateResults.safety; checks.scope_gate = gateResults.scope; checks.one_move_gate = gateResults.one_move; checks.memory_integrity = gateResults.memory_integrity; checks.same_day_repetition = !sameDay.repeated;
-  candidate.gateResults = { truth: gateResults.truth, safety: gateResults.safety, scope: gateResults.scope, one_move: gateResults.one_move, memory_integrity: gateResults.memory_integrity };
+  checks.truth_gate = gateResults.truth; checks.safety_gate = gateResults.safety; checks.scope_gate = gateResults.scope; checks.one_move_gate = gateResults.one_move; checks.memory_integrity = gateResults.memory_integrity; checks.same_day_repetition = !sameDay.repeated; checks.psychological_progression = progression.approved; checks.psychological_movement_key = progression.key ?? 'none';
+  candidate.gateResults = gates;
+  candidate.psychologicalProgression = progression;
   candidate.psychologicalValue = psychologicalValue ?? undefined;
   candidate.editorialScore = editorialScore;
   return { status: reasons.length ? 'rejected' : 'approved', approved: reasons.length === 0, reasons, hard_failures: reasons, warnings, checks, similarInterventions: similarities.map(item => item.previous), similarity: similarities[0]?.score ?? 0 };
