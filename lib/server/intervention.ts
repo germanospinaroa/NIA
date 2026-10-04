@@ -122,12 +122,25 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   try { editorialMemory = await loadEditorialMemory(supabase, userId); } catch { editorialMemory = buildEditorialMemory([]); }
   const relevantTopics = [profile.current_context_domain, ...(Array.isArray(profile.desired_change_concepts) ? profile.desired_change_concepts : [])].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
   appliedBrief.communicationPreference = profile.communication_preference === 'idea' || profile.communication_preference === 'practical' || profile.communication_preference === 'structured' || profile.communication_preference === 'adaptive' ? profile.communication_preference : 'adaptive';
-  appliedBrief.psychologicalContract = formulatePsychologicalIntervention({ currentContext: activeContext, desiredChange, relevantSituations: appliedBrief.relevantSituations, recurringPatterns: appliedBrief.recurringPatterns, learningSignals: effectiveSignals });
+  const basePsychologicalContract = formulatePsychologicalIntervention({ currentContext: activeContext, desiredChange, relevantSituations: appliedBrief.relevantSituations, recurringPatterns: appliedBrief.recurringPatterns, learningSignals: effectiveSignals });
   const progressionHistory = activeRows.map(row => {
     const signature = row.editorial_signature ?? {};
     return { id: row.id, topic: row.topic, mechanismId: signature.mechanismId, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: row.editorial_idea ?? signature.editorialIdea, concept: row.concept, angle: row.angle, createdAt: row.created_at };
   });
-  appliedBrief.psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory });
+  const psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: basePsychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory });
+  // The progression decides the functional phase. The psychological contract
+  // must describe that same phase before the LLM is called; otherwise the
+  // candidate can be generated for phase N while the persisted contract still
+  // describes phase N-1.
+  appliedBrief.psychologicalProgression = psychologicalProgression;
+  appliedBrief.psychologicalContract = formulatePsychologicalIntervention({
+    currentContext: activeContext,
+    desiredChange,
+    relevantSituations: appliedBrief.relevantSituations,
+    recurringPatterns: appliedBrief.recurringPatterns,
+    learningSignals: effectiveSignals,
+    preferredMovement: psychologicalProgression.next_recommended_movement,
+  });
   appliedBrief.editorialPlan = planEditorial({ desiredChange, currentContext: activeContext, communicationPreference: appliedBrief.communicationPreference, memory: editorialMemory, relevantTopics, feedbackGoal: appliedBrief.feedbackGoal, rejectedPatterns: appliedBrief.rejectedPatterns, psychologicalProgression: appliedBrief.psychologicalProgression });
   const calibration = calibrationProfile;
   const recalibratedRecently = calibration?.status === 'resolved' && (calibration.reason === 'context_changed' || calibration.reason === 'desired_change_changed') && typeof calibration.resolved_at === 'string' && Date.now() - new Date(calibration.resolved_at).getTime() < 24 * 60 * 60 * 1000;
