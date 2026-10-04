@@ -189,6 +189,7 @@ function executionContextFromRow(existing: ExecutionRow): ExecutionContext {
 
 export async function updateExecutionRun(supabase: DbClient, context: ExecutionContext, input: { status: ExecutionStatus; interventionId?: string | null; failure?: unknown; candidateCount?: number; retryCount?: number; stageResults?: Record<string, unknown> }) {
   const failure = input.failure ? { failure_code: errorCode(input.failure), failure_message: safeMessage(input.failure) } : {};
+  const stageResults = input.stageResults === undefined ? {} : { stage_results: input.stageResults };
   await operationalClient(supabase).from('execution_runs').update({
     status: input.status,
     intervention_id: input.interventionId ?? null,
@@ -196,7 +197,7 @@ export async function updateExecutionRun(supabase: DbClient, context: ExecutionC
     duration_ms: input.status === 'started' || input.status === 'generating' || input.status === 'auditing' ? null : Date.now() - context.startedAt,
     candidate_count: input.candidateCount,
     retry_count: input.retryCount,
-    stage_results: input.stageResults,
+    ...stageResults,
     ...failure,
   }).eq('id', context.executionId).eq('user_id', context.userId);
 }

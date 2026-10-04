@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, FlaskConical, Send } from 'lucide-react';
 import { useState } from 'react';
 
 type CandidateSummary = { id?: string; topic: string | null; concept: string | null; angle: string | null; intervention_type: string | null; depth: string | null; validation?: string; rejection_reason?: string | null };
+type QaTraceStage = { stage: string; status: string; evidence: string[] };
 type Result = {
   status: string;
   editorial_status?: string;
@@ -14,6 +15,7 @@ type Result = {
   intervention_id?: string | null;
   delivery_id?: string | null;
   evolution?: { accepted?: boolean; provider_message_id_present?: boolean };
+  qa_trace?: { execution_id?: string; status?: string; failure_code?: string | null; error?: string | null; stages?: QaTraceStage[]; provider_calls?: string[] };
 };
 type ButtonsResult = { status?: string; provider_message_id?: string | null; provider_message_id_present?: boolean; reason?: string; error?: string };
 
@@ -30,6 +32,18 @@ function readableButtonsError(code: string) {
   if (code === 'forbidden') return 'No tienes permisos para ejecutar esta prueba.';
   if (code === 'not_configured') return 'El proveedor de WhatsApp no está configurado en Production.';
   return `La prueba de botones no pudo ejecutarse. Código: ${code}.`;
+}
+
+function QaTraceView({ trace }: { trace?: Result['qa_trace'] }) {
+  if (!trace) return null;
+  return <div className="mt-4 rounded-[12px] border border-black/10 bg-[var(--bg)] p-3">
+    <p className="text-[11px] font-semibold uppercase tracking-[.1em] text-[var(--text-tertiary)]">Cadena y evidencia</p>
+    <p className="mt-2 text-[12px] text-[var(--text-secondary)]">Execution <span className="font-mono">{trace.execution_id || 'NOT AVAILABLE'}</span> · status <strong>{trace.status || 'NOT AVAILABLE'}</strong> · failure <span className="font-mono">{trace.failure_code || 'none'}</span></p>
+    {trace.error && <p className="mt-2 text-[12px] text-[#813e31]">{trace.error}</p>}
+    <div className="mt-3 overflow-x-auto rounded-[10px] border border-black/10">
+      <table className="w-full min-w-[640px] text-left text-[12px]"><thead className="bg-[var(--surface)] text-[10px] uppercase tracking-[.1em] text-[var(--text-tertiary)]"><tr><th className="px-3 py-2">Etapa</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Evidencia</th></tr></thead><tbody className="divide-y divide-black/10">{(trace.stages ?? []).map(stage => <tr key={stage.stage}><td className="px-3 py-2 font-semibold">{stage.stage}</td><td className="px-3 py-2">{stage.status}</td><td className="px-3 py-2 text-[var(--text-secondary)]">{stage.evidence.length ? stage.evidence.join(' · ') : 'NOT AVAILABLE'}</td></tr>)}</tbody></table>
+    </div>
+  </div>;
 }
 
 export default function QaRealControl({ userId, userEmail, whatsappStatus }: { userId: string; userEmail: string | null; whatsappStatus: string }) {
@@ -53,8 +67,8 @@ export default function QaRealControl({ userId, userEmail, whatsappStatus }: { u
         body: JSON.stringify({ user_id: userId }),
       });
       const body = await response.json() as Result & { error?: string };
-      if (!response.ok) throw new Error(body.error || 'qa_execution_failed');
       setResult(body);
+      if (!response.ok) throw new Error(body.error || 'qa_execution_failed');
       setConfirming(false);
     } catch (reason) {
       setError(readableError(reason instanceof Error ? reason.message : 'qa_execution_failed'));
@@ -97,6 +111,7 @@ export default function QaRealControl({ userId, userEmail, whatsappStatus }: { u
     </div>
     {confirming && <div className="mt-5 rounded-[14px] border border-black/10 bg-[var(--surface)] p-4" role="alertdialog" aria-label="Confirmar prueba real"><div className="flex gap-3"><AlertTriangle size={17} className="mt-0.5 shrink-0 text-[var(--accent)]" /><p className="text-[13px] leading-5">Esta prueba generará una intervención real y puede enviar un mensaje a WhatsApp.<br />Solo se ejecutará una generación y no se probará el segundo slot.<br /><strong>¿Quieres continuar?</strong></p></div><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setConfirming(false)} className="min-h-11 rounded-[12px] border border-black/10 px-4 py-3 text-[13px] font-semibold text-[var(--text-secondary)]">Cancelar</button><button type="button" onClick={runOnce} disabled={running} className="inline-flex min-h-11 items-center gap-2 rounded-[12px] bg-[var(--text-primary)] px-4 py-3 text-[13px] font-semibold text-[var(--bg)] disabled:opacity-50">{running ? 'Ejecutando prueba…' : 'Ejecutar prueba'}</button></div></div>}
     {error && <div className="mt-5 rounded-[14px] border border-[#b85d48]/30 bg-[#f5e2dd] p-4 text-[13px] text-[#713b31]" role="alert">{error}</div>}
+    {result?.qa_trace && <QaTraceView trace={result.qa_trace} />}
     {result && <div className="mt-5 space-y-4 rounded-[14px] border border-black/10 bg-[var(--surface)] p-4"><div className="flex items-center gap-2 text-[13px] font-semibold"><CheckCircle2 size={16} className="text-[#345238]" />Resultado de la QA completa</div><p className="text-[12px] text-[var(--text-secondary)]">Carril editorial: <strong>{result.editorial_status || 'approved'}</strong>{result.synthetic_downstream ? ' · Downstream: fixture QA, no aprobación editorial' : ''}</p><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-[13px]"><div><p className="text-[11px] uppercase tracking-[.1em] text-[var(--text-tertiary)]">Planner</p><p className="mt-1">{result.editorial?.strategy || 'NOT AVAILABLE'}</p><p className="text-[12px] text-[var(--text-secondary)]">{result.editorial?.topic || 'Topic no disponible'}</p></div><div><p className="text-[11px] uppercase tracking-[.1em] text-[var(--text-tertiary)]">Generación</p><p className="mt-1">{result.generation?.calls ?? 0} llamadas · {result.generation?.candidates ?? 0} candidatas</p><p className="text-[12px] text-[var(--text-secondary)]">{result.generation?.approved ?? 0} aprobadas</p></div><div><p className="text-[11px] uppercase tracking-[.1em] text-[var(--text-tertiary)]">Persistencia</p><p className="mt-1 break-all font-mono text-[11px]">{result.intervention_id || 'NOT AVAILABLE'}</p><p className="text-[12px] text-[var(--text-secondary)]">Intervention ID</p></div><div><p className="text-[11px] uppercase tracking-[.1em] text-[var(--text-tertiary)]">Delivery</p><p className="mt-1 break-all font-mono text-[11px]">{result.delivery_id || 'NOT AVAILABLE'}</p><p className="text-[12px] text-[var(--text-secondary)]">Estado: {result.status === 'success' ? 'sent' : result.status}</p></div></div>{candidates.length > 0 && <div><p className="text-[11px] uppercase tracking-[.1em] text-[var(--text-tertiary)]">Candidatas / resumen</p><div className="mt-2 grid gap-2 md:grid-cols-3">{candidates.map((candidate, index) => <div key={candidate.id || (candidate.concept || 'candidate') + '-' + index} className="rounded-[10px] bg-[var(--bg)] p-3 text-[12px]"><p className="font-semibold">{candidate.intervention_type || 'Formato no disponible'} · {candidate.depth || 'profundidad no disponible'}</p><p className="mt-1 text-[var(--text-secondary)]">{candidate.topic || 'Topic no disponible'} · {candidate.angle || 'Ángulo no disponible'}</p><p className="mt-1 text-[#8b4b3e]">{candidate.validation}{candidate.rejection_reason ? ` · ${candidate.rejection_reason}` : ''}</p></div>)}</div></div>}<p className="text-[12px] text-[var(--text-secondary)]">Evolution accepted: <strong>{result.evolution?.accepted ? 'YES' : 'NO'}</strong> · WhatsApp delivery: <strong>UNKNOWN</strong></p></div>}
     <div className="mt-6 border-t border-black/10 pt-6" aria-labelledby="qa-buttons-title">
       <div className="flex items-start gap-4">

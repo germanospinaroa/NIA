@@ -88,7 +88,7 @@ async function requestWithPayload(payload) {
 }
 
 const normal = await requestWithPayload({ id: 'resp-test', model: 'test-model', choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }], usage: { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 } });
-assert.equal(requestBody.max_completion_tokens, 2400);
+assert.equal(requestBody.max_completion_tokens, 4800);
 assert.deepEqual(normal.value, { ok: true });
 assert.deepEqual(normal.usage, { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18, cached_input_tokens: undefined, cache_write_tokens: undefined });
 

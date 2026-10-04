@@ -73,7 +73,7 @@ export async function requestStructuredJsonWithMeta(name: string, schema: Record
   try {
     let response: Response;
     try {
-      response = await fetch(OPENAI_URL, { method: 'POST', signal: controller.signal, headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: llmModel(), max_completion_tokens: 2400, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } } }) });
+      response = await fetch(OPENAI_URL, { method: 'POST', signal: controller.signal, headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: llmModel(), max_completion_tokens: 4800, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } } }) });
     } catch {
       const networkError = new Error(timedOut ? 'llm_timeout' : 'llm_network_error') as LlmError;
       networkError.code = timedOut ? 'llm_timeout' : 'llm_network_error';
