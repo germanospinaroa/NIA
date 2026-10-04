@@ -126,7 +126,7 @@ type MovementFamily = 'external_input_vs_decision' | 'uncertainty_clarification'
 
 function hasMultipleMoves(value: string) {
   const text = normalized(value);
-  const moveTerms = ['reencuadr', 'distinguir', 'prepar', 'pregunt', 'observar', 'reconocer', 'decidir', 'practicar', 'interrumpir', 'cambiar'];
+  const moveTerms = ['reencuadr', 'distinguir', 'diferenc', 'separar', 'prepar', 'pregunt', 'observar', 'reconocer', 'decidir', 'practicar', 'interrumpir', 'cambiar'];
   const found = moveTerms.filter(term => text.includes(term));
   return found.length > 1 || /\b(y|ademas|tambien)\b/.test(text) && found.length > 0;
 }
@@ -135,8 +135,8 @@ function movementFamily(value: string | null | undefined, mechanismId: string) :
   if (!value?.trim() || hasMultipleMoves(value)) return null;
   const text = normalized(value);
   if (mechanismId === 'external_validation' &&
-      /(opinion|informacion|consejo|escuchar|escuch|cuestion|voz|desacuerdo|consultar|preguntar|aporte|separar)/.test(text) &&
-      /(decision|decidir|criterio|entregar|ceder|cambiar|sustit)/.test(text)) return 'external_input_vs_decision';
+      /(opinion|informacion|consejo|escuchar|escuch|cuestion|voz|desacuerdo|consult|preguntar|aporte|separar)/.test(text) &&
+      /(decision|decidir|criterio|entregar|ceder|cambiar|sustit|votacion|eleccion|elegir|consenso|dato|pregunta)/.test(text)) return 'external_input_vs_decision';
   if (mechanismId === 'uncertainty_clarification' && /(duda|incertidumbre|claro|concreto|punto|pregunta)/.test(text)) return 'uncertainty_clarification';
   if (mechanismId === 'decision_criteria' && /(dato|criterio|revisar|cambiar|decision|decidir)/.test(text)) return 'decision_criteria';
   if ((mechanismId === 'implementation_intention' || mechanismId === 'avoidance_preparation') && /(prepar|respuesta|situacion|ocurra|cuando)/.test(text)) return 'situational_preparation';
@@ -198,7 +198,7 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
     psychological_movement: Boolean(movement && movement.length >= 8 && !/\b(y|ademas)\b.{0,30}\b(y|ademas)\b/i.test(movement)),
     learning_value: takeaway.length >= 20 && !genericTakeaways,
     usefulness: Boolean(candidate.optionalAction?.trim()) || (takeaway.length >= 20 && !genericTakeaways) || /\b(separa|distingue|mira|anota|escribe|elige|prepara|comprueba|pregunta|revisa|observa|diferencia|confundir|equivale|significa)\b/i.test(candidate.text),
-    autonomy: !/\b(debes|tienes que sentir|yo se que tu|hazlo porque yo digo)\b/i.test(candidateText),
+    autonomy: !/\b(debes|tienes que sentir|yo se que tu|hazlo porque yo digo)\b(?!\s+(?:elegir|decidir|hacer)\b)/i.test(candidateText),
     non_genericity: contextualAnchor,
     psychological_transfer: (transferSignal || hasExternalValidationTransfer(candidateText, contextAnchorSpecificity)) && !genericTakeaways && (Boolean(candidate.optionalAction?.trim()) || takeaway.length >= 20),
     context_anchor_specificity: contextAnchorSpecificity,

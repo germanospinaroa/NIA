@@ -74,6 +74,20 @@ const alignedParaphrase = evaluatePsychologicalValue(candidate({
 }), concrete);
 assert.equal(alignedParaphrase.approved, true);
 
+// Production-shaped paraphrases must remain aligned with external_validation
+// without requiring literal wording from the server contract.
+assert.equal(evaluatePsychologicalValue(candidate({
+  text: 'Cuando tienes una decisión importante y ya reconoces un criterio propio, puedes notar si estás buscando un dato concreto o que alguien más te quite la duda. Antes de pedir otra opinión, completa: «Lo que necesito saber para decidir es…».',
+  psychologicalMove: 'Definir qué dato buscas antes de solicitar otra opinión.',
+  takeaway: 'Precisar el dato que falta permite consultar sin entregar la decisión.',
+  optionalAction: 'Completa qué necesitas saber antes de preguntar.',
+}), concrete).approved, true);
+assert.equal(evaluatePsychologicalValue(candidate({
+  text: 'Cuando ya tienes una respuesta y te preocupa equivocarte, puedes escuchar varias opiniones sin convertirlas en una votación sobre qué debes elegir.',
+  psychologicalMove: 'Diferenciar una consulta de una votación sobre qué debes elegir.',
+  takeaway: 'Escuchar perspectivas no sustituye el criterio de quien decide.',
+}), concrete).approved, true);
+
 // Transfer and context-anchor regressions based on the last real QA message.
 const adrianaContract = formulatePsychologicalIntervention({
   currentContext: 'Cuando ya tienes un criterio y aun así te dan ganas de pedir otra opinión antes de decidir',
@@ -183,4 +197,4 @@ const longitudinal = formulatePsychologicalIntervention({ currentContext: 'Esta 
 assert.equal(longitudinal.sufficient, true);
 assert.ok(evaluatePsychologicalValue(candidate({ mechanismId: 'progress_monitoring' }), longitudinal).reasons.includes('psychological_value_one_move'));
 
-console.log('psychological value tests: PASS (26 contract regressions)');
+console.log('psychological value tests: PASS (28 contract regressions)');
