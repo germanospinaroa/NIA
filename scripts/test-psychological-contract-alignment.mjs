@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { alignCandidateToPsychologicalContract, buildBrief } from '../lib/server/intervention.ts';
+import { alignCandidateToPsychologicalContract } from '../lib/server/intervention.ts';
 import { formulatePsychologicalIntervention } from '../lib/psychological-contract.ts';
 
 const contract = formulatePsychologicalIntervention({
