@@ -220,8 +220,16 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
   const situationAnchors = [...context].filter(token => token.length >= 5 && !['alguien', 'cuando', 'tienes', 'tomaste', 'otra', 'persona'].includes(token));
   const situationAnchorHits = situationAnchors.filter(token => candidateText.includes(token)).length;
   const transferSignal = hasTransferSignal(candidate, candidateText);
+  const contractFamily = movementFamily(contract.psychological_move, contract.mechanism_id);
   const contextAnchorSpecificity = contract.mechanism_id === 'external_validation'
-    ? hasExternalSituationAnchor(candidate.text, `${contract.situation} ${contract.observable_pattern}`)
+    ? (
+        hasExternalSituationAnchor(candidate.text, `${contract.situation} ${contract.observable_pattern}`)
+        || (
+          contractFamily === 'decision_criteria'
+          && situationMatches
+          && /(?:decision|decidir|criterio|opcion|elegir|condicion|limite|prioridad)/i.test(candidateText)
+        )
+      )
     : situationAnchors.length < 3 || situationAnchorHits >= 3 || (situationMatches && situationAnchorHits >= 2 && transferSignal);
   const takeaway = candidate.takeaway?.trim() ?? '';
   const genericTakeaways = /^(confia en ti|recuerda que eres capaz|escucha lo que necesitas|date permiso para confiar|la duda no significa que estes equivocada|una duda no define quien eres)[.! ]*$/i.test(takeaway) || /frase bonita|frase general|sentirte mejor|seguir adelante|todo estara bien/i.test(takeaway);
