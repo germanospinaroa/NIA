@@ -55,7 +55,7 @@ export default function TuPage() {
   }
 
   useEffect(() => {
-    Promise.all([fetch('/api/profile'), fetchWhatsApp(), fetch('/api/subscription'), fetch('/api/admin/access'), fetch('/api/calibration')]).then(async ([profileResponse, whatsappState, subscriptionResponse, adminResponse, calibrationResponse]) => {
+    Promise.all([fetch('/api/profile'), fetchWhatsApp(), fetch('/api/subscription'), fetch('/api/admin/access'), fetch('/api/calibration', { cache: 'no-store' })]).then(async ([profileResponse, whatsappState, subscriptionResponse, adminResponse, calibrationResponse]) => {
       const result = await profileResponse.json().catch(() => ({}));
       const subscriptionResult = await subscriptionResponse.json().catch(() => ({}));
       const calibrationResult = await calibrationResponse.json().catch(() => ({}));
@@ -110,11 +110,12 @@ export default function TuPage() {
   async function submitCalibration(option?: CalibrationOption) {
     const freeText = calibrationText.trim();
     if (!option && !freeText) return;
+    const expectedContext = freeText || option?.context_value || '';
     setCalibrationSaving(true); setError('');
     try {
-      const response = await fetch('/api/calibration', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ selected_option: option?.id, free_text: freeText || undefined }) });
+      const response = await fetch('/api/calibration', { method: 'POST', cache: 'no-store', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ selected_option: option?.id, free_text: freeText || undefined }) });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || 'CALIBRATION_ERROR');
+      if (!response.ok || result.status !== 'ready_to_generate' || result.persisted?.context !== expectedContext) throw new Error(result.error || 'CALIBRATION_ERROR');
       if (result.profile) setProfile(result.profile);
       setCalibration(null); setCalibrationText(''); setSavedMessage('Contexto guardado. NIA ya puede trabajar con esta situación.');
     } catch { setError('No pudimos guardar este contexto. Inténtalo de nuevo.'); }

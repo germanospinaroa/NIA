@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Persistencia de calibración — 2026-10-04
+- La calibración de `/app/tú` ahora solicita `/api/calibration` sin caché y solo oculta el formulario después de comprobar que la API devuelve el contexto persistido, el estado `resolved` y la situación activa en `context_history`.
+- `/api/calibration` hace una lectura posterior de `profiles` y `context_history`; si la persistencia no coincide, responde `calibration_persistence_unconfirmed` y la UI conserva el formulario.
+- Tests locales, TypeScript, lint y build pasan. No deployment, QA real ni llamadas OpenAI/Evolution/WhatsApp.
+
 ## QA y calibración accesible — 2026-10-04
 - La trazabilidad de `/api/admin/qa/daily-intervention` ahora conserva y devuelve planner, contrato psicológico y primera etapa fallida cuando una QA termina antes de generación; la UI ya no depende de un estado `approved` implícito en ese error.
 - `/app/tú` reutiliza `/api/calibration` para que cuentas existentes completen `relevant_situations` mediante opciones o texto libre. La API guarda `context_history`, actualiza `profiles.current_context_original` y resuelve `learning_profile.calibration`.

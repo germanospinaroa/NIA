@@ -20,7 +20,14 @@ assert.match(middleware, /return supabaseResponse/);
 assert.match(calibration, /export async function GET/);
 assert.match(calibration, /export async function POST/);
 assert.match(calibration, /success: true/);
-assert.match(settingsPage, /fetch\('\/api\/calibration'\)/);
+assert.match(calibration, /calibration_persistence_unconfirmed/);
+assert.match(calibration, /relevant_situations/);
+assert.match(settingsPage, /cache: 'no-store'/);
+assert.match(settingsPage, /result\.persisted\?\.context/);
+assert.match(settingsPage, /fetch\('\/api\/calibration'/);
+assert.match(settingsPage, /method: 'POST'/);
+assert.match(settingsPage, /selected_option/);
+assert.match(settingsPage, /free_text/);
 assert.match(settingsPage, /submitCalibration/);
 assert.match(settingsPage, /Guardar contexto/);
 

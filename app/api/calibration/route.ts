@@ -36,5 +36,17 @@ export async function POST(request: Request) {
   }
   const { data: updated, error: updateError } = await supabase.from('profiles').update({ current_context_original: context, current_context_summary: context.slice(0, 180), current_context_started_at: now, current_context_last_confirmed_at: now, current_context_status: 'active', learning_profile: learningProfile }).eq('id', user.id).select('*').single();
   if (updateError) return NextResponse.json({ error: 'calibration_save_failed' }, { status: 400 });
-  return NextResponse.json({ success: true, status: 'ready_to_generate', context, profile: updated });
+  const [{ data: persistedProfile, error: persistedProfileError }, { data: persistedContexts, error: persistedContextsError }] = await Promise.all([
+    supabase.from('profiles').select('current_context_original,current_context_summary,current_context_status,learning_profile').eq('id', user.id).single(),
+    supabase.from('context_history').select('context_original,source,status').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(20),
+  ]);
+  const persistedCalibration = persistedProfile?.learning_profile?.calibration;
+  const persistedContext = persistedProfile?.current_context_original;
+  const contextPersisted = persistedContext === context
+    && persistedProfile?.current_context_summary === context.slice(0, 180)
+    && persistedProfile?.current_context_status === 'active'
+    && persistedCalibration?.status === 'resolved'
+    && (persistedContexts ?? []).some(row => row.context_original === context && row.source === 'calibration' && row.status === 'active');
+  if (persistedProfileError || persistedContextsError || !contextPersisted) return NextResponse.json({ error: 'calibration_persistence_unconfirmed' }, { status: 500 });
+  return NextResponse.json({ success: true, status: 'ready_to_generate', context, persisted: { context: persistedContext, calibration_status: persistedCalibration.status, relevant_situations: (persistedContexts ?? []).map(row => row.context_original).filter(Boolean) }, profile: persistedProfile ?? updated });
 }
