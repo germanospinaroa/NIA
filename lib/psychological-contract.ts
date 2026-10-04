@@ -112,6 +112,7 @@ export type PsychologicalCandidateInput = {
   expectedMovement?: string | null;
   takeaway?: string | null;
   optionalAction?: string | null;
+  closing?: string | null;
   whyNow?: string | null;
   riskFlags?: string[] | null;
   editorialIdea?: string | null;
@@ -142,6 +143,16 @@ function movementFamily(value: string | null | undefined, mechanismId: string) :
   return null;
 }
 
+function hasTransferSignal(candidate: PsychologicalCandidateInput, candidateText: string) {
+  return Boolean(candidate.optionalAction?.trim()) || /\b(antes de|la proxima vez|cuando vuelva|si vuelve|anota|escribe|fijate|mira que|distingue|separa|puedes notar|podras notar|que dato|que cambiaria|revisa|comprueba|elige|decide|prepara)\b/i.test(candidateText);
+}
+
+function hasFillerClosing(candidate: PsychologicalCandidateInput, candidateText: string) {
+  const closing = normalized(candidate.closing ?? '');
+  const filler = /^(descansa|nos leemos|manana seguimos|aqui estare|pruebalo cuando tengas oportunidad|recuerda que)[.! ]/;
+  return Boolean((closing && filler.test(closing)) || /(?:descansa\.?\s*manana seguimos|nos leemos manana|aqui estare|pruebalo cuando tengas oportunidad)\s*[.!]*$/i.test(candidateText));
+}
+
 export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInput, contract: PsychologicalInterventionContract) {
   const mechanism = psychologicalMechanisms.find(item => item.id === candidate.mechanismId);
   const candidateText = normalized(candidate.text);
@@ -150,6 +161,10 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
   const situationMatches = Boolean(candidate.situation?.trim() && normalized(candidate.situation) === normalized(contract.situation));
   const mechanismLanguageAnchor = Boolean(mechanism?.preferred_language.some(term => candidateText.includes(normalized(term))));
   const contextualAnchor = sharedContext >= 2 || (situationMatches && mechanismLanguageAnchor);
+  const situationAnchors = [...context].filter(token => token.length >= 5 && !['alguien', 'cuando', 'tienes', 'tomaste', 'otra', 'persona'].includes(token));
+  const situationAnchorHits = situationAnchors.filter(token => candidateText.includes(token)).length;
+  const transferSignal = hasTransferSignal(candidate, candidateText);
+  const contextAnchorSpecificity = situationAnchors.length < 3 || situationAnchorHits >= 3 || (situationMatches && situationAnchorHits >= 2 && transferSignal);
   const takeaway = candidate.takeaway?.trim() ?? '';
   const genericTakeaways = /^(confia en ti|recuerda que eres capaz|escucha lo que necesitas|date permiso para confiar|la duda no significa que estes equivocada|una duda no define quien eres)[.! ]*$/i.test(takeaway) || /frase bonita|frase general|sentirte mejor|seguir adelante|todo estara bien/i.test(takeaway);
   const movement = candidate.psychologicalMove?.trim() ?? '';
@@ -163,6 +178,9 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
     usefulness: Boolean(candidate.optionalAction?.trim()) || (takeaway.length >= 20 && !genericTakeaways) || /\b(separa|distingue|mira|anota|escribe|elige|prepara|comprueba|pregunta|revisa|observa|diferencia|confundir|equivale|significa)\b/i.test(candidate.text),
     autonomy: !/\b(debes|tienes que sentir|yo se que tu|hazlo porque yo digo)\b/i.test(candidateText),
     non_genericity: contextualAnchor,
+    psychological_transfer: transferSignal && !genericTakeaways && (Boolean(candidate.optionalAction?.trim()) || takeaway.length >= 20),
+    context_anchor_specificity: contextAnchorSpecificity,
+    filler_closing: !hasFillerClosing(candidate, candidateText),
     no_invented_psychology: !(candidate.riskFlags ?? []).some(flag => /diagnos|invent|clin|miedo|pereza|autosabotaje/i.test(flag)),
     one_move: Boolean(
       contract.psychological_move &&

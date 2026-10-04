@@ -1,5 +1,9 @@
 # ESTADO — NIA
 
+## Upgrade de valor transferible — 2026-10-04
+- El psychological value gate ahora exige situación anclada, transferencia utilizable, payload de valor y cierre no-relleno cuando corresponda. La estructura sigue siendo flexible: no se obliga a acción, pregunta ni cierre.
+- Añadidas 26 regresiones offline para mensajes genéricos, transferencia, contexto concreto, acciones sin insight y cierres vacíos. Controlled E2E, TypeScript, lint y build pasan. No OpenAI/Evolution/WhatsApp reales ni deployment.
+
 ## Persistencia de calibración — 2026-10-04
 - La calibración de `/app/tú` ahora solicita `/api/calibration` sin caché y solo oculta el formulario después de comprobar que la API devuelve el contexto persistido, el estado `resolved` y la situación activa en `context_history`.
 - `/api/calibration` hace una lectura posterior de `profiles` y `context_history`; si la persistencia no coincide, responde `calibration_persistence_unconfirmed` y la UI conserva el formulario.

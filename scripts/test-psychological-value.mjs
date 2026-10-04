@@ -74,6 +74,97 @@ const alignedParaphrase = evaluatePsychologicalValue(candidate({
 }), concrete);
 assert.equal(alignedParaphrase.approved, true);
 
+// Transfer and context-anchor regressions based on the last real QA message.
+const adrianaContract = formulatePsychologicalIntervention({
+  currentContext: 'Cuando ya tienes un criterio y aun así te dan ganas de pedir otra opinión antes de decidir',
+  desiredChange: 'Confiar más en mi criterio',
+});
+assert.equal(adrianaContract.sufficient, true);
+const productionMessage = evaluatePsychologicalValue(candidate({
+  text: 'Cuando una decisión importante te preocupa, puedes pedir varias opiniones, aunque a veces ya tengas una respuesta o un criterio propio. Consultar puede servir para reunir información. No significa que tu criterio haya desaparecido ni que tengas que entregar la decisión. Descansa. Mañana seguimos.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  interventionPurpose: adrianaContract.intervention_purpose,
+  psychologicalMove: adrianaContract.psychological_move,
+  expectedMovement: adrianaContract.expected_movement,
+  takeaway: 'Consultar puede reunir información sin entregar la decisión.',
+  closing: 'Descansa. Mañana seguimos.',
+}), adrianaContract);
+assert.equal(productionMessage.approved, false);
+assert.ok(productionMessage.reasons.includes('psychological_value_psychological_transfer') || productionMessage.reasons.includes('psychological_value_filler_closing'));
+
+const improvedAdriana = evaluatePsychologicalValue(candidate({
+  text: 'Cuando ya tienes un criterio y aun así te dan ganas de preguntar qué haría otra persona, no necesitas dejar de consultar. Primero distingue qué estás buscando: información que pueda cambiar tu decisión o confirmación de algo que ya decidiste. Antes de preguntar, anota qué decidirías tú y qué dato concreto podría hacerte cambiar de idea.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  interventionPurpose: 'Distinguir información de buscar confirmación.',
+  psychologicalMove: 'separar una opinión de la decisión',
+  expectedMovement: 'Podrás distinguir información de confirmación antes de consultar.',
+  takeaway: 'Puedes consultar sin entregar la decisión: primero identifica qué dato podría hacerte cambiar.',
+  optionalAction: 'Anota qué decidirías tú y qué dato podría hacerte cambiar.',
+}), adrianaContract);
+assert.equal(improvedAdriana.approved, true);
+
+const emptyPrettyMessage = evaluatePsychologicalValue(candidate({
+  text: 'Es normal dudar. Confía en ti y recuerda que dentro de ti ya tienes muchas respuestas. Date permiso para escuchar tu intuición.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  psychologicalMove: adrianaContract.psychological_move,
+  takeaway: 'Confía en ti y recuerda que eres capaz.',
+}), adrianaContract);
+assert.equal(emptyPrettyMessage.approved, false);
+
+const educationWithoutTransfer = evaluatePsychologicalValue(candidate({
+  text: 'Una opinión puede aportar información, pero no se convierte automáticamente en una decisión.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  psychologicalMove: 'separar una opinión de la decisión',
+  optionalAction: null,
+  takeaway: 'Una opinión y una decisión cumplen funciones diferentes.',
+}), adrianaContract);
+assert.equal(educationWithoutTransfer.approved, false);
+assert.ok(educationWithoutTransfer.reasons.includes('psychological_value_psychological_transfer'));
+
+const usefulWithoutAction = evaluatePsychologicalValue(candidate({
+  text: 'Cuando ya tienes un criterio y aparece otra opinión, distingue si trae un dato nuevo o solo otra forma de decirte qué haría alguien más.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  psychologicalMove: 'separar una opinión de la decisión',
+  takeaway: 'La información nueva puede cambiar una decisión; otra voz no necesariamente.',
+}), adrianaContract);
+assert.equal(usefulWithoutAction.approved, true);
+
+const actionWithoutInsight = evaluatePsychologicalValue(candidate({
+  text: 'Antes de preguntar, escribe tres cosas y léelas en voz alta.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  psychologicalMove: 'separar una opinión de la decisión',
+  optionalAction: 'Escribe tres cosas y léelas en voz alta.',
+  takeaway: 'Haz estos pasos.',
+}), adrianaContract);
+assert.equal(actionWithoutInsight.approved, false);
+
+const fillerClosing = evaluatePsychologicalValue(candidate({
+  text: 'Cuando ya tienes un criterio, distingue qué dato podría hacerlo cambiar. Descansa. Mañana seguimos.',
+  situation: adrianaContract.situation,
+  mechanismId: adrianaContract.mechanism_id,
+  psychologicalMove: 'separar una opinión de la decisión',
+  takeaway: 'Un dato nuevo puede justificar revisar una decisión.',
+  optionalAction: 'Anota qué dato podría hacerte cambiar.',
+  closing: 'Descansa. Mañana seguimos.',
+}), adrianaContract);
+assert.equal(fillerClosing.approved, false);
+assert.ok(fillerClosing.reasons.includes('psychological_value_filler_closing'));
+
+const concreteTransfer = evaluatePsychologicalValue(candidate({
+  text: 'Cuando alguien cuestiona una decisión, mira qué dato cambió antes de volver a decidir.',
+  situation: concrete.situation,
+  mechanismId: concrete.mechanism_id,
+  psychologicalMove: 'separar una opinión de la decisión',
+  takeaway: 'Revisar un dato concreto es distinto de seguir la última opinión.',
+}), concrete);
+assert.equal(concreteTransfer.approved, true);
+
 // 5–8: mechanism, basis, context and learning are independently required.
 assert.ok(evaluatePsychologicalValue(candidate({ mechanismId: 'invented_mechanism' }), concrete).reasons.includes('psychological_value_mechanism_validity'));
 assert.ok(evaluatePsychologicalValue(candidate({ takeaway: 'Una frase bonita para sentirte mejor.' }), concrete).reasons.includes('psychological_value_learning_value'));
@@ -92,4 +183,4 @@ const longitudinal = formulatePsychologicalIntervention({ currentContext: 'Esta 
 assert.equal(longitudinal.sufficient, true);
 assert.ok(evaluatePsychologicalValue(candidate({ mechanismId: 'progress_monitoring' }), longitudinal).reasons.includes('psychological_value_one_move'));
 
-console.log('psychological value tests: PASS (18 contract regressions)');
+console.log('psychological value tests: PASS (26 contract regressions)');
