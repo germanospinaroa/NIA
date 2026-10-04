@@ -110,4 +110,20 @@ const productionShaped = [
 assert.equal(productionShaped.filter(result => result.approved).length, 1);
 assert.ok(productionShaped[2].approved);
 
-console.log('context anchoring tests: PASS (11 regressions)');
+// Real production-shaped later-phase candidate: it does not need to repeat
+// "opinions" in every sentence once the confirmed situation is preserved.
+const laterPhase = evaluatePsychologicalValue(candidate({
+  text: 'Cuando tienes que tomar una decisión importante, prueba a completar estas dos frases: «No elegiría una opción que…» y «Podría aceptar una opción que…, aunque…». La primera aclara tu límite; la segunda, qué concesión te parece aceptable.',
+  situation: contract.situation,
+  psychologicalMove: 'definir qué condiciones tendría que cumplir una opción para que la elijas',
+  takeaway: 'Separar un límite de una concesión posible vuelve más claro el criterio con el que eliges.',
+  optionalAction: 'Completa las dos frases para la decisión que tengas en mente.',
+}), formulatePsychologicalIntervention({
+  currentContext: contract.situation,
+  desiredChange: 'Confiar más en mi criterio',
+  relevantSituations: [contract.situation],
+  preferredMovement: 'external_validation:define_decision_criterion',
+}));
+assert.equal(laterPhase.approved, true);
+
+console.log('context anchoring tests: PASS (12 regressions)');
