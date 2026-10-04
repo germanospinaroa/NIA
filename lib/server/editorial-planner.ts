@@ -1,5 +1,6 @@
 import { editorialExperienceTypes, editorialInterventionTypes, type CommunicationPreference, type EditorialDepth, type EditorialExperienceType, type EditorialInterventionType, type EditorialMemory, type EditorialStrategy } from './editorial-memory.ts';
 import { canonicalEditorialTypes, closingTypes, directivenessLevels, functionalEmotions, type CanonicalEditorialType, type ClosingType, type Directiveness, type FunctionalEmotion } from '../editorial-contract.ts';
+import type { PsychologicalProgression } from '../psychological-progression.ts';
 
 export type EditorialPlan = {
   strategy: EditorialStrategy;
@@ -18,9 +19,13 @@ export type EditorialPlan = {
   recommended_functional_emotion?: FunctionalEmotion;
   recommended_directiveness?: Directiveness;
   recommended_closing_type?: ClosingType;
+  target_movement?: string | null;
+  builds_on_previous?: string | null;
+  intentionally_not_repeating?: string[];
+  expected_progression?: string;
 };
 
-type PlannerInput = { desiredChange: string; currentContext: string; communicationPreference?: CommunicationPreference | null; memory: EditorialMemory; relevantTopics?: string[]; feedbackGoal?: string; rejectedPatterns?: string[] };
+type PlannerInput = { desiredChange: string; currentContext: string; communicationPreference?: CommunicationPreference | null; memory: EditorialMemory; relevantTopics?: string[]; feedbackGoal?: string; rejectedPatterns?: string[]; psychologicalProgression?: PsychologicalProgression | null };
 const validPreferences = new Set<CommunicationPreference>(['idea', 'practical', 'structured', 'adaptive']);
 
 function preferredType(preference: CommunicationPreference, memory: EditorialMemory): EditorialInterventionType {
@@ -76,6 +81,10 @@ export function planEditorial(input: PlannerInput): EditorialPlan {
           ? 'brief'
           : 'medium';
   const rhythmReason = experienceSaturated ? ` La experiencia reciente está concentrada en ${input.memory.rhythm.dominantExperience}; se prioriza ${experience} para abrir el ritmo.` : '';
+  const progression = input.psychologicalProgression;
+  const targetMovement = progression?.next_recommended_movement ?? null;
+  const buildsOnPrevious = progression?.current_psychological_state && progression.current_psychological_state !== 'not_started' ? progression.current_psychological_state : null;
+  const progressionNote = targetMovement ? ` Progresión: trabajar ${targetMovement}; construir sobre ${buildsOnPrevious ?? 'el contexto inicial'} y no repetir ${(progression?.blocked_repeated_movements ?? []).join(', ') || 'el movimiento actual'}.` : '';
   return {
     strategy,
     recommended_topic: topic,
@@ -88,10 +97,14 @@ export function planEditorial(input: PlannerInput): EditorialPlan {
     recent_concepts_to_avoid: input.memory.recent.slice(0, 4).map(item => item.concept).filter((value): value is string => Boolean(value)),
     recent_editorial_ideas_to_avoid: input.memory.rhythm.recentIdeas.slice(0, 5),
     recent_experiences_to_avoid: experienceSaturated && input.memory.rhythm.dominantExperience ? [input.memory.rhythm.dominantExperience] : [],
-    diversity_notes: `Preferencia ${preference}; experiencias recientes: ${Object.entries(input.memory.rhythm.experienceCounts).filter(([, count]) => count > 0).map(([key, count]) => `${key}:${count}`).join(', ') || 'sin metadata histórica'}. Ideas recientes: ${input.memory.rhythm.recentIdeas.slice(0, 3).join(' | ') || 'ninguna'}.${rhythmReason}${pausedFamilies.length ? ` Familias pausadas temporalmente: ${pausedFamilies.join(', ')}.` : ''}`,
+    diversity_notes: `Preferencia ${preference}; experiencias recientes: ${Object.entries(input.memory.rhythm.experienceCounts).filter(([, count]) => count > 0).map(([key, count]) => `${key}:${count}`).join(', ') || 'sin metadata histórica'}. Ideas recientes: ${input.memory.rhythm.recentIdeas.slice(0, 3).join(' | ') || 'ninguna'}.${rhythmReason}${pausedFamilies.length ? ` Familias pausadas temporalmente: ${pausedFamilies.join(', ')}.` : ''}${progressionNote}`,
     recommended_editorial_type: canonicalType,
     recommended_functional_emotion: emotionCandidates[0] ?? 'claridad',
     recommended_directiveness: directiveness,
     recommended_closing_type: closing,
+    target_movement: targetMovement,
+    builds_on_previous: buildsOnPrevious,
+    intentionally_not_repeating: progression?.recent_movements ?? [],
+    expected_progression: progression?.progression_reason ?? 'La siguiente intervención debe aportar un movimiento útil y no solo una redacción distinta.',
   };
 }

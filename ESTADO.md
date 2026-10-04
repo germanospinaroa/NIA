@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Progresión psicológica — 2026-10-04
+- Añadida una trayectoria determinista dentro del brief y de la firma editorial: objetivo, patrón, estado actual, movimientos completados/recientes, siguiente movimiento, razones y takeaways recientes.
+- El planner ahora expone `target_movement`, `builds_on_previous`, `intentionally_not_repeating` y `expected_progression`; el prompt recibe esa trayectoria y el gate `psychological_progression` rechaza repetición de movimiento o takeaway aunque cambie el wording.
+- La lectura actual de Production para Adriana identifica `external_validation:information_vs_delegating_decision` como movimiento ya trabajado y recomienda `external_validation:define_decision_criterion` como siguiente fase. Tests de trayectoria y regresiones editoriales pasan; aún sin deployment ni nueva llamada real.
+
 ## Upgrade de valor transferible — 2026-10-04
 - El psychological value gate ahora exige situación anclada, transferencia utilizable, payload de valor y cierre no-relleno cuando corresponda. La estructura sigue siendo flexible: no se obliga a acción, pregunta ni cierre.
 - Añadidas 26 regresiones offline para mensajes genéricos, transferencia, contexto concreto, acciones sin insight y cierres vacíos. Controlled E2E, TypeScript, lint y build pasan. No OpenAI/Evolution/WhatsApp reales ni deployment.
