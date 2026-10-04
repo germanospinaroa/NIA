@@ -33,6 +33,12 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
   const generationAttempt = attempts?.[0];
   const evaluated = candidates?.length ?? generationAttempt?.candidate_count ?? 0;
   const approved = candidates?.filter(row => row.audit_results?.approved === true && !row.rejection_reason).length ?? generationAttempt?.approved_candidate_count ?? 0;
+  const rejectionReasons = [...new Set((candidates ?? []).flatMap(row => {
+    const audit = row.audit_results && typeof row.audit_results === 'object' ? row.audit_results as Record<string, unknown> : {};
+    const reasons = Array.isArray(audit.reasons) ? audit.reasons : [];
+    const hardFailures = Array.isArray(audit.hard_failures) ? audit.hard_failures : [];
+    return [...reasons, ...hardFailures].filter((reason): reason is string => typeof reason === 'string');
+  }))];
   const providerEvidence = (rows: NonNullable<typeof providerCalls>) => rows.length ? rows.map(row => `${row.operation}: ${row.status}${row.model ? ` (${row.model})` : ''}${row.error_code ? ` · ${row.error_code}` : ''}${row.error_message ? ` · ${row.error_message}` : ''}`) : [];
   const hasEvent = (eventType: string) => (events ?? []).some(row => row.event_type === eventType);
   const stage = (name: string, status: QaStageStatus, evidence: string[] = []) => ({ stage: name, status, evidence });
@@ -45,7 +51,7 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
     stage('Psychological contract', psychologicalStage ? (psychologicalStage.sufficient === false ? 'FAIL' : 'PASS') : 'NOT REACHED', psychologicalStage ? [`sufficient=${String(psychologicalStage.sufficient)}`, `mechanism=${String(psychologicalStage.mechanism_id ?? 'NOT AVAILABLE')}`] : []),
     stage('OpenAI', generationCall.some(row => row.status === 'success') ? 'PASS' : generationCall.length ? 'FAIL' : 'NOT REACHED', providerEvidence(generationCall)),
     stage('Candidates', evaluated > 0 ? 'PASS' : 'NOT REACHED', evaluated > 0 ? [`${evaluated} evaluated`] : []),
-    stage('Gates', evaluated > 0 ? 'PASS' : 'NOT REACHED', evaluated > 0 ? [`${approved} approved`, `${Math.max(0, evaluated - approved)} rejected`] : []),
+    stage('Gates', evaluated === 0 ? 'NOT REACHED' : approved > 0 ? 'PASS' : 'FAIL', evaluated > 0 ? [`${approved} approved`, `${Math.max(0, evaluated - approved)} rejected`, ...(rejectionReasons.length ? [`reasons=${rejectionReasons.join('|')}`] : [])] : []),
     stage('Intervention', execution?.intervention_id ? 'PASS' : 'NOT REACHED', execution?.intervention_id ? [`intervention_id=${execution.intervention_id}`] : []),
     stage('Composer', stageResults.composer ? 'PASS' : interactions ? 'PASS' : 'NOT REACHED', stageResults.composer ? ['recorded'] : interactions ? ['interaction exists after composer'] : []),
     stage('Interaction', interactions ? 'PASS' : 'NOT REACHED', interactions ? [`interaction_id=${interactions.id}`] : []),
@@ -54,7 +60,8 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
     stage('Evolution', deliveries?.status === 'sent' ? 'PASS' : deliveries ? 'FAIL' : 'NOT REACHED', deliveries?.status === 'sent' ? [`provider_message_id=${deliveries.provider_message_id ? 'present' : 'missing'}`] : deliveries?.last_error ? [String(deliveries.last_error)] : []),
     stage('WhatsApp', deliveries?.status === 'sent' ? 'SENT' : deliveries ? 'NOT SENT' : 'UNKNOWN', deliveries ? [`delivery_status=${deliveries.status}`] : []),
   ];
-  return { execution_id: executionId, status: execution?.status ?? 'unknown', failure_code: execution?.failure_code ?? null, error: generationAttempt?.error_message ?? execution?.failure_message ?? null, candidate_count: execution?.candidate_count ?? evaluated, intervention_id: execution?.intervention_id ?? null, stages, provider_calls: providerEvidence(providerCalls ?? []) };
+  const firstFailure = stages.find(item => item.status === 'FAIL');
+  return { execution_id: executionId, status: execution?.status ?? 'unknown', failure_code: execution?.failure_code ?? null, error: generationAttempt?.error_message ?? execution?.failure_message ?? null, candidate_count: execution?.candidate_count ?? evaluated, intervention_id: execution?.intervention_id ?? null, failure_stage: firstFailure?.stage ?? null, stages, provider_calls: providerEvidence(providerCalls ?? []) };
 }
 
 function sanitizedGeneration(admin: ReturnType<typeof createAdminClient>, executionId: string) {

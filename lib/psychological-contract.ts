@@ -121,11 +121,35 @@ function contextTokens(value: string) {
   return new Set(normalized(value).split(/\s+/).filter(token => token.length > 3 && !['cuando', 'esta', 'para', 'esto', 'tiene', 'como', 'porque'].includes(token)));
 }
 
+type MovementFamily = 'external_input_vs_decision' | 'uncertainty_clarification' | 'decision_criteria' | 'situational_preparation' | 'other';
+
+function hasMultipleMoves(value: string) {
+  const text = normalized(value);
+  const moveTerms = ['reencuadr', 'distinguir', 'prepar', 'pregunt', 'observar', 'reconocer', 'decidir', 'practicar', 'interrumpir', 'cambiar'];
+  const found = moveTerms.filter(term => text.includes(term));
+  return found.length > 1 || /\b(y|ademas|tambien)\b/.test(text) && found.length > 0;
+}
+
+function movementFamily(value: string | null | undefined, mechanismId: string) : MovementFamily | null {
+  if (!value?.trim() || hasMultipleMoves(value)) return null;
+  const text = normalized(value);
+  if (mechanismId === 'external_validation' &&
+      /(opinion|informacion|consejo|escuchar|cuestion|voz|desacuerdo)/.test(text) &&
+      /(decision|decidir|criterio|entregar|ceder|cambiar)/.test(text)) return 'external_input_vs_decision';
+  if (mechanismId === 'uncertainty_clarification' && /(duda|incertidumbre|claro|concreto|punto|pregunta)/.test(text)) return 'uncertainty_clarification';
+  if (mechanismId === 'decision_criteria' && /(dato|criterio|revisar|cambiar|decision|decidir)/.test(text)) return 'decision_criteria';
+  if ((mechanismId === 'implementation_intention' || mechanismId === 'avoidance_preparation') && /(prepar|respuesta|situacion|ocurra|cuando)/.test(text)) return 'situational_preparation';
+  return null;
+}
+
 export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInput, contract: PsychologicalInterventionContract) {
   const mechanism = psychologicalMechanisms.find(item => item.id === candidate.mechanismId);
   const candidateText = normalized(candidate.text);
   const context = contextTokens(`${contract.situation} ${contract.observable_pattern}`);
   const sharedContext = [...context].filter(token => candidateText.includes(token)).length;
+  const situationMatches = Boolean(candidate.situation?.trim() && normalized(candidate.situation) === normalized(contract.situation));
+  const mechanismLanguageAnchor = Boolean(mechanism?.preferred_language.some(term => candidateText.includes(normalized(term))));
+  const contextualAnchor = sharedContext >= 2 || (situationMatches && mechanismLanguageAnchor);
   const takeaway = candidate.takeaway?.trim() ?? '';
   const genericTakeaways = /^(confia en ti|recuerda que eres capaz|escucha lo que necesitas|date permiso para confiar|la duda no significa que estes equivocada|una duda no define quien eres)[.! ]*$/i.test(takeaway) || /frase bonita|frase general|sentirte mejor|seguir adelante|todo estara bien/i.test(takeaway);
   const movement = candidate.psychologicalMove?.trim() ?? '';
@@ -138,13 +162,17 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
     learning_value: takeaway.length >= 20 && !genericTakeaways,
     usefulness: Boolean(candidate.optionalAction?.trim()) || (takeaway.length >= 20 && !genericTakeaways) || /\b(separa|distingue|mira|anota|escribe|elige|prepara|comprueba|pregunta|revisa|observa|diferencia|confundir|equivale|significa)\b/i.test(candidate.text),
     autonomy: !/\b(debes|tienes que sentir|yo se que tu|hazlo porque yo digo)\b/i.test(candidateText),
-    non_genericity: sharedContext >= 2,
+    non_genericity: contextualAnchor,
     no_invented_psychology: !(candidate.riskFlags ?? []).some(flag => /diagnos|invent|clin|miedo|pereza|autosabotaje/i.test(flag)),
-    one_move: Boolean(contract.psychological_move && movement && (movement === contract.psychological_move || movement.includes(contract.psychological_move) || contract.psychological_move.includes(movement))),
+    one_move: Boolean(
+      contract.psychological_move &&
+      movementFamily(movement, contract.mechanism_id) &&
+      movementFamily(movement, contract.mechanism_id) === movementFamily(contract.psychological_move, contract.mechanism_id),
+    ),
   };
   for (const [key, passed] of Object.entries(checks)) if (!passed) reasons.push(`psychological_value_${key}`);
   const whyThisMessage = checks.contextual_relevance && checks.mechanism_validity && checks.intervention_purpose && checks.psychological_movement ? `Porque la situación confirmada (${contract.situation}) y la dirección (${contract.user_direction}) justifican usar ${mechanism?.name ?? contract.mechanism_id} para ${contract.intervention_purpose.toLowerCase()}` : '';
-  const counterfactual_passed = sharedContext >= 2;
+  const counterfactual_passed = contextualAnchor;
   if (!counterfactual_passed) reasons.push('counterfactual_too_generic');
   return { approved: reasons.length === 0, reasons, checks, whyThisMessage, counterfactual_passed, mechanism: mechanism?.id ?? null };
 }

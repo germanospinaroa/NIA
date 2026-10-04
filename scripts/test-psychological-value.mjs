@@ -47,6 +47,33 @@ assert.ok(adrianaAudit.reasons.includes('psychological_value_contextual_relevanc
 assert.equal(evaluatePsychologicalValue(candidate(), concrete).approved, true);
 assert.equal(evaluatePsychologicalValue(candidate({ optionalAction: 'Antes de pedir otra opinión, escribe primero tu respuesta.' }), concrete).approved, true);
 
+// Production-shaped regression: the server contract is the source of truth even
+// when persistence metadata has no nested psychologicalContract.
+const productionShaped = evaluatePsychologicalValue(candidate({
+  text: 'Cuando ya tienes una respuesta para una decisión importante, pedir varias opiniones puede hacer difícil notar qué aportó cada una. Antes de consultar, anota qué elegirías por ahora y qué dato concreto podría hacerte cambiar. Luego podrás distinguir una información nueva de una opinión que solo suma otra voz.',
+  psychologicalMove: 'escuchar una opinión sin cederle la decisión a otra persona',
+  interventionPurpose: 'Distinguir información de entregar la decisión.',
+  expectedMovement: 'Podrás notar qué cambió antes de cambiar de decisión.',
+  takeaway: 'Una opinión puede aportar información sin decidir por ti.',
+  optionalAction: 'Antes de consultar, anota qué dato concreto podría hacerte cambiar.',
+  editorial_signature: { psychologicalContract: null },
+}), concrete);
+assert.equal(productionShaped.approved, true);
+assert.ok(!productionShaped.reasons.includes('psychological_value_one_move'));
+
+const genericWithContract = evaluatePsychologicalValue(candidate({
+  text: 'Confía en ti y recuerda que tienes todo lo necesario para tomar buenas decisiones.',
+  takeaway: 'Confía en ti y recuerda que eres capaz.',
+}), concrete);
+assert.equal(genericWithContract.approved, false);
+assert.ok(genericWithContract.reasons.some(reason => reason.startsWith('psychological_value_') || reason === 'counterfactual_too_generic'));
+
+const alignedParaphrase = evaluatePsychologicalValue(candidate({
+  psychologicalMove: 'separar una opinión de la decisión',
+  interventionPurpose: 'Ayudar a escuchar datos sin entregar el criterio.',
+}), concrete);
+assert.equal(alignedParaphrase.approved, true);
+
 // 5–8: mechanism, basis, context and learning are independently required.
 assert.ok(evaluatePsychologicalValue(candidate({ mechanismId: 'invented_mechanism' }), concrete).reasons.includes('psychological_value_mechanism_validity'));
 assert.ok(evaluatePsychologicalValue(candidate({ takeaway: 'Una frase bonita para sentirte mejor.' }), concrete).reasons.includes('psychological_value_learning_value'));
@@ -65,4 +92,4 @@ const longitudinal = formulatePsychologicalIntervention({ currentContext: 'Esta 
 assert.equal(longitudinal.sufficient, true);
 assert.ok(evaluatePsychologicalValue(candidate({ mechanismId: 'progress_monitoring' }), longitudinal).reasons.includes('psychological_value_one_move'));
 
-console.log('psychological value tests: PASS (15 contract regressions)');
+console.log('psychological value tests: PASS (18 contract regressions)');
