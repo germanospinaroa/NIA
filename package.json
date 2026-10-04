@@ -20,6 +20,7 @@
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
     "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",
     "test:whatsapp-buttons": "node --experimental-strip-types scripts/test-whatsapp-buttons.mjs",
+    "test:whatsapp-inbound": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-whatsapp-inbound.mjs",
     "test:message-composer": "node --experimental-strip-types scripts/test-message-composer.mjs",
     "test:next-message": "node --experimental-strip-types scripts/test-next-message.mjs",
     "test:app-ui": "node scripts/test-app-ui.mjs",

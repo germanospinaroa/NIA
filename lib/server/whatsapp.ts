@@ -23,6 +23,46 @@ export function extractLinkCode(text: string) {
   return match?.[0] ?? null;
 }
 
+export type EvolutionInboundMessage = {
+  providerMessageId: string | null;
+  remoteJid: string;
+  from: string;
+  text: string;
+  fromMe: boolean;
+  messageType: 'conversation' | 'extendedTextMessage' | 'button' | 'unknown';
+  isGroup: boolean;
+  isBroadcast: boolean;
+  buttonId: string | null;
+  buttonText: string | null;
+};
+
+/** Normalizes the Evolution MESSAGES_UPSERT shape without inventing identity. */
+export function parseEvolutionMessage(body: Record<string, unknown>): EvolutionInboundMessage {
+  const data = (body.data ?? {}) as Record<string, unknown>;
+  const key = (data.key ?? {}) as Record<string, unknown>;
+  const message = (data.message ?? {}) as Record<string, unknown>;
+  const extended = (message.extendedTextMessage ?? {}) as Record<string, unknown>;
+  const button = (message.buttonsResponseMessage ?? message.templateButtonReplyMessage ?? {}) as Record<string, unknown>;
+  const remoteJid = typeof key.remoteJid === 'string' ? key.remoteJid : '';
+  const conversation = typeof message.conversation === 'string' ? message.conversation : '';
+  const extendedText = typeof extended.text === 'string' ? extended.text : '';
+  const buttonId = typeof button.selectedButtonId === 'string' ? button.selectedButtonId : typeof button.selectedId === 'string' ? button.selectedId : null;
+  const buttonText = typeof button.selectedDisplayText === 'string' ? button.selectedDisplayText : typeof button.selectedName === 'string' ? button.selectedName : null;
+  const messageType = buttonId || buttonText ? 'button' : conversation ? 'conversation' : extendedText ? 'extendedTextMessage' : 'unknown';
+  return {
+    providerMessageId: typeof key.id === 'string' && key.id.trim() ? key.id : null,
+    remoteJid,
+    from: remoteJid.replace(/@.*$/, ''),
+    text: conversation || extendedText || buttonText || '',
+    fromMe: key.fromMe === true,
+    messageType,
+    isGroup: remoteJid.endsWith('@g.us'),
+    isBroadcast: remoteJid.endsWith('@broadcast') || remoteJid === 'status@broadcast',
+    buttonId,
+    buttonText,
+  };
+}
+
 export function maskPhone(phone: string | null | undefined) {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, '');

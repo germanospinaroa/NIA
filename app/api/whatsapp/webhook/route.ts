@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { extractLinkCode, hashLinkCode, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
+import { extractLinkCode, hashLinkCode, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
+import { persistInboundMessage, processInboundMessage, processUnresolvedInbound } from '@/lib/server/whatsapp-inbound';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -24,34 +25,42 @@ function validEvolutionToken(request: Request) {
   return Boolean(expected && received && received === expected);
 }
 
-function evolutionMessage(body: Record<string, unknown>) {
-  const data = (body.data ?? {}) as Record<string, unknown>;
-  const key = (data.key ?? {}) as Record<string, unknown>;
-  const message = (data.message ?? {}) as Record<string, unknown>;
-  const extended = (message.extendedTextMessage ?? {}) as Record<string, unknown>;
-  const text = typeof message.conversation === 'string' ? message.conversation : typeof extended.text === 'string' ? extended.text : '';
-  const button = (message.buttonsResponseMessage ?? message.templateButtonReplyMessage ?? {}) as Record<string, unknown>;
-  const remoteJid = typeof key.remoteJid === 'string' ? key.remoteJid : '';
-  return { from: remoteJid.replace(/@.*$/, ''), text, buttonId: typeof button.selectedButtonId === 'string' ? button.selectedButtonId : typeof button.selectedId === 'string' ? button.selectedId : null, buttonText: typeof button.selectedDisplayText === 'string' ? button.selectedDisplayText : typeof button.selectedName === 'string' ? button.selectedName : null, messageId: typeof key.id === 'string' ? key.id : null, fromMe: key.fromMe === true };
-}
-
 export async function POST(request: Request) {
   const raw = await request.text();
   const authenticated = whatsappProvider() === 'evolution' ? validEvolutionToken(request) : validSignature(raw, request.headers.get('x-hub-signature-256'));
   if (!authenticated) return NextResponse.json({ error: 'invalid_webhook_auth' }, { status: 401 });
   let body: Record<string, unknown>;
   try { body = JSON.parse(raw) as Record<string, unknown>; } catch { return NextResponse.json({ error: 'invalid_json' }, { status: 400 }); }
-  const evolution = whatsappProvider() === 'evolution' ? evolutionMessage(body) : null;
+  const evolution = whatsappProvider() === 'evolution' ? parseEvolutionMessage(body) : null;
   const metaMessage = (body.entry as Array<{ changes?: Array<{ value?: { messages?: Array<{ from?: string; text?: { body?: string } }> } }> }> | undefined)?.flatMap(entry => entry.changes ?? []).flatMap(change => change.value?.messages ?? [])[0];
   const from = evolution ? evolution.from : metaMessage?.from?.trim();
   const text = evolution ? evolution.text : metaMessage?.text?.body;
-  if (evolution?.fromMe) return NextResponse.json({ received: true });
   const code = text ? extractLinkCode(text) : null;
+  if (evolution?.fromMe) return NextResponse.json({ received: true });
+  if (evolution?.isGroup || evolution?.isBroadcast) return NextResponse.json({ received: true, ignored: 'unsupported_jid' });
   if (evolution?.buttonId && from) {
-    console.info('whatsapp_feedback_button_received', { buttonId: evolution.buttonId, buttonTextPresent: Boolean(evolution.buttonText), messageIdPresent: Boolean(evolution.messageId), waIdSuffix: from.slice(-4) });
+    console.info('whatsapp_feedback_button_received', { buttonId: evolution.buttonId, buttonTextPresent: Boolean(evolution.buttonText), messageIdPresent: Boolean(evolution.providerMessageId), waIdSuffix: from.slice(-4) });
     const admin = createAdminClient();
-    await admin.from('event_log').insert({ user_id: null, event_type: 'whatsapp_feedback_received', entity_type: 'whatsapp', metadata: { button_id: evolution.buttonId, button_text: evolution.buttonText, provider_message_id: evolution.messageId, wa_id_suffix: from.slice(-4) } });
+    await admin.from('event_log').insert({ user_id: null, event_type: 'whatsapp_feedback_received', entity_type: 'whatsapp', metadata: { button_id: evolution.buttonId, button_text: evolution.buttonText, provider_message_id: evolution.providerMessageId, wa_id_suffix: from.slice(-4) } });
     return NextResponse.json({ received: true, feedback: 'identified' });
+  }
+  if (whatsappProvider() === 'evolution' && evolution && from && !code && evolution.messageType !== 'button') {
+    const admin = createAdminClient();
+    if (!evolution.providerMessageId) {
+      await admin.from('event_log').insert({ event_type: 'whatsapp_inbound_missing_id', entity_type: 'whatsapp', metadata: { wa_id_suffix: from.slice(-4), message_type: evolution.messageType } });
+      return NextResponse.json({ received: true, ignored: 'missing_message_id' }, { status: 202 });
+    }
+    if (!evolution.text.trim()) return NextResponse.json({ received: true, ignored: 'unsupported_message' }, { status: 202 });
+    const { data: connection } = await admin.from('whatsapp_connections').select('user_id,wa_id,status').eq('provider', 'evolution').eq('wa_id', from).eq('status', 'connected').maybeSingle();
+    const persisted = await persistInboundMessage(admin, evolution, connection?.user_id ?? null);
+    if (!persisted.created) return NextResponse.json({ received: true, duplicate: true, status: persisted.row.status }, { status: 202 });
+    await admin.from('event_log').insert({ user_id: connection?.user_id ?? null, event_type: 'inbound_received', entity_type: 'whatsapp_inbound', entity_id: persisted.row.id, metadata: { provider: 'evolution', provider_message_id: evolution.providerMessageId, wa_id_suffix: from.slice(-4) } });
+    if (!connection?.user_id) {
+      after(() => processUnresolvedInbound(admin, evolution, persisted.row).catch(error => console.error('[nia-inbound-unresolved-failed]', error instanceof Error ? error.message : String(error))));
+      return NextResponse.json({ received: true, processing: 'scheduled', user_resolved: false }, { status: 202 });
+    }
+    after(() => processInboundMessage(admin, evolution, persisted.row, connection.user_id).catch(error => console.error('[nia-inbound-processing-failed]', error instanceof Error ? error.message : String(error))));
+    return NextResponse.json({ received: true, processing: 'scheduled', user_resolved: true }, { status: 202 });
   }
   if (!from || !code) return NextResponse.json({ received: true });
   const admin = createAdminClient();

@@ -184,7 +184,7 @@ async function persistRejectedCandidates(supabase: DbClient, userId: string, can
   if (error) throw new Error('candidate_save_failed');
 }
 
-export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean; slot?: string | null; localDate?: string | null; executionContext?: 'production' | 'qa' }): Promise<InterventionResult> {
+export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean; slot?: string | null; localDate?: string | null; executionContext?: 'production' | 'qa'; allowRelevantFallback?: boolean }): Promise<InterventionResult> {
   if (execution) {
     await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'intervention_requested', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { contextKey, channel, idempotencyKey: idempotencyKey ?? null } }));
     await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'generating' }));
@@ -250,7 +250,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'generation' });
       recordInterventionGenerationFailure(error, { userId, contextKey, channel, attempt: attempt + 1 });
       if (execution?.executionContext === 'qa') throw error;
-      const fallback = relevantFallback(history, contextKey, brief.currentContext, brief.feedbackGoal);
+      const fallback = options?.allowRelevantFallback === false ? null : relevantFallback(history, contextKey, brief.currentContext, brief.feedbackGoal);
       if (fallback) return deliverExisting(supabase, fallback, channel, execution);
       throw new Error('llm_generation_failed_no_relevant_fallback');
     }
