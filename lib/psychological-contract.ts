@@ -216,13 +216,13 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
   const sharedContext = [...context].filter(token => candidateText.includes(token)).length;
   const situationMatches = Boolean(candidate.situation?.trim() && normalized(candidate.situation) === normalized(contract.situation));
   const mechanismLanguageAnchor = Boolean(mechanism?.preferred_language.some(term => candidateText.includes(normalized(term))));
+  const contractFamily = movementFamily(contract.psychological_move, contract.mechanism_id);
   const contextualAnchor = sharedContext >= 2
     || (situationMatches && mechanismLanguageAnchor)
     || (situationMatches && contractFamily === 'decision_criteria' && /(?:decision|decidir|criterio|opcion|elegir|condicion|limite|prioridad)/i.test(candidateText));
   const situationAnchors = [...context].filter(token => token.length >= 5 && !['alguien', 'cuando', 'tienes', 'tomaste', 'otra', 'persona'].includes(token));
   const situationAnchorHits = situationAnchors.filter(token => candidateText.includes(token)).length;
   const transferSignal = hasTransferSignal(candidate, candidateText);
-  const contractFamily = movementFamily(contract.psychological_move, contract.mechanism_id);
   const contextAnchorSpecificity = contract.mechanism_id === 'external_validation'
     ? (
         hasExternalSituationAnchor(candidate.text, `${contract.situation} ${contract.observable_pattern}`)
