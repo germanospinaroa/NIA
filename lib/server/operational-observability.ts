@@ -189,7 +189,17 @@ function executionContextFromRow(existing: ExecutionRow): ExecutionContext {
 
 export async function updateExecutionRun(supabase: DbClient, context: ExecutionContext, input: { status: ExecutionStatus; interventionId?: string | null; failure?: unknown; candidateCount?: number; retryCount?: number; stageResults?: Record<string, unknown> }) {
   const failure = input.failure ? { failure_code: errorCode(input.failure), failure_message: safeMessage(input.failure) } : {};
-  const stageResults = input.stageResults === undefined ? {} : { stage_results: input.stageResults };
+  let stageResults: Record<string, unknown> = {};
+  if (input.stageResults !== undefined) {
+    const { data } = await operationalClient(supabase)
+      .from('execution_runs')
+      .select('stage_results')
+      .eq('id', context.executionId)
+      .eq('user_id', context.userId)
+      .maybeSingle();
+    const current = data?.stage_results && typeof data.stage_results === 'object' ? data.stage_results as Record<string, unknown> : {};
+    stageResults = { stage_results: { ...current, ...input.stageResults } };
+  }
   await operationalClient(supabase).from('execution_runs').update({
     status: input.status,
     intervention_id: input.interventionId ?? null,

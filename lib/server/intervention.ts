@@ -208,6 +208,11 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
   }
   if (!brief.psychologicalContract?.sufficient) throw new Error('insufficient_intervention_basis');
   if (!llmConfigured()) {
+    if (execution?.executionContext === 'qa') {
+      const error = new Error('llm_not_configured');
+      recordInterventionGenerationFailure(error, { userId, contextKey, channel });
+      throw error;
+    }
     const fallback = relevantFallback(history, contextKey, brief.currentContext, brief.feedbackGoal);
     if (fallback) return deliverExisting(supabase, fallback, channel, execution);
     const error = new Error('llm_not_configured_no_relevant_fallback');
@@ -244,6 +249,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       if (generationAttempt) await observe(supabase, () => finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'failed', error }));
       await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'generation' });
       recordInterventionGenerationFailure(error, { userId, contextKey, channel, attempt: attempt + 1 });
+      if (execution?.executionContext === 'qa') throw error;
       const fallback = relevantFallback(history, contextKey, brief.currentContext, brief.feedbackGoal);
       if (fallback) return deliverExisting(supabase, fallback, channel, execution);
       throw new Error('llm_generation_failed_no_relevant_fallback');

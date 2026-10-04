@@ -20,6 +20,7 @@ const tables = {
   interventions: [], learning_signals: [], context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
 };
 const counts = { openai: 0, evolution: 0 };
+let failNextGeneration = false;
 
 function rowId() { return randomUUID(); }
 function clone(value) { return value === undefined ? value : JSON.parse(JSON.stringify(value)); }
@@ -94,7 +95,14 @@ globalThis.fetch = async (input, init = {}) => {
     const body = JSON.parse(String(init.body ?? '{}'));
     const name = body.response_format?.json_schema?.name;
     if (url.includes('/embeddings')) return jsonResponse({ data: [{ embedding: Array.from({ length: 8 }, () => 0.01) }], usage: { prompt_tokens: 3, total_tokens: 3 } });
-    if (name === 'nia_intervention_candidates') return jsonResponse({ id: 'controlled-generation', model: 'controlled-model', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ candidates }) } }], usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 } });
+    if (name === 'nia_intervention_candidates') {
+      if (failNextGeneration) {
+        const timeout = new Error('aborted');
+        timeout.name = 'AbortError';
+        throw timeout;
+      }
+      return jsonResponse({ id: 'controlled-generation', model: 'controlled-model', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ candidates }) } }], usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 } });
+    }
     if (name === 'nia_intervention_audit') return jsonResponse({ id: 'controlled-audit', model: 'controlled-model', choices: [{ message: { content: JSON.stringify(audit) } }], usage: { prompt_tokens: 50, completion_tokens: 50, total_tokens: 100 } });
     throw new Error(`unexpected controlled OpenAI schema: ${name}`);
   }
@@ -127,4 +135,26 @@ assert.equal(db.tables.interventions[0].editorial_signature.psychologicalContrac
 assert.equal(db.tables.intervention_candidates.length, 3);
 assert.equal(counts.evolution, 1);
 assert.ok(counts.openai >= 4, `expected generation, embedding and audit provider calls, got ${counts.openai}`);
+
+// Execution B proves that a provider timeout cannot inherit A's downstream state.
+failNextGeneration = true;
+const realSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = ((callback, delay, ...args) => delay === 30_000 ? (callback(...args), 0) : realSetTimeout(callback, delay, ...args));
+const timeoutExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_timeout', idempotencyKey: `qa-timeout:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_timeout:${userId}` });
+await assert.rejects(
+  resolveIntervention(db, userId, 'intention', 'whatsapp', timeoutExecution.idempotencyKey, timeoutExecution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${timeoutExecution.executionId}`, localDate: '2026-10-04' }),
+  /llm_timeout/,
+);
+globalThis.setTimeout = realSetTimeout;
+await updateExecutionRun(db, timeoutExecution, { status: 'failed', failure: new Error('llm_timeout') });
+const timeoutRun = db.tables.execution_runs.find(row => row.id === timeoutExecution.executionId);
+assert.equal(timeoutRun.status, 'failed');
+assert.equal(timeoutRun.failure_code, 'llm_timeout');
+assert.equal(timeoutRun.candidate_count ?? 0, 0);
+assert.equal(timeoutRun.intervention_id ?? null, null);
+assert.equal(db.tables.intervention_candidates.filter(row => row.execution_run_id === timeoutExecution.executionId).length, 0);
+assert.equal(db.tables.interactions.filter(row => row.slot === `qa:${timeoutExecution.executionId}`).length, 0);
+assert.equal(db.tables.whatsapp_daily_deliveries.filter(row => row.slot === `qa:${timeoutExecution.executionId}`).length, 0);
+assert.equal(counts.evolution, 1, 'timeout execution must not call Evolution');
+assert.notEqual(timeoutRun.intervention_id, finalRun.intervention_id);
 console.log(JSON.stringify({ status: 'PASS', execution_run: finalRun.id, planner: 'executed', candidates: db.tables.intervention_candidates.length, intervention: finalRun.intervention_id, composer: 'real', interaction: interaction.id, delivery: delivery.id, provider_message_id: delivery.provider_message_id, openai_boundary_calls: counts.openai, evolution_boundary_calls: counts.evolution }, null, 2));

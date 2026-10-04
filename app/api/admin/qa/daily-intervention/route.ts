@@ -8,7 +8,7 @@ import { localDate } from '@/lib/server/whatsapp-schedule';
 import { claimDelivery, sendClaimedDelivery } from '@/lib/server/whatsapp-daily';
 import { loadEditorialMemory } from '@/lib/server/editorial-memory';
 import { recordAdminAudit, recordExecutionStage, startQaExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
-import type { InterventionCandidate, InterventionResult } from '@/lib/intervention-engine';
+import type { InterventionResult } from '@/lib/intervention-engine';
 
 export const maxDuration = 60;
 
@@ -18,13 +18,13 @@ function qaSlot(executionId: string) { return `qa:${executionId}`; }
 type QaStageStatus = 'PASS' | 'FAIL' | 'NOT REACHED' | 'SENT' | 'NOT SENT' | 'UNKNOWN';
 type QaStage = { stage: string; status: QaStageStatus; evidence: string[] };
 
-async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string, startedAt: number) {
-  const [{ data: execution }, { data: events }, { data: attempts }, { data: providerCalls }, { data: candidates }, { data: interactions }, { data: deliveries }] = await Promise.all([
-    admin.from('execution_runs').select('id,status,failure_code,failure_message,stage_results,candidate_count,intervention_id,started_at,completed_at').eq('id', executionId).eq('user_id', userId).maybeSingle(),
+async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string) {
+  const { data: execution } = await admin.from('execution_runs').select('id,status,failure_code,failure_message,stage_results,candidate_count,intervention_id,started_at,completed_at').eq('id', executionId).eq('user_id', userId).maybeSingle();
+  const [{ data: events }, { data: attempts }, { data: providerCalls }, { data: candidates }, { data: interactions }, { data: deliveries }] = await Promise.all([
     admin.from('event_log').select('event_type,occurred_at,metadata').eq('execution_run_id', executionId).order('occurred_at', { ascending: true }),
     admin.from('generation_attempts').select('status,candidate_count,approved_candidate_count,rejection_count,provider,model,error_code,error_message').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
     admin.from('execution_provider_calls').select('operation,status,provider,model,error_code,error_message').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
-    admin.from('intervention_candidates').select('audit_results,rejection_reason').eq('user_id', userId).eq('execution_context', 'qa').gte('created_at', new Date(startedAt - 1000).toISOString()).limit(3),
+    admin.from('intervention_candidates').select('audit_results,rejection_reason').eq('intervention_id', execution?.intervention_id ?? '00000000-0000-0000-0000-000000000000').limit(3),
     admin.from('interactions').select('id').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
     admin.from('whatsapp_daily_deliveries').select('id,status,provider_message_id,last_error').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
   ]);
@@ -94,89 +94,6 @@ async function candidateSummaries(admin: ReturnType<typeof createAdminClient>, i
     audit_approved: candidate.audit_results?.approved === true,
     rejection_reason: candidate.rejection_reason,
   }));
-}
-
-async function candidateSummariesForExecution(admin: ReturnType<typeof createAdminClient>, userId: string, startedAt: number) {
-  const { data } = await admin.from('intervention_candidates')
-    .select('id,topic,concept,angle,intervention_type,depth,blocks,candidate_text,audit_results,rejection_reason')
-    .eq('user_id', userId)
-    .eq('execution_context', 'qa')
-    .gte('created_at', new Date(startedAt - 1000).toISOString())
-    .order('created_at', { ascending: true })
-    .limit(3);
-  return (data ?? []).map(candidate => ({
-    id: candidate.id,
-    topic: candidate.topic,
-    concept: candidate.concept,
-    angle: candidate.angle,
-    intervention_type: candidate.intervention_type,
-    depth: candidate.depth,
-    blocks: Array.isArray(candidate.blocks) ? candidate.blocks.length : null,
-    length: typeof candidate.candidate_text === 'string' ? candidate.candidate_text.length : 0,
-    validation: candidate.rejection_reason ? 'rejected' : 'approved',
-    audit_approved: candidate.audit_results?.approved === true,
-    rejection_reason: candidate.rejection_reason,
-  }));
-}
-
-async function createSyntheticDownstreamFixture(admin: ReturnType<typeof createAdminClient>, userId: string, executionId: string, context: string, desiredChange: string): Promise<{ interventionId: string; intervention: InterventionCandidate }> {
-  const text = 'Esta es una prueba técnica del recorrido de NIA. La generación editorial de esta ejecución no produjo una candidata aprobada; este mensaje comprueba únicamente el composer y la entrega.';
-  const intervention: InterventionCandidate = {
-    text,
-    function: 'reframe',
-    concept: 'qa_downstream_fixture',
-    angle: 'qa_downstream_fixture',
-    structure: 'context_does_not_mean',
-    topic: 'qa_downstream_fixture',
-    interventionType: 'brief_insight',
-    editorialType: 'context_mirror',
-    depth: 'brief',
-    blocks: [{ type: 'idea', text }],
-    situation: context,
-    intention: desiredChange,
-    experienceType: 'brief_insight',
-    territoryKey: 'qa_downstream_fixture',
-    editorialTake: 'Comprobar el recorrido downstream sin aprobar contenido editorial.',
-    editorialIdea: 'La infraestructura downstream puede probarse sin convertir una candidata rechazada en mensaje editorial.',
-    functionalEmotion: 'claridad',
-    directiveness: 'reflective',
-    closingType: 'none',
-  };
-  const { data, error } = await admin.from('interventions').insert({
-    user_id: userId,
-    execution_context: 'qa',
-    text,
-    function: intervention.function,
-    concept: intervention.concept,
-    angle: intervention.angle,
-    structure: intervention.structure,
-    topic: intervention.topic,
-    intervention_type: intervention.interventionType,
-    depth: intervention.depth,
-    blocks: intervention.blocks,
-    editorial_strategy: 'qa_downstream_fixture',
-    editorial_reason: 'No hubo candidata editorial aprobada; fixture exclusivo para comprobar downstream.',
-    editorial_take: intervention.editorialTake,
-    editorial_idea: intervention.editorialIdea,
-    experience_type: intervention.experienceType,
-    territory_key: intervention.territoryKey,
-    situation: context,
-    intention: desiredChange,
-    editorial_type: intervention.editorialType,
-    functional_emotion: intervention.functionalEmotion,
-    directiveness: intervention.directiveness,
-    closing_type: intervention.closingType,
-    editorial_signature: { ...intervention, syntheticQa: true, executionId },
-    editorial_score: null,
-    gate_results: null,
-    audit_status: 'approved',
-    audit_results: { synthetic_qa: true, not_editorial_approval: true, execution_id: executionId },
-    status: 'created',
-    channel: 'whatsapp',
-    idempotency_key: `qa_fixture:${executionId}`,
-  }).select('id').single();
-  if (error || !data) throw new Error('qa_synthetic_intervention_save_failed');
-  return { interventionId: data.id, intervention };
 }
 
 async function existingResult(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string, date: string) {
@@ -253,18 +170,17 @@ export async function POST(request: Request) {
       },
     });
     let result: InterventionResult;
-    let editorialStatus: 'approved' | 'no_approved_intervention' = 'approved';
-    let syntheticDownstream = false;
+    const editorialStatus = 'approved' as const;
     try {
       result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa' });
     } catch (error) {
-      if (!(error instanceof Error) || error.message !== 'no_approved_intervention') throw error;
-      editorialStatus = 'no_approved_intervention';
-      syntheticDownstream = true;
-      const synthetic = await createSyntheticDownstreamFixture(admin, userId, run.context.executionId, 'QA downstream fixture', 'QA downstream verification');
-      result = { intervention: synthetic.intervention, interventionId: synthetic.interventionId, feedback: { question: '', dimension: 'relevance', options: [] }, candidates: [] };
+      if (error instanceof Error && error.message === 'no_approved_intervention') {
+        const trace = await qaTrace(admin, run.context.executionId, userId);
+        return NextResponse.json({ status: 'editorial_review_required', editorial_status: 'no_approved_intervention', execution_run_id: run.context.executionId, generation: await sanitizedGeneration(admin, run.context.executionId), editorial: { strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null, intervention_type: brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: brief.editorialPlan?.recommended_depth ?? null }, intervention_id: null, delivery_id: null, evolution: { accepted: false, provider_message_id_present: false }, qa_trace: trace });
+      }
+      throw error;
     }
-    await recordExecutionStage(admin, run.context, 'intervention', { status: 'completed', intervention_id: result.interventionId, synthetic_qa: syntheticDownstream });
+    await recordExecutionStage(admin, run.context, 'intervention', { status: 'completed', intervention_id: result.interventionId });
     const recent = await admin.from('interactions').select('content,slot').eq('user_id', userId).order('created_at', { ascending: false }).limit(16);
     const recentContents = (recent.data ?? []).filter(row => typeof row.slot !== 'string' || !row.slot.startsWith('qa:')).slice(0, 8).map(row => row.content).filter((value): value is string => typeof value === 'string');
     const content = composeNiaMessage({ content: result.intervention.text, firstName: profile.first_name, timezone: profile.timezone, userKey: userId, now, recentContents });
@@ -276,21 +192,20 @@ export async function POST(request: Request) {
     if (!claim) throw new Error('qa_delivery_already_processed');
     await recordExecutionStage(admin, run.context, 'delivery_claim', { status: 'completed', delivery_id: claim.id });
     const delivery = await sendClaimedDelivery(admin, { ...claim, userId, interactionId: interaction.id, localDate: date, slot }, connection.wa_id, content);
-    const generation = { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: editorialStatus === 'approved' ? await candidateSummaries(admin, result.interventionId) : await candidateSummariesForExecution(admin, userId, run.context.startedAt) };
+    const generation = { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: await candidateSummaries(admin, result.interventionId) };
     const editorial = { strategy: brief.editorialPlan?.strategy ?? null, topic: result.intervention.topic ?? brief.editorialPlan?.recommended_topic ?? null, intervention_type: result.intervention.interventionType ?? brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: result.intervention.depth ?? brief.editorialPlan?.recommended_depth ?? null };
     if (!delivery.ok) {
       await updateExecutionRun(admin, run.context, { status: 'failed', interventionId: result.interventionId, failure: new Error(delivery.reason) });
-      const trace = await qaTrace(admin, run.context.executionId, userId, run.context.startedAt);
-      return NextResponse.json({ status: 'downstream_failed', editorial_status: editorialStatus, synthetic_downstream: syntheticDownstream, execution_run_id: run.context.executionId, generation, editorial, intervention_id: result.interventionId, delivery_id: claim.id, evolution: { accepted: false, provider_message_id_present: false }, qa_trace: trace }, { status: 502 });
+      const trace = await qaTrace(admin, run.context.executionId, userId);
+      return NextResponse.json({ status: 'downstream_failed', editorial_status: editorialStatus, execution_run_id: run.context.executionId, generation, editorial, intervention_id: result.interventionId, delivery_id: claim.id, evolution: { accepted: false, provider_message_id_present: false }, qa_trace: trace }, { status: 502 });
     }
     await recordExecutionStage(admin, run.context, 'sender', { status: 'completed', provider: 'evolution', provider_message_id_present: Boolean(delivery.providerMessageId) });
     await recordExecutionStage(admin, run.context, 'evolution', { status: 'completed', http_status: delivery.status ?? null, provider_message_id_present: Boolean(delivery.providerMessageId) });
-    if (syntheticDownstream) await updateExecutionRun(admin, run.context, { status: 'no_approved_intervention', interventionId: result.interventionId, candidateCount: generation.candidates, stageResults: { downstream: { status: 'completed', synthetic_qa: true, composer: 'shared', delivery: 'shared' } } });
-    const trace = await qaTrace(admin, run.context.executionId, userId, run.context.startedAt);
-    return NextResponse.json({ status: editorialStatus === 'approved' ? 'success' : 'editorial_review_required', editorial_status: editorialStatus, synthetic_downstream: syntheticDownstream, execution_run_id: run.context.executionId, generation, editorial, intervention_id: result.interventionId, delivery_id: claim.id, evolution: { accepted: true, provider_message_id_present: Boolean(delivery.providerMessageId) }, qa_trace: trace });
+    const trace = await qaTrace(admin, run.context.executionId, userId);
+    return NextResponse.json({ status: 'success', editorial_status: editorialStatus, execution_run_id: run.context.executionId, generation, editorial, intervention_id: result.interventionId, delivery_id: claim.id, evolution: { accepted: true, provider_message_id_present: Boolean(delivery.providerMessageId) }, qa_trace: trace });
   } catch (error) {
     await updateExecutionRun(admin, run.context, { status: 'failed', failure: error });
-    const trace = await qaTrace(admin, run.context.executionId, userId, run.context.startedAt);
+    const trace = await qaTrace(admin, run.context.executionId, userId);
     console.error('[admin-qa-daily-intervention] failed', { executionId: run.context.executionId, userId, reason: error instanceof Error ? error.message : 'unknown' });
     const contract = preparedBrief?.psychologicalContract;
     const psychologicalContract = contract ? { situation: contract.situation, observable_pattern: contract.observable_pattern, user_direction: contract.user_direction, friction: contract.friction, mechanism_id: contract.mechanism_id, mechanism_confidence: contract.mechanism_confidence, intervention_purpose: contract.intervention_purpose, psychological_move: contract.psychological_move, expected_movement: contract.expected_movement, takeaway: contract.takeaway, why_now: contract.why_now, sufficient: contract.sufficient, risk_flags: contract.risk_flags } : null;

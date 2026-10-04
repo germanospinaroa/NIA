@@ -9,13 +9,13 @@ assert.match(route, /resolveIntervention\(admin, userId/);
 assert.match(route, /composeNiaMessage/);
 assert.match(route, /claimDelivery/);
 assert.match(route, /sendClaimedDelivery/);
-assert.match(route, /createSyntheticDownstreamFixture/);
+assert.doesNotMatch(route, /createSyntheticDownstreamFixture/);
 assert.match(route, /editorial_review_required/);
 assert.doesNotMatch(route, /getOrCreateDailyInteraction/);
 assert.doesNotMatch(route, /CRON_SECRET/);
 assert.match(intervention, /execution_context: options\?\.executionContext/);
 assert.match(memory, /execution_context.*qa/);
-assert.match(route, /synthetic_qa/);
-assert.match(route, /not_editorial_approval/);
+assert.doesNotMatch(route, /synthetic_qa/);
+assert.doesNotMatch(route, /not_editorial_approval/);
 
 console.log('QA E2E orchestration tests: PASS');

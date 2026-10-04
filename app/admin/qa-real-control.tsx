@@ -62,6 +62,7 @@ export default function QaRealControl({ userId, userEmail, whatsappStatus }: { u
     if (running) return;
     setRunning(true);
     setError('');
+    setResult(null);
     try {
       const response = await fetch('/api/admin/qa/daily-intervention', {
         method: 'POST',
