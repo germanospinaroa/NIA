@@ -172,6 +172,41 @@ function addUsage(target: StructuredUsage, source?: StructuredUsage) {
 }
 
 export const candidateSchema = { type: 'object', additionalProperties: false, required: ['candidates'], properties: { candidates: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['topic', 'editorial_take', 'editorial_idea', 'experience_type', 'intervention_type', 'editorial_type', 'functional_emotion', 'directiveness', 'closing_type', 'signal', 'evidence_direction', 'movement', 'opening_closing', 'depth', 'blocks', 'function', 'concept', 'angle', 'structure'], properties: { topic: { type: 'string', minLength: 1, maxLength: 160 }, editorial_take: { type: 'string', minLength: 8, maxLength: 240 }, editorial_idea: { type: 'string', minLength: 8, maxLength: 240 }, experience_type: { type: 'string', enum: ['brief_insight', 'reflection', 'encouragement', 'perspective_shift', 'practical_tool', 'exercise', 'challenge', 'question', 'check_in', 'validation', 'direct_push', 'concrete_example', 'story_or_scenario', 'feedback_request'] }, intervention_type: { type: 'string', enum: ['brief_insight', 'reflection', 'practical_guidance', 'tool', 'step_by_step', 'example', 'deep_dive'] }, editorial_type: { type: 'string', enum: [...canonicalEditorialTypes] }, functional_emotion: { type: 'string', enum: [...functionalEmotions] }, directiveness: { type: 'string', enum: [...directivenessLevels] }, closing_type: { type: 'string', enum: [...closingTypes] }, signal: { type: 'string', minLength: 1, maxLength: 240 }, evidence_direction: { type: 'string', minLength: 1, maxLength: 240 }, movement: { type: 'string', minLength: 1, maxLength: 160 }, opening_closing: { type: 'string', minLength: 1, maxLength: 240 }, situation: { type: 'string', maxLength: 240 }, intention: { type: 'string', maxLength: 240 }, insight_id: { type: 'string', maxLength: 120 }, action_id: { type: 'string', maxLength: 120 }, longitudinal_evidence_refs: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 120 } }, depth: { type: 'string', enum: ['brief', 'medium', 'deep'] }, blocks: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'object', additionalProperties: false, required: ['type', 'text'], properties: { type: { type: 'string', enum: candidateBlockTypes }, text: { type: 'string', minLength: 1, maxLength: 420 } } } }, function: { type: 'string', enum: [...candidateFunctions] }, concept: { type: 'string', minLength: 2, maxLength: 120 }, angle: { type: 'string', minLength: 2, maxLength: 180 }, structure: { type: 'string', enum: [...candidateStructures] } } } } } };
+type StrictSchemaNode = { type?: string | string[]; properties?: Record<string, StrictSchemaNode>; required?: string[]; additionalProperties?: boolean; items?: StrictSchemaNode; anyOf?: StrictSchemaNode[]; oneOf?: StrictSchemaNode[]; allOf?: StrictSchemaNode[] };
+
+const candidateItemSchema = (candidateSchema.properties.candidates.items as unknown) as StrictSchemaNode;
+const candidateProperties = candidateItemSchema.properties ?? {};
+const nullableCandidateFields: Array<[string, 'string' | 'array']> = [
+  ['situation', 'string'],
+  ['intention', 'string'],
+  ['insight_id', 'string'],
+  ['action_id', 'string'],
+  ['longitudinal_evidence_refs', 'array'],
+];
+candidateItemSchema.required = [...new Set([...(candidateItemSchema.required ?? []), ...nullableCandidateFields.map(([key]) => key)])];
+for (const [key, type] of nullableCandidateFields) candidateProperties[key] = { ...candidateProperties[key], type: [type, 'null'] };
+
+export function strictSchemaErrors(schema: unknown, path = '$'): string[] {
+  if (!schema || typeof schema !== 'object') return [`${path} must be an object`];
+  const node = schema as StrictSchemaNode;
+  const errors: string[] = [];
+  if (node.type === 'object') {
+    const properties = node.properties;
+    if (!properties) errors.push(`${path}.properties is required`);
+    if (node.additionalProperties !== false) errors.push(`${path}.additionalProperties must be false`);
+    if (!Array.isArray(node.required)) errors.push(`${path}.required is required`);
+    if (properties && Array.isArray(node.required)) {
+      const propertyKeys = Object.keys(properties);
+      const requiredKeys = new Set(node.required);
+      for (const key of propertyKeys) if (!requiredKeys.has(key)) errors.push(`${path}.required is missing ${key}`);
+      for (const key of node.required) if (!Object.prototype.hasOwnProperty.call(properties, key)) errors.push(`${path}.required references missing property ${key}`);
+      for (const [key, property] of Object.entries(properties)) errors.push(...strictSchemaErrors(property, `${path}.properties.${key}`));
+    }
+  }
+  if (node.type === 'array' && node.items) errors.push(...strictSchemaErrors(node.items, `${path}.items`));
+  for (const key of ['anyOf', 'oneOf', 'allOf'] as const) for (const [index, child] of (node[key] ?? []).entries()) errors.push(...strictSchemaErrors(child, `${path}.${key}[${index}]`));
+  return errors;
+}
 const auditSchema = { type: 'object', additionalProperties: false, required: ['context_fit', 'specificity', 'generic_motivation', 'chatbot_language', 'coaching_language', 'therapy_language', 'robotic_or_abstract_language', 'first_read_comprehension', 'editorial_novelty', 'experience_novelty', 'cliché', 'semantic_repetition', 'concept_repetition', 'structure_repetition', 'single_idea', 'natural_voice', 'unnecessary_advice', 'approved', 'reasons'], properties: { context_fit: { type: 'boolean' }, specificity: { type: 'boolean' }, generic_motivation: { type: 'boolean' }, chatbot_language: { type: 'boolean' }, coaching_language: { type: 'boolean' }, therapy_language: { type: 'boolean' }, robotic_or_abstract_language: { type: 'boolean' }, first_read_comprehension: { type: 'boolean' }, editorial_novelty: { type: 'boolean' }, experience_novelty: { type: 'boolean' }, 'cliché': { type: 'boolean' }, semantic_repetition: { type: 'boolean' }, concept_repetition: { type: 'boolean' }, structure_repetition: { type: 'boolean' }, single_idea: { type: 'boolean' }, natural_voice: { type: 'boolean' }, unnecessary_advice: { type: 'boolean' }, approved: { type: 'boolean' }, reasons: { type: 'array', items: { type: 'string' } } } };
 const calibrationSchema = { type: 'object', additionalProperties: false, required: ['question', 'options', 'allow_free_text', 'reason', 'missing_context_field'], properties: { question: { type: 'string', minLength: 12, maxLength: 180 }, options: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'object', additionalProperties: false, required: ['id', 'label', 'context_value'], properties: { id: { type: 'string', minLength: 2, maxLength: 40 }, label: { type: 'string', minLength: 2, maxLength: 80 }, context_value: { type: 'string', minLength: 2, maxLength: 180 } } } }, allow_free_text: { type: 'boolean', const: true }, reason: { type: 'string', enum: ['too_general', 'missing_context', 'context_changed', 'desired_change_changed'] }, missing_context_field: { type: 'string', enum: ['current_context', 'active_context', 'relevant_situations', 'desired_change'] } } };
 

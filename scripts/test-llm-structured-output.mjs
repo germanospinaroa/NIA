@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
-import { candidateSchema, isRetryableLlmError, requestStructuredJsonWithMeta, validateLlmCandidate, withTechnicalJsonRetryMeta } from '../lib/server/llm-intervention.ts';
+import { candidateSchema, isRetryableLlmError, requestStructuredJsonWithMeta, strictSchemaErrors, validateLlmCandidate, withTechnicalJsonRetryMeta } from '../lib/server/llm-intervention.ts';
 
 const blocksSchema = candidateSchema.properties.candidates.items.properties.blocks;
 assert.equal(blocksSchema.items.properties.type.type, 'string');
 assert.equal(blocksSchema.items.properties.text.type, 'string');
+assert.deepEqual(strictSchemaErrors(candidateSchema), []);
+assert.deepEqual(candidateSchema.properties.candidates.items.required.includes('situation'), true);
+assert.deepEqual(candidateSchema.properties.candidates.items.properties.situation.type, ['string', 'null']);
+assert.deepEqual(candidateSchema.properties.candidates.items.properties.longitudinal_evidence_refs.type, ['array', 'null']);
+assert.deepEqual(strictSchemaErrors({ type: 'object', additionalProperties: false, required: [], properties: { nested: { type: 'object', additionalProperties: true, required: [], properties: { value: { type: 'string' } } } } }), [
+  '$.required is missing nested',
+  '$.properties.nested.additionalProperties must be false',
+  '$.properties.nested.required is missing value',
+]);
 
 const base = {
   topic: 'criterio propio',
