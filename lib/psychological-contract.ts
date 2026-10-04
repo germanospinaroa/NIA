@@ -75,7 +75,41 @@ function chooseMechanism(context: string, direction: string) {
   return null;
 }
 
-export function formulatePsychologicalIntervention(input: { currentContext: string; desiredChange: string; relevantSituations?: string[]; recurringPatterns?: string[]; learningSignals?: Array<{ value?: unknown }> }): PsychologicalInterventionContract {
+function movementDescription(mechanismId: string, preferredMovement?: string | null) {
+  const key = preferredMovement?.trim() ?? '';
+  const labels: Record<string, string> = {
+    'external_validation:notice_the_consulting_pattern': 'observar cuándo empiezas a buscar otra opinión antes de decidir',
+    'external_validation:information_vs_delegating_decision': 'distinguir la información que aporta una opinión de entregar la decisión',
+    'external_validation:define_decision_criterion': 'definir qué condiciones tendría que cumplir una opción para que la elijas',
+    'external_validation:set_reconsideration_threshold': 'definir qué tendría que cambiar para que reconsideres una decisión',
+    'external_validation:decide_with_sufficient_information': 'decidir cuando ya tienes información suficiente, sin seguir acumulando opiniones',
+    'external_validation:review_outcome_without_self_punishment': 'revisar el resultado de una decisión sin convertirlo en un juicio sobre ti',
+    'external_validation:build_evidence_of_own_capacity': 'reconocer evidencia concreta de decisiones que pudiste tomar por tu cuenta',
+    'uncertainty_clarification:name_the_concrete_question': 'convertir la duda en una pregunta concreta que puedas responder',
+    'uncertainty_clarification:identify_what_is_known': 'separar lo que ya sabes de lo que todavía falta comprobar',
+    'uncertainty_clarification:choose_a_sufficient_next_step': 'elegir el siguiente paso que aporte el dato que falta',
+    'uncertainty_clarification:act_without_total_certainty': 'decidir qué puedes hacer aunque todavía no tengas certeza total',
+    'decision_criteria:name_the_decision_rule': 'hacer explícita la regla que usarás para decidir',
+    'decision_criteria:set_reconsideration_threshold': 'definir qué tendría que cambiar para reconsiderar la decisión',
+    'decision_criteria:decide_with_sufficient_information': 'decidir cuando ya tienes información suficiente',
+    'decision_criteria:review_outcome_without_self_punishment': 'revisar el resultado sin convertirlo en un juicio sobre ti',
+    'situational_preparation:notice_the_trigger': 'reconocer la señal concreta que suele aparecer antes de responder',
+    'situational_preparation:prepare_an_alternative_response': 'preparar una respuesta alternativa para esa situación concreta',
+    'situational_preparation:practice_the_response_in_context': 'practicar esa respuesta en la situación donde quieres usarla',
+    'situational_preparation:review_what_happened': 'revisar qué ocurrió cuando apareció esa situación',
+    'progress_monitoring:notice_two_observations': 'registrar dos observaciones concretas antes de sacar una conclusión sobre tu avance',
+    'progress_monitoring:name_what_changed': 'nombrar qué cambió entre una situación y otra',
+    'progress_monitoring:build_evidence_of_own_capacity': 'reconocer evidencia concreta de lo que ya pudiste hacer por tu cuenta',
+  };
+  if (key.startsWith(`${mechanismId}:`) && labels[key]) return labels[key];
+  if (mechanismId === 'external_validation') return 'distinguir información de entregar la decisión';
+  if (mechanismId === 'implementation_intention') return 'preparar una respuesta para una situación concreta';
+  if (mechanismId === 'decision_criteria') return 'hacer explícito qué dato justificaría revisar';
+  if (mechanismId === 'uncertainty_clarification') return 'convertir una duda amplia en un punto concreto';
+  return 'mirar la situación desde un criterio más útil';
+}
+
+export function formulatePsychologicalIntervention(input: { currentContext: string; desiredChange: string; relevantSituations?: string[]; recurringPatterns?: string[]; learningSignals?: Array<{ value?: unknown }>; preferredMovement?: string | null }): PsychologicalInterventionContract {
   const currentContext = input.currentContext.trim();
   const contextualSituation = hasObservableCue(currentContext) ? currentContext : (input.relevantSituations ?? []).find(value => typeof value === 'string' && hasObservableCue(value))?.trim() ?? currentContext;
   const situation = contextualSituation || (input.relevantSituations ?? []).find(Boolean)?.trim() || '';
@@ -83,7 +117,7 @@ export function formulatePsychologicalIntervention(input: { currentContext: stri
   const mechanism = chooseMechanism(situation, input.desiredChange);
   const sufficient = Boolean(situation && observable && mechanism);
   const mechanismId = mechanism?.id ?? 'context_clarification';
-  const movement = mechanism?.id === 'external_validation' ? 'distinguir información de entregar la decisión' : mechanism?.id === 'implementation_intention' ? 'preparar una respuesta para una situación concreta' : mechanism?.id === 'decision_criteria' ? 'hacer explícito qué dato justificaría revisar' : mechanism?.id === 'uncertainty_clarification' ? 'convertir una duda amplia en un punto concreto' : 'mirar la situación desde un criterio más útil';
+  const movement = sufficient ? movementDescription(mechanismId, input.preferredMovement) : 'precisar la situación antes de intervenir';
   return {
     situation,
     observable_pattern: observable,
