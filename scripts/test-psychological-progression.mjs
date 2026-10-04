@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { derivePsychologicalProgression, progressionForCandidate } from '../lib/psychological-progression.ts';
+import { derivePsychologicalProgression, movementKey, progressionForCandidate } from '../lib/psychological-progression.ts';
+import { formulatePsychologicalIntervention } from '../lib/psychological-contract.ts';
 
 const base = {
   goal: 'Confiar más en mi criterio.',
@@ -13,6 +14,15 @@ const history = [
   { id: '1', mechanismId: 'external_validation', movement: 'distinguir información de entregar la decisión', takeaway: 'Consultar no significa entregar la decisión.', createdAt: '2026-10-01T12:00:00Z' },
 ];
 const progression = derivePsychologicalProgression({ ...base, history });
+assert.equal(movementKey({ mechanismId: 'external_validation', movement: 'distinguir información de entregar la decisión' }), 'external_validation:information_vs_delegating_decision');
+const alignedContract = formulatePsychologicalIntervention({
+  currentContext: base.pattern,
+  desiredChange: base.goal,
+  relevantSituations: [base.pattern],
+  preferredMovement: 'external_validation:define_decision_criterion',
+});
+assert.equal(alignedContract.psychological_move, 'definir qué condiciones tendría que cumplir una opción para que la elijas');
+assert.match(alignedContract.expected_movement, /definir qué condiciones tendría que cumplir una opción/);
 assert.equal(progression.current_psychological_state, 'external_validation:information_vs_delegating_decision');
 assert.equal(progression.next_recommended_movement, 'external_validation:define_decision_criterion');
 assert.ok(progression.completed_movements.includes('external_validation:information_vs_delegating_decision'));
