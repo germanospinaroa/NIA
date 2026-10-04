@@ -342,7 +342,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       } catch (error) {
         await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge' });
         recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'semantic_judge' });
-        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'semantic_judge_unavailable', hard_failures: [...deterministic.hard_failures, 'semantic_judge_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, semantic_judge_ran: false }, similarInterventions: [], similarity: 0, semanticStatus: 'fail', deterministic };
+        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'semantic_judge_unavailable'], hard_failures: [...deterministic.hard_failures, 'semantic_judge_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, semantic_judge_ran: false }, similarInterventions: [], similarity: 0, semanticStatus: 'fail', deterministic };
         attemptCandidates.push(normalizedCandidate);
         continue;
       }
@@ -362,7 +362,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       } catch (error) {
         await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit' });
         recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'llm_audit' });
-        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable', hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
+        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable'], hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'llm', reasons: ['llm_audit_unavailable'] } }));
       }
       attemptCandidates.push(normalizedCandidate);
