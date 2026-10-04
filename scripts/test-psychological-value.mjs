@@ -82,6 +82,29 @@ assert.equal(evaluatePsychologicalValue(candidate({
   takeaway: 'Precisar el dato que falta permite consultar sin entregar la decisión.',
   optionalAction: 'Completa qué necesitas saber antes de preguntar.',
 }), concrete).approved, true);
+
+// Production-shaped regression after the real 23:42 rejection:
+// a later decision-criteria intervention may stay anchored to the confirmed
+// situation without repeating the earlier external-validation wording.
+const decisionCriteriaProduction = evaluatePsychologicalValue(candidate({
+  text: 'Cuando tienes que tomar una decisión importante, prueba a completar estas dos frases: «No elegiría una opción que…» y «Podría aceptar una opción que…, aunque…». La primera aclara tu límite; la segunda, qué concesión te parece aceptable. Juntas te ayudan a definir qué tendría que cumplir la opción que elijas.',
+  situation: concrete.situation,
+  mechanismId: concrete.mechanism_id,
+  psychologicalMove: 'definir qué condiciones tendría que cumplir una opción para que la elijas',
+  interventionPurpose: concrete.intervention_purpose,
+  expectedMovement: concrete.expected_movement,
+  takeaway: 'Distinguir un límite de una concesión posible vuelve más claro el criterio con el que eliges.',
+  optionalAction: 'Completa las dos frases para la decisión que tengas en mente.',
+}), formulatePsychologicalIntervention({
+  currentContext: concrete.situation,
+  desiredChange: concrete.user_direction,
+  relevantSituations: [concrete.situation],
+  preferredMovement: 'external_validation:define_decision_criterion',
+}));
+assert.equal(decisionCriteriaProduction.approved, true);
+assert.equal(decisionCriteriaProduction.reasons.includes('psychological_value_context_anchor_specificity'), false);
+assert.equal(decisionCriteriaProduction.reasons.includes('psychological_value_one_move'), false);
+assert.equal(decisionCriteriaProduction.reasons.includes('psychological_value_psychological_transfer'), false);
 assert.equal(evaluatePsychologicalValue(candidate({
   text: 'Cuando ya tienes una respuesta y te preocupa equivocarte, puedes escuchar varias opiniones sin convertirlas en una votación sobre qué debes elegir.',
   psychologicalMove: 'Diferenciar una consulta de una votación sobre qué debes elegir.',
