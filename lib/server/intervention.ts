@@ -183,18 +183,20 @@ function enrichAudit(candidate: InterventionCandidate, deterministic: ReturnType
 }
 
 function psychologicalSignature(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract'], progression?: InterventionBrief['psychologicalProgression']) {
+  const sourceMechanism = contract?.mechanism_id ?? candidate.mechanismId ?? null;
+  const sourceMovement = contract?.psychological_move ?? candidate.psychologicalMove ?? candidate.movement ?? null;
   return {
     psychologicalContract: contract ?? null,
-    mechanismId: candidate.mechanismId ?? null,
-    mechanismConfidence: candidate.mechanismConfidence ?? null,
-    interventionPurpose: candidate.interventionPurpose ?? null,
-    psychologicalMove: candidate.psychologicalMove ?? null,
-    expectedMovement: candidate.expectedMovement ?? null,
-    takeaway: candidate.takeaway ?? null,
-    optionalAction: candidate.optionalAction ?? null,
-    whyNow: candidate.whyNow ?? null,
-    riskFlags: candidate.riskFlags ?? [],
-    psychologicalMovementKey: movementKey({ mechanismId: candidate.mechanismId, movement: candidate.psychologicalMove ?? candidate.movement, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }),
+    mechanismId: sourceMechanism,
+    mechanismConfidence: contract?.mechanism_confidence ?? candidate.mechanismConfidence ?? null,
+    interventionPurpose: contract?.intervention_purpose ?? candidate.interventionPurpose ?? null,
+    psychologicalMove: sourceMovement,
+    expectedMovement: contract?.expected_movement ?? candidate.expectedMovement ?? null,
+    takeaway: candidate.takeaway ?? contract?.takeaway ?? null,
+    optionalAction: candidate.optionalAction ?? contract?.optional_action ?? null,
+    whyNow: contract?.why_now ?? candidate.whyNow ?? null,
+    riskFlags: contract?.risk_flags ?? candidate.riskFlags ?? [],
+    psychologicalMovementKey: movementKey({ mechanismId: sourceMechanism, movement: sourceMovement }),
     psychologicalProgression: progression ?? null,
   };
 }
@@ -280,7 +282,22 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     const auditStarted = Date.now();
     for (const candidate of generated) {
       if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_generated', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, candidateIndex: attemptCandidates.length } }));
-      const deterministic = auditCandidate(candidate, {
+      const psychologicalAlignedCandidate: InterventionCandidate = attemptBrief.psychologicalContract?.sufficient
+      ? {
+          ...candidate,
+          mechanismId: attemptBrief.psychologicalContract.mechanism_id,
+          mechanismConfidence: attemptBrief.psychologicalContract.mechanism_confidence,
+          interventionPurpose: attemptBrief.psychologicalContract.intervention_purpose,
+          psychologicalMove: attemptBrief.psychologicalContract.psychological_move,
+          expectedMovement: attemptBrief.psychologicalContract.expected_movement,
+          whyNow: attemptBrief.psychologicalContract.why_now,
+          riskFlags: attemptBrief.psychologicalContract.risk_flags,
+          situation: candidate.situation ?? attemptBrief.psychologicalContract.situation,
+          intention: candidate.intention ?? attemptBrief.psychologicalContract.user_direction,
+        }
+      : candidate;
+    const normalizedCandidate = psychologicalAlignedCandidate;
+    const deterministic = auditCandidate(normalizedCandidate, {
         ...attemptBrief,
         recentEditorialIdeas: [
           ...(attemptBrief.recentEditorialIdeas ?? []),
@@ -288,8 +305,8 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
         ],
       });
       if (!deterministic.approved) {
-        candidate.audit = deterministic;
-        attemptCandidates.push(candidate);
+        normalizedCandidate.audit = deterministic;
+        attemptCandidates.push(normalizedCandidate);
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'deterministic', reasons: deterministic.reasons } }));
         continue;
       }
@@ -348,7 +365,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
         candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable'], hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'llm', reasons: ['llm_audit_unavailable'] } }));
       }
-      attemptCandidates.push(candidate);
+      attemptCandidates.push(normalizedCandidate);
     }
     if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'completed', candidateCount: generated.length, approvedCandidateCount: attemptCandidates.filter(candidate => candidate.audit?.approved).length, rejectionCount: attemptCandidates.filter(candidate => !candidate.audit?.approved).length, usage: generationUsage });
     if (execution) await observe(supabase, () => recordExecutionStage(supabase, execution, 'auditing', { duration_ms: Date.now() - auditStarted, attempt: attempt + 1, candidate_count: attemptCandidates.length, approved_count: attemptCandidates.filter(candidate => candidate.audit?.approved).length, rejected_count: attemptCandidates.filter(candidate => !candidate.audit?.approved).length }));
