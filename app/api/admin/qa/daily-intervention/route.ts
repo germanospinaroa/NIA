@@ -18,26 +18,46 @@ function qaSlot(executionId: string) { return `qa:${executionId}`; }
 type QaStageStatus = 'PASS' | 'FAIL' | 'NOT REACHED' | 'SENT' | 'NOT SENT' | 'UNKNOWN';
 type QaStage = { stage: string; status: QaStageStatus; evidence: string[] };
 
+async function candidateSummariesForExecution(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string) {
+  const { data } = await admin.from('intervention_candidates').select('id,topic,concept,angle,intervention_type,depth,blocks,candidate_text,audit_results,rejection_reason,editorial_signature').eq('user_id', userId).eq('execution_context', 'qa').order('created_at', { ascending: true }).limit(100);
+  return (data ?? []).filter(candidate => {
+    const signature = candidate.editorial_signature && typeof candidate.editorial_signature === 'object' ? candidate.editorial_signature as Record<string, unknown> : {};
+    return signature.executionRunId === executionId;
+  }).map(candidate => ({
+    id: candidate.id,
+    topic: candidate.topic,
+    concept: candidate.concept,
+    angle: candidate.angle,
+    intervention_type: candidate.intervention_type,
+    depth: candidate.depth,
+    blocks: Array.isArray(candidate.blocks) ? candidate.blocks.length : null,
+    candidate_text: candidate.candidate_text,
+    length: typeof candidate.candidate_text === 'string' ? candidate.candidate_text.length : 0,
+    validation: candidate.rejection_reason ? 'rejected' : 'approved',
+    audit_approved: candidate.audit_results?.approved === true,
+    rejection_reason: candidate.rejection_reason,
+  }));
+}
+
 async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string) {
   const { data: execution } = await admin.from('execution_runs').select('id,status,failure_code,failure_message,stage_results,candidate_count,intervention_id,started_at,completed_at').eq('id', executionId).eq('user_id', userId).maybeSingle();
-  const [{ data: events }, { data: attempts }, { data: providerCalls }, { data: candidates }, { data: interactions }, { data: deliveries }] = await Promise.all([
+  const [{ data: events }, { data: attempts }, { data: providerCalls }, { data: interactions }, { data: deliveries }, candidateSummaries] = await Promise.all([
     admin.from('event_log').select('event_type,occurred_at,metadata').eq('execution_run_id', executionId).order('occurred_at', { ascending: true }),
     admin.from('generation_attempts').select('status,candidate_count,approved_candidate_count,rejection_count,provider,model,error_code,error_message').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
     admin.from('execution_provider_calls').select('operation,status,provider,model,error_code,error_message').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
-    admin.from('intervention_candidates').select('audit_results,rejection_reason').eq('intervention_id', execution?.intervention_id ?? '00000000-0000-0000-0000-000000000000').limit(3),
     admin.from('interactions').select('id').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
     admin.from('whatsapp_daily_deliveries').select('id,status,provider_message_id,last_error').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
+    candidateSummariesForExecution(admin, executionId, userId),
   ]);
   const stageResults = execution?.stage_results && typeof execution.stage_results === 'object' ? execution.stage_results as Record<string, unknown> : {};
   const generationCall = (providerCalls ?? []).filter(row => row.operation === 'generation');
   const generationAttempt = attempts?.[0];
-  const evaluated = candidates?.length ?? generationAttempt?.candidate_count ?? 0;
-  const approved = candidates?.filter(row => row.audit_results?.approved === true && !row.rejection_reason).length ?? generationAttempt?.approved_candidate_count ?? 0;
-  const rejectionReasons = [...new Set((candidates ?? []).flatMap(row => {
-    const audit = row.audit_results && typeof row.audit_results === 'object' ? row.audit_results as Record<string, unknown> : {};
+  const evaluated = candidateSummaries.length || generationAttempt?.candidate_count || 0;
+  const approved = candidateSummaries.filter(row => row.audit_approved && !row.rejection_reason).length || generationAttempt?.approved_candidate_count || 0;
+  const rejectionReasons = [...new Set(candidateSummaries.flatMap(row => {
+    const audit = row.rejection_reason ? { reasons: row.rejection_reason.split(',') } : {};
     const reasons = Array.isArray(audit.reasons) ? audit.reasons : [];
-    const hardFailures = Array.isArray(audit.hard_failures) ? audit.hard_failures : [];
-    return [...reasons, ...hardFailures].filter((reason): reason is string => typeof reason === 'string');
+    return reasons.filter((reason): reason is string => typeof reason === 'string');
   }))];
   const providerEvidence = (rows: NonNullable<typeof providerCalls>) => rows.length ? rows.map(row => `${row.operation}: ${row.status}${row.model ? ` (${row.model})` : ''}${row.error_code ? ` · ${row.error_code}` : ''}${row.error_message ? ` · ${row.error_message}` : ''}`) : [];
   const hasEvent = (eventType: string) => (events ?? []).some(row => row.event_type === eventType);
@@ -61,7 +81,7 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
     stage('WhatsApp', deliveries?.status === 'sent' ? 'SENT' : deliveries ? 'NOT SENT' : 'UNKNOWN', deliveries ? [`delivery_status=${deliveries.status}`] : []),
   ];
   const firstFailure = stages.find(item => item.status === 'FAIL');
-  return { execution_id: executionId, status: execution?.status ?? 'unknown', failure_code: execution?.failure_code ?? null, error: generationAttempt?.error_message ?? execution?.failure_message ?? null, candidate_count: execution?.candidate_count ?? evaluated, intervention_id: execution?.intervention_id ?? null, failure_stage: firstFailure?.stage ?? null, stages, provider_calls: providerEvidence(providerCalls ?? []) };
+  return { execution_id: executionId, status: execution?.status ?? 'unknown', failure_code: execution?.failure_code ?? null, error: generationAttempt?.error_message ?? execution?.failure_message ?? null, candidate_count: execution?.candidate_count ?? evaluated, intervention_id: execution?.intervention_id ?? null, candidate_summaries: candidateSummaries, failure_stage: firstFailure?.stage ?? null, stages, provider_calls: providerEvidence(providerCalls ?? []) };
 }
 
 function sanitizedGeneration(admin: ReturnType<typeof createAdminClient>, executionId: string) {
@@ -77,23 +97,6 @@ function sanitizedGeneration(admin: ReturnType<typeof createAdminClient>, execut
       rejected: attempt?.rejection_count ?? 0,
     };
   });
-}
-
-async function candidateSummaries(admin: ReturnType<typeof createAdminClient>, interventionId: string) {
-  const { data } = await admin.from('intervention_candidates').select('id,topic,concept,angle,intervention_type,depth,blocks,candidate_text,audit_results,rejection_reason').eq('intervention_id', interventionId).order('created_at', { ascending: true });
-  return (data ?? []).map(candidate => ({
-    id: candidate.id,
-    topic: candidate.topic,
-    concept: candidate.concept,
-    angle: candidate.angle,
-    intervention_type: candidate.intervention_type,
-    depth: candidate.depth,
-    blocks: Array.isArray(candidate.blocks) ? candidate.blocks.length : null,
-    length: typeof candidate.candidate_text === 'string' ? candidate.candidate_text.length : 0,
-    validation: candidate.rejection_reason ? 'rejected' : 'approved',
-    audit_approved: candidate.audit_results?.approved === true,
-    rejection_reason: candidate.rejection_reason,
-  }));
 }
 
 async function existingResult(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string, date: string) {
@@ -176,7 +179,7 @@ export async function POST(request: Request) {
     } catch (error) {
       if (error instanceof Error && error.message === 'no_approved_intervention') {
         const trace = await qaTrace(admin, run.context.executionId, userId);
-        return NextResponse.json({ status: 'editorial_review_required', editorial_status: 'no_approved_intervention', execution_run_id: run.context.executionId, generation: await sanitizedGeneration(admin, run.context.executionId), editorial: { strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null, intervention_type: brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: brief.editorialPlan?.recommended_depth ?? null }, intervention_id: null, delivery_id: null, evolution: { accepted: false, provider_message_id_present: false }, qa_trace: trace });
+        return NextResponse.json({ status: 'editorial_review_required', editorial_status: 'no_approved_intervention', execution_run_id: run.context.executionId, generation: { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: trace.candidate_summaries }, editorial: { strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null, intervention_type: brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: brief.editorialPlan?.recommended_depth ?? null }, intervention_id: null, delivery_id: null, evolution: { accepted: false, provider_message_id_present: false }, qa_trace: trace });
       }
       throw error;
     }
@@ -192,7 +195,7 @@ export async function POST(request: Request) {
     if (!claim) throw new Error('qa_delivery_already_processed');
     await recordExecutionStage(admin, run.context, 'delivery_claim', { status: 'completed', delivery_id: claim.id });
     const delivery = await sendClaimedDelivery(admin, { ...claim, userId, interactionId: interaction.id, localDate: date, slot }, connection.wa_id, content);
-    const generation = { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: await candidateSummaries(admin, result.interventionId) };
+    const generation = { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: await candidateSummariesForExecution(admin, run.context.executionId, userId) };
     const editorial = { strategy: brief.editorialPlan?.strategy ?? null, topic: result.intervention.topic ?? brief.editorialPlan?.recommended_topic ?? null, intervention_type: result.intervention.interventionType ?? brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: result.intervention.depth ?? brief.editorialPlan?.recommended_depth ?? null };
     if (!delivery.ok) {
       await updateExecutionRun(admin, run.context, { status: 'failed', interventionId: result.interventionId, failure: new Error(delivery.reason) });

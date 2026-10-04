@@ -35,7 +35,7 @@ for (const value of Object.values(executionB)) assert.notEqual(value, executionA
 assert.match(intervention, /if \(execution\?\.executionContext === 'qa'\) throw error/);
 assert.match(intervention, /if \(execution\?\.executionContext === 'qa'\) \{/);
 assert.doesNotMatch(route, /createSyntheticDownstreamFixture/);
-assert.doesNotMatch(route, /candidateSummariesForExecution/);
+assert.match(route, /candidateSummariesForExecution/);
 assert.match(route, /updateExecutionRun\(admin, run\.context, \{ status: 'failed', failure: error \}\)/);
 assert.match(route, /slot = qaSlot\(run\.context\.executionId\)/);
 assert.match(route, /eq\('slot', qaSlot\(executionId\)\)/);

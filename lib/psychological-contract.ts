@@ -135,8 +135,8 @@ function movementFamily(value: string | null | undefined, mechanismId: string) :
   if (!value?.trim() || hasMultipleMoves(value)) return null;
   const text = normalized(value);
   if (mechanismId === 'external_validation' &&
-      /(opinion|informacion|consejo|escuchar|cuestion|voz|desacuerdo)/.test(text) &&
-      /(decision|decidir|criterio|entregar|ceder|cambiar)/.test(text)) return 'external_input_vs_decision';
+      /(opinion|informacion|consejo|escuchar|escuch|cuestion|voz|desacuerdo|consultar|preguntar|aporte|separar)/.test(text) &&
+      /(decision|decidir|criterio|entregar|ceder|cambiar|sustit)/.test(text)) return 'external_input_vs_decision';
   if (mechanismId === 'uncertainty_clarification' && /(duda|incertidumbre|claro|concreto|punto|pregunta)/.test(text)) return 'uncertainty_clarification';
   if (mechanismId === 'decision_criteria' && /(dato|criterio|revisar|cambiar|decision|decidir)/.test(text)) return 'decision_criteria';
   if ((mechanismId === 'implementation_intention' || mechanismId === 'avoidance_preparation') && /(prepar|respuesta|situacion|ocurra|cuando)/.test(text)) return 'situational_preparation';
@@ -145,6 +145,13 @@ function movementFamily(value: string | null | undefined, mechanismId: string) :
 
 function hasTransferSignal(candidate: PsychologicalCandidateInput, candidateText: string) {
   return Boolean(candidate.optionalAction?.trim()) || /\b(antes de|la proxima vez|cuando vuelva|si vuelve|anota|escribe|fijate|mira que|distingue|separa|puedes notar|podras notar|que dato|que cambiaria|revisa|comprueba|elige|decide|prepara)\b/i.test(candidateText);
+}
+
+function hasExternalValidationTransfer(candidateText: string, contextAnchorSpecificity: boolean) {
+  if (!contextAnchorSpecificity) return false;
+  const hasInformationCriterion = /(?:aporta|falta|nuevo|cambia|ocupa el lugar|informacion que faltaba|dato concreto)/i.test(candidateText);
+  const appliesToDecision = /(?:opinion|opiniones|escuch|consult|pregunt|decision|criterio)/i.test(candidateText);
+  return hasInformationCriterion && appliesToDecision;
 }
 
 function hasFillerClosing(candidate: PsychologicalCandidateInput, candidateText: string) {
@@ -193,7 +200,7 @@ export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInpu
     usefulness: Boolean(candidate.optionalAction?.trim()) || (takeaway.length >= 20 && !genericTakeaways) || /\b(separa|distingue|mira|anota|escribe|elige|prepara|comprueba|pregunta|revisa|observa|diferencia|confundir|equivale|significa)\b/i.test(candidate.text),
     autonomy: !/\b(debes|tienes que sentir|yo se que tu|hazlo porque yo digo)\b/i.test(candidateText),
     non_genericity: contextualAnchor,
-    psychological_transfer: transferSignal && !genericTakeaways && (Boolean(candidate.optionalAction?.trim()) || takeaway.length >= 20),
+    psychological_transfer: (transferSignal || hasExternalValidationTransfer(candidateText, contextAnchorSpecificity)) && !genericTakeaways && (Boolean(candidate.optionalAction?.trim()) || takeaway.length >= 20),
     context_anchor_specificity: contextAnchorSpecificity,
     filler_closing: !hasFillerClosing(candidate, candidateText),
     no_invented_psychology: !(candidate.riskFlags ?? []).some(flag => /diagnos|invent|clin|miedo|pereza|autosabotaje/i.test(flag)),

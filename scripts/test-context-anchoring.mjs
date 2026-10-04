@@ -91,4 +91,23 @@ assert.equal(evaluatePsychologicalValue(candidate({
 // 10. Multiple psychological moves remain rejected.
 assert.ok(evaluatePsychologicalValue(candidate({ psychologicalMove: 'reencuadrar y preparar una acción' }), contract).reasons.includes('psychological_value_one_move'));
 
-console.log('context anchoring tests: PASS (10 regressions)');
+// 11. Production-shaped replay: the real Adriana contract has enough context
+// and the generated distinction is valid even without a separate action.
+const productionShaped = [
+  {
+    text: 'Al pedir opiniones sobre una decisión importante, puedes buscar una perspectiva concreta sin pedir que otra persona elija por ti. Una forma de hacerlo es preguntar: «¿Qué aspecto crees que podría no estar viendo?»',
+    psychologicalMove: 'Convertir la búsqueda de opiniones en una petición de información concreta, sin pedir que otros ocupen el lugar de la decisión propia.',
+  },
+  {
+    text: 'Antes de pedir opiniones sobre una decisión importante, anota tu respuesta provisional y la razón principal. Al escuchar cada opinión, fíjate en qué dato o consideración nueva aporta frente a esa razón.',
+    psychologicalMove: 'Hacer visible el criterio propio antes de consultar, para poder separar aportes nuevos de una sustitución de la decisión.',
+  },
+  {
+    text: 'Cuando ya tienes una respuesta o un criterio para una decisión importante, pedir varias opiniones puede ayudarte a encontrar información que faltaba. La diferencia está en si lo que escuchas aporta algo nuevo o si empieza a ocupar el lugar de tu decisión.',
+    psychologicalMove: 'Distinguir si una opinión aporta algo que faltaba o si empieza a ocupar el lugar de tu decisión.',
+  },
+].map(item => evaluatePsychologicalValue(candidate({ ...item, optionalAction: null, takeaway: 'Una opinión puede aportar información sin tener que decidir por ti.' }), contract));
+assert.equal(productionShaped.filter(result => result.approved).length, 1);
+assert.ok(productionShaped[2].approved);
+
+console.log('context anchoring tests: PASS (11 regressions)');

@@ -21,6 +21,7 @@ const tables = {
 };
 const counts = { openai: 0, evolution: 0 };
 let failNextGeneration = false;
+let rejectNextGeneration = false;
 
 function rowId() { return randomUUID(); }
 function clone(value) { return value === undefined ? value : JSON.parse(JSON.stringify(value)); }
@@ -101,7 +102,9 @@ globalThis.fetch = async (input, init = {}) => {
         timeout.name = 'AbortError';
         throw timeout;
       }
-      return jsonResponse({ id: 'controlled-generation', model: 'controlled-model', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ candidates }) } }], usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 } });
+      const responseCandidates = rejectNextGeneration ? candidates.map(candidate => ({ ...candidate, text: 'Confía en ti y recuerda que eres capaz.', blocks: [{ type: 'idea', text: 'Confía en ti y recuerda que eres capaz.' }], takeaway: 'Una frase bonita para sentirte mejor.', optional_action: null, optionalAction: null })) : candidates;
+      rejectNextGeneration = false;
+      return jsonResponse({ id: 'controlled-generation', model: 'controlled-model', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ candidates: responseCandidates }) } }], usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 } });
     }
     if (name === 'nia_intervention_audit') return jsonResponse({ id: 'controlled-audit', model: 'controlled-model', choices: [{ message: { content: JSON.stringify(audit) } }], usage: { prompt_tokens: 50, completion_tokens: 50, total_tokens: 100 } });
     throw new Error(`unexpected controlled OpenAI schema: ${name}`);
@@ -146,6 +149,7 @@ await assert.rejects(
   /llm_timeout/,
 );
 globalThis.setTimeout = realSetTimeout;
+failNextGeneration = false;
 await updateExecutionRun(db, timeoutExecution, { status: 'failed', failure: new Error('llm_timeout') });
 const timeoutRun = db.tables.execution_runs.find(row => row.id === timeoutExecution.executionId);
 assert.equal(timeoutRun.status, 'failed');
@@ -157,4 +161,22 @@ assert.equal(db.tables.interactions.filter(row => row.slot === `qa:${timeoutExec
 assert.equal(db.tables.whatsapp_daily_deliveries.filter(row => row.slot === `qa:${timeoutExecution.executionId}`).length, 0);
 assert.equal(counts.evolution, 1, 'timeout execution must not call Evolution');
 assert.notEqual(timeoutRun.intervention_id, finalRun.intervention_id);
+
+// Execution C proves that a successful generation with no approved candidate
+// stops at Gates and cannot create downstream records.
+rejectNextGeneration = true;
+const rejectionExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_rejection', idempotencyKey: `qa-rejection:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_rejection:${userId}` });
+await assert.rejects(
+  resolveIntervention(db, userId, 'intention', 'whatsapp', rejectionExecution.idempotencyKey, rejectionExecution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${rejectionExecution.executionId}`, localDate: '2026-10-04' }),
+  /no_approved_intervention/,
+);
+const rejectionRun = db.tables.execution_runs.find(row => row.id === rejectionExecution.executionId);
+assert.equal(rejectionRun.status, 'no_approved_intervention');
+assert.equal(rejectionRun.failure_code, 'no_approved_intervention');
+assert.equal(rejectionRun.candidate_count, 3);
+assert.equal(rejectionRun.intervention_id ?? null, null);
+assert.equal(db.tables.intervention_candidates.filter(row => row.editorial_signature?.executionRunId === rejectionExecution.executionId).length, 3);
+assert.equal(db.tables.interactions.filter(row => row.slot === `qa:${rejectionExecution.executionId}`).length, 0);
+assert.equal(db.tables.whatsapp_daily_deliveries.filter(row => row.slot === `qa:${rejectionExecution.executionId}`).length, 0);
+assert.equal(counts.evolution, 1, 'rejected editorial run must not call Evolution');
 console.log(JSON.stringify({ status: 'PASS', execution_run: finalRun.id, planner: 'executed', candidates: db.tables.intervention_candidates.length, intervention: finalRun.intervention_id, composer: 'real', interaction: interaction.id, delivery: delivery.id, provider_message_id: delivery.provider_message_id, openai_boundary_calls: counts.openai, evolution_boundary_calls: counts.evolution }, null, 2));

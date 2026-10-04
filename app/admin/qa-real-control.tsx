@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, FlaskConical, Send } from 'lucide-react';
 import { useState } from 'react';
 
-type CandidateSummary = { id?: string; topic: string | null; concept: string | null; angle: string | null; intervention_type: string | null; depth: string | null; validation?: string; rejection_reason?: string | null };
+type CandidateSummary = { id?: string; topic: string | null; concept: string | null; angle: string | null; intervention_type: string | null; depth: string | null; candidate_text?: string | null; validation?: string; rejection_reason?: string | null };
 type QaTraceStage = { stage: string; status: string; evidence: string[] };
 type Result = {
   status: string;
@@ -70,7 +70,7 @@ export default function QaRealControl({ userId, userEmail, whatsappStatus }: { u
         body: JSON.stringify({ user_id: userId }),
       });
       const body = await response.json() as Result & { error?: string };
-      setResult(body);
+      setResult({ ...body, editorial_status: body.editorial_status ?? 'NOT AVAILABLE' });
       if (!response.ok) throw new Error(body.error || 'qa_execution_failed');
       setConfirming(false);
     } catch (reason) {
