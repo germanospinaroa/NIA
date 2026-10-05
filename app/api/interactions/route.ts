@@ -14,8 +14,8 @@ export async function POST(request: Request) {
   let execution;
   try { execution = await startExecutionRun(supabase, { userId: user.id, channel: 'web', triggerSource: 'nia_point', idempotencyKey }); } catch { return NextResponse.json({ error: 'intervention_unavailable' }, { status: 503 }); }
   let result;
-  try { result = await resolveIntervention(supabase, user.id, body.context_key, 'web', idempotencyKey, execution); } catch (error) {
-    await updateExecutionRun(supabase, execution, { status: error instanceof CalibrationRequiredError ? 'failed' : error instanceof Error && error.message === 'no_approved_intervention' ? 'no_approved_intervention' : 'failed', failure: error });
+  try { result = await resolveIntervention(supabase, user.id, body.context_key, 'web', idempotencyKey, execution, { writerVersion: 'v2' }); } catch (error) {
+    await updateExecutionRun(supabase, execution, { status: error instanceof CalibrationRequiredError ? 'failed' : error instanceof Error && ['no_approved_intervention', 'no_approved_intervention_after_repair'].includes(error.message) ? 'no_approved_intervention' : 'failed', failure: error });
     if (error instanceof CalibrationRequiredError) {
       await recordEvent(supabase, { userId: user.id, eventType: 'recalibration_started', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { reason: error.calibration.reason } });
       return NextResponse.json({ status: 'calibration_required', calibration: error.calibration });

@@ -77,7 +77,7 @@ export async function processInboundMessage(admin: DbClient, message: EvolutionI
   await recordEvent(admin, { userId, eventType: 'inbound_processing_started', entityType: 'whatsapp_inbound', entityId: inbound.id, executionRunId: execution.executionId, metadata: { providerMessageId: message.providerMessageId } });
   try {
     const contextKey = contextKeyFromInbound(message.text);
-    const result = await resolveIntervention(admin, userId, contextKey, 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'production', allowRelevantFallback: false });
+    const result = await resolveIntervention(admin, userId, contextKey, 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'production', allowRelevantFallback: false, writerVersion: 'v2' });
     await recordExecutionStage(admin, execution, 'intervention', { status: 'PASS', intervention_id: result.interventionId });
     const { data: profile } = await admin.from('profiles').select('first_name,timezone,direction_key').eq('id', userId).single();
     if (!profile) throw new Error('profile_unavailable');
@@ -104,7 +104,7 @@ export async function processInboundMessage(admin: DbClient, message: EvolutionI
     return { kind: 'completed' as const, executionId: execution.executionId, interventionId: result.interventionId, interactionId: interaction.id, deliveryId: claim.id, providerMessageId: delivery.providerMessageId ?? null };
   } catch (error) {
     const messageText = error instanceof Error ? error.message : String(error);
-    const noApproved = messageText === 'no_approved_intervention';
+    const noApproved = ['no_approved_intervention', 'no_approved_intervention_after_repair'].includes(messageText);
     await updateInbound(admin, inbound.id, { status: noApproved ? 'no_approved_intervention' : 'failed', processed_at: new Date().toISOString(), error_code: noApproved ? 'no_approved_intervention' : messageText.slice(0, 100) });
     await recordEvent(admin, { userId, eventType: 'inbound_processing_failed', entityType: 'whatsapp_inbound', entityId: inbound.id, executionRunId: execution.executionId, metadata: { errorCode: noApproved ? 'no_approved_intervention' : messageText.slice(0, 100) } });
     await updateExecutionRun(admin, execution, { status: noApproved ? 'no_approved_intervention' : 'failed', failure: error });

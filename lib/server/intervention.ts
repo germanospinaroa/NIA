@@ -12,6 +12,7 @@ import type { EditorialSignature } from '@/lib/editorial-contract';
 import { formulatePsychologicalIntervention } from '@/lib/psychological-contract';
 import { derivePsychologicalProgression, movementKey } from '@/lib/psychological-progression';
 import { buildInterventionBlueprint } from '@/lib/intervention-blueprint';
+import { resolveWithWriterV2 } from '@/lib/server/writer-v2-intervention';
 
 type DbClient = SupabaseClient;
 type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; execution_context?: 'production' | 'qa' | null; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; editorial_idea?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null; situation?: string | null; intention?: string | null; editorial_type?: string | null; insight_id?: string | null; functional_emotion?: string | null; directiveness?: string | null; closing_type?: string | null; action_id?: string | null; editorial_signature?: EditorialSignature | null; editorial_score?: Record<string, unknown> | null; gate_results?: Record<string, unknown> | null; same_day_repetition?: boolean | null; saturation_state?: string | null; regeneration_reason?: string | null; longitudinal_evidence_refs?: string[] | null; slot?: string | null; local_date?: string | null };
@@ -199,7 +200,7 @@ async function persistRejectedCandidates(supabase: DbClient, userId: string, can
   if (error) throw new Error('candidate_save_failed');
 }
 
-export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean; slot?: string | null; localDate?: string | null; executionContext?: 'production' | 'qa'; allowRelevantFallback?: boolean }): Promise<InterventionResult> {
+export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean; slot?: string | null; localDate?: string | null; executionContext?: 'production' | 'qa'; allowRelevantFallback?: boolean; writerVersion?: 'legacy' | 'v2' }): Promise<InterventionResult> {
   if (execution) {
     await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'intervention_requested', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { contextKey, channel, idempotencyKey: idempotencyKey ?? null } }));
     await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'generating' }));
@@ -222,6 +223,9 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     throw new CalibrationRequiredError(calibration);
   }
   if (!brief.psychologicalContract?.sufficient) throw new Error('insufficient_intervention_basis');
+  if (options?.writerVersion === 'v2') {
+    return resolveWithWriterV2({ supabase, userId, contextKey, channel, idempotencyKey, execution, executionContext: options.executionContext, slot: options.slot, localDate: options.localDate, brief });
+  }
   if (!llmConfigured()) {
     if (execution?.executionContext === 'qa') {
       const error = new Error('llm_not_configured');

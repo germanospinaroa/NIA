@@ -176,7 +176,7 @@ export async function POST(request: Request) {
     let result: InterventionResult;
     const editorialStatus = 'approved' as const;
     try {
-      result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa' });
+      result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', writerVersion: 'v2' });
     } catch (error) {
       if (error instanceof Error && ['no_approved_intervention', 'no_approved_intervention_after_repair'].includes(error.message)) {
         const trace = await qaTrace(admin, run.context.executionId, userId);

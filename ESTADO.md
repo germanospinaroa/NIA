@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Writer V2 productivo — 2026-10-05
+- Integrado `Writer V2` como camino explícito de generación en las rutas productivas (`daily`, WhatsApp inbound, interacción web y QA admin), usando `gpt-6.1-sol` y una única salida `{ message }`.
+- El servidor conserva la decisión de progression/blueprint/SEMA; Writer V2 solo expresa el movimiento seleccionado. Los critical gates se ejecutan sin juez semántico, embeddings ni auditoría LLM adicional.
+- Límite duro: máximo 2 intentos por intervención (generación + una reparación). Se registra modelo, tokens, coste estimado, intentos y repair en `generation_attempts`, `execution_provider_calls`, `stage_results` y `editorial_signature`.
+- El generador anterior permanece disponible únicamente mediante `writerVersion: 'legacy'`; no existe fallback automático. Validación local: Writer V2, editoriales, QA controlada, TypeScript, lint y build PASS. Deployment y una única E2E real pendientes.
+
 ## Fix de progresión histórica — 2026-10-05
 - La progresión ahora usa `editorial_signature.psychologicalMovementKey` de intervenciones aprobadas como clave canónica; conserva el movimiento humano solo como fallback para históricos antiguos.
 - Los candidatos rechazados no entran en `progressionHistory`, por lo que no avanzan ni bloquean la trayectoria.

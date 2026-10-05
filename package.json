@@ -35,6 +35,8 @@
     "test:qa-execution-isolation": "node scripts/test-qa-execution-isolation.mjs",
     "test:qa-e2e-controlled": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-qa-e2e-controlled.mjs",
     "test:qa-provider-acceptance": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-qa-provider-acceptance.mjs",
+    "compare:writer-v2-real": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/compare-writer-v2-real.mjs",
+    "test:writer-v2": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-writer-v2.mjs",
     "test:admin-access": "node --experimental-strip-types scripts/test-admin-access.mjs",
     "test:editorial-memory": "node --experimental-strip-types scripts/test-editorial-memory.mjs",
     "test:editorial-planner": "node --experimental-strip-types scripts/test-editorial-planner.mjs",
