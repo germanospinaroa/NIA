@@ -3,6 +3,8 @@ name: NIA CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [qa/full-chain-validation]
   workflow_dispatch:
 
 jobs:
