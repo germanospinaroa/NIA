@@ -3,6 +3,8 @@ name: NIA CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -39,6 +41,8 @@ jobs:
 
       - name: Contract alignment
         run: npm run test:psychological-contract-alignment
+      - name: Production-shaped replay
+        run: npm run test:production-shaped-replay
 
       - name: AI regressions
         run: npm run test:ai-regressions
