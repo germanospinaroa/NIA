@@ -17,7 +17,24 @@ delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const tables = {
   profiles: [{ id: userId, first_name: 'Ana', direction_key: '', desired_change_original: 'Confiar más en mi criterio', current_context_original: 'Cuando alguien cuestiona una decisión que ya tomaste', current_context_domain: 'decisiones', desired_change_language: [], learning_profile: {}, communication_preference: 'adaptive', desired_change_concepts: [], voice_style: null }],
-  interventions: [], learning_signals: [], context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
+  interventions: [{
+    id: 'history-1',
+    user_id: userId,
+    created_at: '2026-10-03T12:00:00.000Z',
+    topic: 'criterio propio',
+    intervention_type: 'reflection',
+    text: 'Puedes escuchar una opinión sin entregar la decisión.',
+    editorial_idea: 'Distinguir información de entregar la decisión.',
+    concept: 'información y decisión',
+    angle: 'escuchar sin ceder',
+    editorial_signature: {
+      mechanismId: 'external_validation',
+      psychologicalMove: 'distinguir información de entregar la decisión',
+      takeaway: 'Escuchar información no equivale a entregar la decisión.',
+    },
+  }],
+  learning_signals: [],
+  context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
 };
 const counts = { openai: 0, evolution: 0 };
 let failNextGeneration = false;
@@ -169,8 +186,10 @@ assert.equal(delivery.provider_message_id, 'controlled-provider-message');
 const finalRun = db.tables.execution_runs.find(row => row.id === execution.executionId);
 assert.equal(finalRun.status, 'approved');
 assert.ok(finalRun.intervention_id);
-assert.equal(db.tables.interventions.length, 1);
-assert.equal(db.tables.interventions[0].editorial_signature.psychologicalContract.mechanism_id, 'external_validation');
+assert.equal(db.tables.interventions.length, 2);
+const createdIntervention = db.tables.interventions.find(row => row.id !== 'history-1');
+assert.ok(createdIntervention?.editorial_signature?.psychologicalContract?.mechanism_id === 'external_validation');
+assert.equal(createdIntervention.editorial_signature.psychologicalMovementKey, 'external_validation:define_decision_criterion');
 assert.equal(db.tables.intervention_candidates.length, 3);
 assert.equal(counts.evolution, 1);
 assert.ok(counts.openai >= 4, `expected generation, embedding and audit provider calls, got ${counts.openai}`);
