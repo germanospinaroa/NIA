@@ -16,11 +16,14 @@ assert.match(dailySource, /eq\('local_date', date\)/);
 assert.match(whatsappSource, /for \(const due of slots\.slice\(0, 1\)\)/);
 
 assert.doesNotMatch(migration, /\b(delete|truncate)\b/i);
-assert.match(migration, /interactions_daily_one_per_day_after_cutoff/);
-assert.match(migration, /whatsapp_daily_psychological_one_per_day_after_cutoff/);
+assert.match(migration, /daily_unique_enforced/);
+assert.match(migration, /set daily_unique_enforced = false/);
+assert.match(migration, /set default true/);
+assert.match(migration, /interactions_daily_one_per_day_enforced/);
+assert.match(migration, /whatsapp_daily_deliveries_interaction_once/);
 assert.match(migration, /interaction_type = 'daily_message'/);
-assert.match(migration, /slot in \('1', '2'\)/);
-assert.match(migration, /created_at >= timestamptz '2026-10-05 20:00:00\+00'/g);
+assert.match(migration, /on public\.whatsapp_daily_deliveries\(interaction_id\)/);
+assert.doesNotMatch(migration, /created_at\s*>=/i);
 assert.match(migration, /nia_welcome/);
 
 const claimed = new Set();

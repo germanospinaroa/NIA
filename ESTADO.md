@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Fuente de migración forward-safe — 2026-10-05
+- Reemplazada la lógica basada en `created_at` de `supabase/migrations/20261005200000_one_daily_intervention.sql` por `interactions.daily_unique_enforced`: filas existentes se marcan `false`, nuevas filas heredan `true`, y el índice parcial protege una sola `daily_message` por usuario/fecha sin reescribir ni borrar historia.
+- Añadida unicidad futura de `whatsapp_daily_deliveries.interaction_id`; se conserva el índice histórico por usuario/fecha/slot. La bienvenida sigue siendo compatible con su propio `interaction_type`.
+- Actualizadas regresiones de delivery/idempotencia y añadido `scripts/test-daily-invariant-migration.mjs`. Tests funcionales, typecheck y build PASS; lint PASS con cuatro warnings heredados.
+- No se inspeccionó ni modificó Supabase en esta tarea; no se aplicaron migraciones, no hubo proveedores, deploy ni merge.
+
 ## Contrato de novedad material — 2026-10-05
 - `DailyInterventionPlan` ahora exige `newContribution` y `expectedTakeaway`, decididos determinísticamente por el planner antes de Writer; Writer solo expresa el valor recibido y no puede decidir el qué.
 - El planner aplica un prefiltro conservador de novedad material contra exposiciones entregadas, planes prospectivos y planes del refill actual; prioriza valor canónico aún no usado y permite revisitas solo con una contribución distinta. El Semantic Fidelity Judge sigue siendo la autoridad semántica final.
