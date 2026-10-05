@@ -24,11 +24,14 @@ assert.equal(new Set(sends).size, 1);
 
 const dailySource = fs.readFileSync(new URL('../lib/server/daily-message.ts', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/20261003060000_daily_interactions_by_slot.sql', import.meta.url), 'utf8');
-assert.match(dailySource, /dailyIdempotencyKey\(userId, date\)/);
 assert.match(dailySource, /releaseConsumedMessage/);
+assert.match(dailySource, /approved_buffer_underflow/);
+assert.doesNotMatch(dailySource, /resolveIntervention|startExecutionRun|composeNiaMessage/);
 const bufferSource = fs.readFileSync(new URL('../lib/server/approved-message-buffer.ts', import.meta.url), 'utf8');
 assert.match(bufferSource, /export async function releaseConsumedMessage/);
 assert.match(dailySource, /local_date: date, slot/);
 assert.match(migration, /interactions_daily_slot_once/);
-assert.match(migration, /drop index if exists public\.interactions_daily_once/);
+const hardenedMigration = fs.readFileSync(new URL('../supabase/migrations/20261005200000_one_daily_intervention.sql', import.meta.url), 'utf8');
+assert.match(hardenedMigration, /interactions_daily_one_per_day_after_cutoff/);
+assert.match(hardenedMigration, /slot in \('1', '2'\)/);
 console.log('daily whatsapp idempotency tests: PASS');

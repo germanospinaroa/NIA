@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Delivery hardening post-recovery — 2026-10-05
+- `lib/server/daily-message.ts` ya no genera contenido en vivo: la entrega consume únicamente el buffer aprobado; si falta contenido registra `buffer_underflow` y lanza `approved_buffer_underflow` de forma determinista.
+- Añadida `supabase/migrations/20261005200000_one_daily_intervention.sql`: índice parcial forward-only para una intervención psicológica nueva por usuario/fecha y para entregas WhatsApp de slots legacy, preservando históricos y excluyendo `nia_welcome`.
+- Añadido `scripts/test-buffered-daily-delivery.mjs`; suite offline, typecheck y build PASS; lint PASS con cuatro warnings heredados. Sin OpenAI, WhatsApp, Evolution, Supabase writes ni deploy.
+
 ## Continuidad longitudinal y elegibilidad de movement — 2026-10-05
 - Añadida continuidad derivada de la historia canónica: `previousDeliveredMovement`, `previousDeliveredTakeaway`, `previousDeliveredMessage` limitado al último registro y `continuityGuidance`. Writer V2 recibe estos datos como contexto server-side; no se afirma aplicación ni progreso de la persona sin evidencia confirmada.
 - Extendidos los 22 contratos canónicos con `deliveredLearning`, `buildsOn`, `evidenceRequirements` y `conditional`. No se creó una biblioteca paralela.
