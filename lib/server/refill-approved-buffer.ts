@@ -7,8 +7,50 @@ import { contextVersion, hasExactMessageDuplicate, MIN_APPROVED_BUFFER_DAYS, nor
 import { storeApprovedMessage } from '@/lib/server/approved-message-buffer';
 import { localDate } from '@/lib/server/whatsapp-schedule';
 
-const TARGET_BUFFER_DAYS = 5;
-const DEFAULT_MAX_COST_USD = 0.03;
+export const TARGET_BUFFER_DAYS = 5;
+export const MIN_BUFFER_DAYS = MIN_APPROVED_BUFFER_DAYS;
+export const DEFAULT_MAX_COST_USD = 0.03;
+export const DEFAULT_REFILL_RUN_MAX_COST_USD = 0.15;
+
+export type RefillPriority = 'critical' | 'urgent' | 'normal';
+
+export type ProductionEligibilityRow = {
+  userId: string;
+  accountStatus: string | null;
+  whatsappEnabled: boolean | null;
+  whatsappConnected: boolean;
+  subscriptionStatus: string | null;
+};
+
+export type RefillOrchestrationCandidate = { userId: string; bufferBefore: number };
+
+export type RefillOrchestrationUserResult = {
+  userId: string;
+  bufferBefore: number;
+  bufferAfter: number;
+  created: number;
+  skipped: string[];
+  failureReason: string | null;
+  estimatedCostUsd: number;
+  priority: RefillPriority | null;
+};
+
+export type RefillOrchestrationResult = {
+  users: RefillOrchestrationUserResult[];
+  estimatedCostUsd: number;
+  budgetExhausted: boolean;
+};
+
+export function isEligibleProductionUser(row: ProductionEligibilityRow) {
+  return row.accountStatus === 'active' && row.whatsappEnabled === true && row.whatsappConnected && row.subscriptionStatus === 'active';
+}
+
+export function refillPriority(bufferBefore: number, minBufferDays = MIN_BUFFER_DAYS, targetBufferDays = TARGET_BUFFER_DAYS): RefillPriority | null {
+  if (bufferBefore >= targetBufferDays) return null;
+  if (bufferBefore === 0) return 'critical';
+  if (bufferBefore < minBufferDays) return 'urgent';
+  return 'normal';
+}
 
 export type RefillResult = {
   userId: string;
@@ -21,9 +63,94 @@ export type RefillResult = {
   usageRecords: { model: string; purpose: 'writer' | 'judge'; intendedLocalDate: string; attempt: number; inputTokens: number; outputTokens: number; estimatedCostUsd: number }[];
 };
 
+type RefillOrchestrationOptions = {
+  minBufferDays?: number;
+  targetBufferDays?: number;
+  perUserMaxCostUsd?: number;
+  globalMaxCostUsd?: number;
+  refill?: (userId: string, options: { minBufferDays: number; targetBufferDays: number; maxCostUsd: number }) => Promise<RefillResult>;
+  onEvent?: (event: { userId?: string; eventType: string; metadata?: Record<string, unknown> }) => void | Promise<void>;
+};
+
+async function emitRefillEvent(options: RefillOrchestrationOptions, event: { userId?: string; eventType: string; metadata?: Record<string, unknown> }) {
+  try { await options.onEvent?.(event); } catch { /* observability must not stop another user's refill */ }
+}
+
+export async function orchestrateRefillUsers(candidates: RefillOrchestrationCandidate[], options: RefillOrchestrationOptions = {}): Promise<RefillOrchestrationResult> {
+  const minBufferDays = options.minBufferDays ?? MIN_BUFFER_DAYS;
+  const targetBufferDays = options.targetBufferDays ?? TARGET_BUFFER_DAYS;
+  const perUserMaxCostUsd = options.perUserMaxCostUsd ?? DEFAULT_MAX_COST_USD;
+  const globalMaxCostUsd = options.globalMaxCostUsd ?? Number(process.env.REFILL_RUN_MAX_COST_USD || DEFAULT_REFILL_RUN_MAX_COST_USD);
+  const refill = options.refill ?? (async () => { throw new Error('refill_runner_not_configured'); });
+  const users: RefillOrchestrationUserResult[] = [];
+  let estimatedCostUsd = 0;
+  let budgetExhausted = false;
+
+  for (const candidate of candidates) {
+    const priority = refillPriority(candidate.bufferBefore, minBufferDays, targetBufferDays);
+    if (!priority) {
+      users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter: candidate.bufferBefore, created: 0, skipped: ['buffer_at_target'], failureReason: null, estimatedCostUsd: 0, priority: null });
+      continue;
+    }
+    await emitRefillEvent(options, { userId: candidate.userId, eventType: candidate.bufferBefore === 0 ? 'zero_buffer' : candidate.bufferBefore < minBufferDays ? 'below_min_buffer' : 'refill_started', metadata: { buffer_before: candidate.bufferBefore, priority } });
+    const remainingBudget = globalMaxCostUsd - estimatedCostUsd;
+    if (remainingBudget <= 0) {
+      budgetExhausted = true;
+      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'budget_exhausted', metadata: { buffer_before: candidate.bufferBefore, priority } });
+      users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter: candidate.bufferBefore, created: 0, skipped: ['budget_exhausted'], failureReason: null, estimatedCostUsd: 0, priority });
+      continue;
+    }
+    try {
+      const result = await refill(candidate.userId, { minBufferDays, targetBufferDays, maxCostUsd: Math.min(perUserMaxCostUsd, remainingBudget) });
+      const cost = Number(result.usage.estimatedCostUsd || 0);
+      estimatedCostUsd += cost;
+      const created = result.created.length;
+      const bufferAfter = Math.min(targetBufferDays, candidate.bufferBefore + created);
+      if (estimatedCostUsd >= globalMaxCostUsd) budgetExhausted = true;
+      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'refill_completed', metadata: { buffer_before: candidate.bufferBefore, buffer_after: bufferAfter, created, priority, estimated_cost_usd: cost } });
+      users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter, created, skipped: result.skipped, failureReason: null, estimatedCostUsd: cost, priority });
+    } catch (error) {
+      const failureReason = error instanceof Error ? error.message : 'refill_failed';
+      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'refill_failed', metadata: { buffer_before: candidate.bufferBefore, priority, reason: failureReason } });
+      users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter: candidate.bufferBefore, created: 0, skipped: [], failureReason, estimatedCostUsd: 0, priority });
+    }
+  }
+  return { users, estimatedCostUsd, budgetExhausted };
+}
+
 function estimatedWriterCost(input = 0, output = 0) { return (input * 2 + output * 10) / 1_000_000; }
 function estimatedJudgeCost(input = 0, output = 0) { return (input * 0.2 + output * 1) / 1_000_000; }
 function futureDate(timezone: string | null | undefined, now: Date, offset: number) { return localDate(timezone, new Date(now.getTime() + offset * 86_400_000)); }
+
+export async function refillEligibleProductionUsers(admin: SupabaseClient, options: RefillOrchestrationOptions & { now?: Date } = {}) {
+  const { data: profiles, error: profileError } = await admin.from('profiles').select('id,account_status,whatsapp_enabled').eq('account_status', 'active').eq('whatsapp_enabled', true);
+  if (profileError) throw new Error('refill_profiles_unavailable');
+  const profileRows = (profiles ?? []) as Array<{ id: string; account_status: string | null; whatsapp_enabled: boolean | null }>;
+  if (!profileRows.length) return { eligibleUsers: 0, ...await orchestrateRefillUsers([], options) };
+  const userIds = profileRows.map(row => row.id);
+  const [{ data: connections, error: connectionError }, { data: subscriptions, error: subscriptionError }, { data: bufferRows, error: bufferError }] = await Promise.all([
+    admin.from('whatsapp_connections').select('user_id,wa_id,status').in('user_id', userIds).eq('status', 'connected'),
+    admin.from('subscriptions').select('user_id,status').in('user_id', userIds).eq('status', 'active'),
+    admin.from('approved_intervention_buffer').select('user_id').in('user_id', userIds).in('status', ['approved', 'buffered']),
+  ]);
+  if (connectionError) throw new Error('refill_connections_unavailable');
+  if (subscriptionError) throw new Error('refill_subscriptions_unavailable');
+  if (bufferError) throw new Error('refill_buffer_counts_unavailable');
+  const connected = new Set((connections ?? []).filter(row => Boolean(row.wa_id)).map(row => row.user_id));
+  const activeSubscription = new Set((subscriptions ?? []).map(row => row.user_id));
+  const eligibility = profileRows.map(row => ({ userId: row.id, accountStatus: row.account_status, whatsappEnabled: row.whatsapp_enabled, whatsappConnected: connected.has(row.id), subscriptionStatus: activeSubscription.has(row.id) ? 'active' : null }));
+  const eligibleIds = new Set(eligibility.filter(isEligibleProductionUser).map(row => row.userId));
+  const counts = new Map<string, number>();
+  for (const row of bufferRows ?? []) if (eligibleIds.has(row.user_id)) counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1);
+  const candidates = [...eligibleIds].map(userId => ({ userId, bufferBefore: counts.get(userId) ?? 0 }));
+  return {
+    eligibleUsers: candidates.length,
+    ...await orchestrateRefillUsers(candidates, {
+      ...options,
+      refill: (userId, refillOptions) => refillApprovedBuffer(admin, userId, { ...refillOptions, now: options.now }),
+    }),
+  };
+}
 
 export async function refillApprovedBuffer(admin: SupabaseClient, userId: string, options: { now?: Date; minBufferDays?: number; targetBufferDays?: number; maxCostUsd?: number; onUsage?: (record: RefillResult['usageRecords'][number]) => void | Promise<void> } = {}): Promise<RefillResult> {
   const now = options.now ?? new Date();

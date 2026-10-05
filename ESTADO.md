@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Long-horizon recurrent buffer refill — 2026-10-05
+- Añadido `scripts/test-recurrent-long-horizon.mjs`: descubre dinámicamente los cinco mecanismos de `PSYCHOLOGICAL_MOVEMENT_PATHS`, simula 365 días por mecanismo, verifica progresión de depth, revisitas con nuevas signatures, aislamiento de evidencia confirmada y escenarios de buffer/dependencias/contexto.
+- Añadida simulación rolling de buffer: objetivo 5 días, mínimo 3; consume y entrega diariamente, rellena hasta 5 y conserva el buffer ante fallos puntuales o consecutivos. Resultado: mínimo observado 4 después del consumo, 0 underflows, 0 signatures/hash duplicados y 0 estados terminales.
+- `lib/server/refill-approved-buffer.ts` conserva una única lógica de generación y ahora expone orquestación offline multiusuario, prioridades critical/urgent/normal, elegibilidad conservadora con estados existentes, aislamiento de fallos y límite global configurable `REFILL_RUN_MAX_COST_USD` además del límite por usuario.
+- `app/api/cron/refill-buffer/route.ts` mantiene el modo QA de usuario único y añade un modo de producción explícito para usuarios elegibles; no se ejecutó el modo productivo ni se realizaron escrituras externas.
+- Añadido `scripts/test-buffer-refill-orchestration.mjs` con usuarios A-F, fallo aislado, budget global y matriz de elegibilidad. Suite offline, typecheck y build PASS; lint PASS con cuatro warnings heredados. No se modificaron Writer V2, Semantic Fidelity Judge, planner ni contratos de movement.
+
 ## Delivery hardening post-recovery — 2026-10-05
 - `lib/server/daily-message.ts` ya no genera contenido en vivo: la entrega consume únicamente el buffer aprobado; si falta contenido registra `buffer_underflow` y lanza `approved_buffer_underflow` de forma determinista.
 - Añadida `supabase/migrations/20261005200000_one_daily_intervention.sql`: índice parcial forward-only para una intervención psicológica nueva por usuario/fecha y para entregas WhatsApp de slots legacy, preservando históricos y excluyendo `nia_welcome`.
