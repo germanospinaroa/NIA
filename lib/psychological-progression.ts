@@ -63,7 +63,7 @@ export function movementKey(record: PsychologicalMovementRecord): string | null 
     // mere presence of "información" or "decidir" collapse it into the earlier
     // information-vs-decision phase.
     const explicitCriterion = /(regla|condicion|definir|criterio|cumplir|elegir|opcion|prioridad|suficiente)/.test(text);
-    const consultationLanguage = /(opinion|consult|escuch|pregunt|consejo)/.test(text);
+    const consultationLanguage = /(opinion|informacion|dato|consult|escuch|pregunt|consejo)/.test(text);
     if (explicitCriterion && !consultationLanguage) return 'external_validation:define_decision_criterion';
     // Information-vs-decision is the earlier phase when the declared movement
     // actually describes handling an external opinion or consultation.
