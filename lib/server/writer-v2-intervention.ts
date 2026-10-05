@@ -173,8 +173,11 @@ export async function resolveWithWriterV2(input: {
               interventionMode: brief.dailyPlan?.interventionMode,
               angle: brief.dailyPlan?.angle,
               depth: brief.dailyPlan?.depth,
+              newContribution: writerInput.newContribution,
+              expectedTakeaway: writerInput.expectedTakeaway,
               previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway,
               recentTakeaways: brief.recentEditorialTakes ?? [],
+              priorContributions: (brief.movementExposures ?? []).flatMap(exposure => [exposure.newContribution, exposure.expectedTakeaway, exposure.takeaway]).filter((value): value is string => Boolean(value)),
               relatedSignatures: (brief.movementExposures ?? []).filter(exposure => exposure.canonicalMovement === guidance.target).map(exposure => exposure.interventionSignature).slice(0, 12),
               message: generated.message,
             });

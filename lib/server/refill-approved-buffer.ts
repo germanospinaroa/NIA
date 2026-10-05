@@ -192,7 +192,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     if (usage.estimatedCostUsd + 0.005 > maxCostUsd) break;
     const intendedLocalDate = futureDate(typeof profile.timezone === 'string' ? profile.timezone : null, now, offset);
     if (existingRows.some(row => row.intendedLocalDate === intendedLocalDate) || created.some(row => row.intendedLocalDate === intendedLocalDate)) continue;
-    const prospectiveLearning: ProspectiveLearning[] = [...existingRows, ...created].map(item => ({ bufferItemId: item.id ?? `planned:${item.intendedLocalDate}`, intendedLocalDate: item.intendedLocalDate, canonicalMovement: item.plan.canonicalMovement, takeaway: item.plan.reason, message: item.message, interventionSignature: item.interventionSignature }));
+    const prospectiveLearning: ProspectiveLearning[] = [...existingRows, ...created].map(item => ({ bufferItemId: item.id ?? `planned:${item.intendedLocalDate}`, intendedLocalDate: item.intendedLocalDate, canonicalMovement: item.plan.canonicalMovement, takeaway: item.plan.expectedTakeaway ?? item.plan.reason, message: item.message, interventionSignature: item.interventionSignature, newContribution: item.plan.newContribution, expectedTakeaway: item.plan.expectedTakeaway }));
     const planned = planDailyIntervention({ goal: brief.desiredChange, context: brief.currentContext, confirmedEvidence: brief.confirmedEvidence, mechanismId: brief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: deliveredExposures.map(exposure => ({ mechanismId: brief.psychologicalContract?.mechanism_id, psychologicalMovementKey: exposure.canonicalMovement, movement: exposure.canonicalMovement, takeaway: exposure.takeaway, text: exposure.message })), exposures: deliveredExposures, plannedSignatures: [...plannedSignatures], prospectiveLearning, intendedLocalDate, projectedReceptionStage: projectedReceptionStage(deliveredExposures.length, prospectiveLearning.length) }).selected;
     if (plannedSignatures.has(planned.interventionSignature)) { skipped.push(`${intendedLocalDate}:signature_collision`); continue; }
     const nextBrief = { ...brief, dailyPlan: planned, recentInterventions: [...historicalMessages, ...created.map(item => item.message)] };
@@ -207,7 +207,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     let evaluation = evaluateWriterV2(generated.message, input);
     const guidance = getMovementTargetGuidance(planned.canonicalMovement);
     if (!guidance) { skipped.push(`${intendedLocalDate}:missing_movement_guidance`); continue; }
-    const judge = async () => judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], relatedSignatures: [...plannedSignatures], message: generated.message });
+    const judge = async () => judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, newContribution: planned.newContribution, expectedTakeaway: planned.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], priorContributions: [...deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]), ...prospectiveLearning.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway])].filter((value): value is string => Boolean(value)), relatedSignatures: [...plannedSignatures], message: generated.message });
     let judged = await judge();
     calls.judge += 1;
     usage.judgeInput += judged.usage.prompt_tokens ?? 0;
@@ -224,7 +224,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
       usage.estimatedCostUsd = estimatedWriterCost(usage.writerInput, usage.writerOutput) + estimatedJudgeCost(usage.judgeInput, usage.judgeOutput);
       await recordUsage({ model: 'gpt-6.1-sol', purpose: 'writer', intendedLocalDate, attempt: 2, inputTokens: generated.usage?.prompt_tokens ?? 0, outputTokens: generated.usage?.completion_tokens ?? 0, estimatedCostUsd: estimatedWriterCost(generated.usage?.prompt_tokens ?? 0, generated.usage?.completion_tokens ?? 0) });
       evaluation = evaluateWriterV2(generated.message, input);
-      judged = await judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], relatedSignatures: [...plannedSignatures], message: generated.message });
+      judged = await judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, newContribution: planned.newContribution, expectedTakeaway: planned.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], priorContributions: [...deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]), ...prospectiveLearning.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway])].filter((value): value is string => Boolean(value)), relatedSignatures: [...plannedSignatures], message: generated.message });
       calls.judge += 1;
       usage.judgeInput += judged.usage.prompt_tokens ?? 0;
       usage.judgeOutput += judged.usage.completion_tokens ?? 0;
@@ -233,6 +233,15 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
       evaluation = applySemanticFidelity(evaluation, judged.result);
     }
     if (!evaluation.approved || hasExactMessageDuplicate(generated.message, [...historicalMessages, ...reservedRows, ...created.map(item => item.message)])) { skipped.push(`${intendedLocalDate}:${evaluation.hardFailures.join('|') || 'exact_message_duplicate'}`); if (usage.estimatedCostUsd > maxCostUsd) break; continue; }
+    planned.semanticAudit = {
+      target_expressed: judged.result.target_expressed,
+      adjacent_drift: judged.result.adjacent_drift,
+      movement_value: judged.result.movement_value,
+      new_contribution_expressed: judged.result.new_contribution_expressed,
+      same_actionable_teaching_as_prior: judged.result.same_actionable_teaching_as_prior,
+      novel_contribution: judged.result.novel_contribution,
+      semantic_redundancy: judged.result.semantic_redundancy,
+    };
     const item = { user_id: userId, intended_local_date: intendedLocalDate, plan: planned, message: generated.message, status: 'buffered' as const, normalized_message_hash: normalizedMessageHash(generated.message), intervention_signature: planned.interventionSignature, context_version: contextVersion(brief.currentContext, brief.desiredChange) };
     const storedRow = await storeApprovedMessage(admin, item);
     const stored = {

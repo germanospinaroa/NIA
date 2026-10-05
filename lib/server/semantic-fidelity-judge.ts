@@ -14,8 +14,11 @@ export type SemanticFidelityInput = {
   interventionMode?: string;
   angle?: string;
   depth?: string;
+  newContribution: string;
+  expectedTakeaway: string;
   previousDeliveredTakeaway?: string | null;
   recentTakeaways?: string[];
+  priorContributions?: string[];
   relatedSignatures?: string[];
 };
 
@@ -24,6 +27,8 @@ export type SemanticFidelityResult = {
   adjacent_drift: boolean;
   dominant_movement: string;
   movement_value: boolean;
+  new_contribution_expressed: boolean;
+  same_actionable_teaching_as_prior: boolean;
   novel_contribution: boolean;
   semantic_redundancy: boolean;
   reason: string;
@@ -40,12 +45,14 @@ export type SemanticFidelityExecution = {
 const schema = {
   type: 'object',
   additionalProperties: false,
-  required: ['target_expressed', 'adjacent_drift', 'dominant_movement', 'movement_value', 'novel_contribution', 'semantic_redundancy', 'reason'],
+  required: ['target_expressed', 'adjacent_drift', 'dominant_movement', 'movement_value', 'new_contribution_expressed', 'same_actionable_teaching_as_prior', 'novel_contribution', 'semantic_redundancy', 'reason'],
   properties: {
     target_expressed: { type: 'boolean' },
     adjacent_drift: { type: 'boolean' },
     dominant_movement: { type: 'string', maxLength: 120 },
     movement_value: { type: 'boolean' },
+    new_contribution_expressed: { type: 'boolean' },
+    same_actionable_teaching_as_prior: { type: 'boolean' },
     novel_contribution: { type: 'boolean' },
     semantic_redundancy: { type: 'boolean' },
     reason: { type: 'string', minLength: 1, maxLength: 300 },
@@ -58,7 +65,9 @@ adjacent_drift=true solo si otro movimiento se convierte en la enseñanza princi
 movement_value=true según el valueKind: recognition reconoce una señal o secuencia concreta; distinction separa dos fenómenos; clarification vuelve nombrable una duda; criterion ofrece o construye una referencia para evaluar; action deja un paso ejecutable; practice permite ensayar; review permite revisar un hecho; evidence hace visible evidencia observable.
 Para recognition, repetir los hechos del contexto con otras palabras no basta: debe añadir una forma concreta de localizar, nombrar o distinguir la señal/secuencia cuando vuelva a ocurrir. Si solo dice que la persona consulta o ya tiene una respuesta, sin esa forma nueva de reconocerlo, movement_value=false.
 No exijas acción a recognition, distinction, clarification, review o evidence si ya entregan ese valor funcional.
-No diagnostiques ni inventes hechos. novel_contribution=true solo si añade una distinción, criterio, aplicación, práctica, conexión, transferencia, anticipación, evidencia o profundidad que no esté en los takeaways/firmas previos. semantic_redundancy=true si entrega sustancialmente la misma enseñanza sin una contribución nueva. Devuelve únicamente el JSON solicitado y una razón breve, sin cadena de pensamiento.`;
+new_contribution_expressed=true solo si el mensaje entrega el newContribution requerido y expected_takeaway es reconocible sin sustituirlo por un aprendizaje anterior.
+same_actionable_teaching_as_prior=true si el mensaje entrega sustancialmente la misma enseñanza accionable que algún takeaway/contribution previo, aunque cambien palabras, angle, mode o signature.
+No diagnostiques ni inventes hechos. novel_contribution=true solo si añade una distinción, criterio, aplicación, práctica, conexión, transferencia, anticipación, evidencia o profundidad que no esté en los takeaways/contributions previos. semantic_redundancy=true si entrega sustancialmente la misma enseñanza sin una contribución nueva. Devuelve únicamente el JSON solicitado y una razón breve, sin cadena de pensamiento.`;
 
 export function normalizeDominantMovement(raw: string, target: string, adjacentMovements: string[], message: string): string {
   const known = new Set([target, ...adjacentMovements]);
@@ -82,7 +91,7 @@ export function normalizeDominantMovement(raw: string, target: string, adjacentM
 function parseResult(value: unknown, target: string, adjacentMovements: string[], message: string): SemanticFidelityResult {
   if (!value || typeof value !== 'object') throw new Error('semantic_fidelity_schema_invalid');
   const row = value as Record<string, unknown>;
-  if (typeof row.target_expressed !== 'boolean' || typeof row.adjacent_drift !== 'boolean' || typeof row.dominant_movement !== 'string' || typeof row.movement_value !== 'boolean' || typeof row.novel_contribution !== 'boolean' || typeof row.semantic_redundancy !== 'boolean' || typeof row.reason !== 'string' || !row.reason.trim()) {
+  if (typeof row.target_expressed !== 'boolean' || typeof row.adjacent_drift !== 'boolean' || typeof row.dominant_movement !== 'string' || typeof row.movement_value !== 'boolean' || typeof row.new_contribution_expressed !== 'boolean' || typeof row.same_actionable_teaching_as_prior !== 'boolean' || typeof row.novel_contribution !== 'boolean' || typeof row.semantic_redundancy !== 'boolean' || typeof row.reason !== 'string' || !row.reason.trim()) {
     throw new Error('semantic_fidelity_schema_invalid');
   }
   return {
@@ -90,6 +99,8 @@ function parseResult(value: unknown, target: string, adjacentMovements: string[]
     adjacent_drift: row.adjacent_drift,
     dominant_movement: normalizeDominantMovement(row.dominant_movement.trim() || target, target, adjacentMovements, message),
     movement_value: row.movement_value,
+    new_contribution_expressed: row.new_contribution_expressed,
+    same_actionable_teaching_as_prior: row.same_actionable_teaching_as_prior,
     novel_contribution: row.novel_contribution,
     semantic_redundancy: row.semantic_redundancy,
     reason: row.reason.trim(),
@@ -122,8 +133,11 @@ export async function judgeSemanticFidelity(input: SemanticFidelityInput): Promi
           intervention_mode: input.interventionMode ?? null,
           angle: input.angle ?? null,
           depth: input.depth ?? null,
+          new_contribution: input.newContribution,
+          expected_takeaway: input.expectedTakeaway,
           previous_delivered_takeaway: input.previousDeliveredTakeaway ?? null,
           recent_takeaways: input.recentTakeaways ?? [],
+          prior_contributions: input.priorContributions ?? [],
           related_signatures: input.relatedSignatures ?? [],
           message: input.message,
         }) },

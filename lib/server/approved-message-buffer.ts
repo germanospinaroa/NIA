@@ -118,6 +118,8 @@ function bufferMovementExposure(row: BufferRow, deliveredAt: string): MovementEx
     message: row.message,
     normalizedMessageHash: row.normalized_message_hash || normalizedMessageHash(row.message),
     interventionSignature: row.intervention_signature || dailyInterventionSignature({ canonicalMovement, interventionMode, angle: plan.angle, depth, contextUsed }),
+    newContribution: plan.newContribution,
+    expectedTakeaway: plan.expectedTakeaway,
   };
 }
 

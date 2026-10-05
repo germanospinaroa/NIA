@@ -24,6 +24,8 @@ export type WriterV2Input = {
   previousDeliveredTakeaway: string | null;
   previousDeliveredMessage: string | null;
   continuityGuidance: string[];
+  newContribution: string;
+  expectedTakeaway: string;
   recentMessages?: string[];
   allowMovementRevisit?: boolean;
 };
@@ -89,6 +91,8 @@ export function writerV2InputFromBrief(brief: InterventionBrief, reception?: Par
     previousDeliveredTakeaway: progression?.continuity.previousDeliveredTakeaway ?? null,
     previousDeliveredMessage: progression?.continuity.previousDeliveredMessage ?? null,
     continuityGuidance: [...(progression?.continuity.continuityGuidance ?? []), ...(brief.dailyPlan?.continuityGuidance ?? []), ...(brief.dailyPlan?.noveltyGuidance ?? [])],
+    newContribution: brief.dailyPlan?.newContribution ?? '',
+    expectedTakeaway: brief.dailyPlan?.expectedTakeaway ?? '',
     recentMessages: (brief.recentInterventions ?? []).slice(0, 100),
     allowMovementRevisit: Boolean(brief.dailyPlan),
   };
@@ -112,6 +116,8 @@ export function writerV2Prompt(input: WriterV2Input, repairReasons: string[] = [
     previous_delivered_movement: input.previousDeliveredMovement,
     previous_delivered_takeaway: input.previousDeliveredTakeaway,
     previous_delivered_message: input.previousDeliveredMessage,
+    new_contribution: input.newContribution,
+    expected_takeaway: input.expectedTakeaway,
     continuity_guidance: input.continuityGuidance,
     recent_messages: input.recentMessages ?? [],
     allow_movement_revisit: input.allowMovementRevisit ?? false,
@@ -148,6 +154,8 @@ export function applySemanticFidelity(evaluation: WriterV2Evaluation, result: Se
     ...(result.target_expressed ? [] : ['movement_not_expressed']),
     ...(result.adjacent_drift ? ['adjacent_movement_drift'] : []),
     ...(result.movement_value ? [] : ['no_transferable_value']),
+    ...(result.new_contribution_expressed ? [] : ['new_contribution_not_expressed']),
+    ...(result.same_actionable_teaching_as_prior ? ['same_actionable_teaching_as_prior'] : []),
     ...(result.novel_contribution ? [] : ['no_novel_contribution']),
     ...(result.semantic_redundancy ? ['semantic_redundancy'] : []),
   ];
@@ -159,7 +167,7 @@ export async function generateWriterV2(input: WriterV2Input, options: { model: s
   const result = await requestWriterV2Json({
     model: options.model,
     maxOutputTokens: options.maxOutputTokens ?? 320,
-    system: 'Escribe una única intervención final para la persona. El servidor ya decidió el movimiento psicológico: exprésalo, no lo rediseñes. Esta intervención forma parte de una secuencia: trabaja únicamente el movimiento asignado hoy y no adelantes aprendizajes de etapas posteriores aunque parezcan útiles. Si existe un aprendizaje entregado inmediatamente antes, construye desde él sin afirmar que la persona lo aplicó, lo aprendió o lo logró salvo que haya evidencia confirmada. Evita reiniciar innecesariamente desde la introducción del contexto. Usa solo hechos confirmados. Respeta las instrucciones de recepción y el momento del día. Entrega contexto reconocible, una distinción o insight y algo utilizable cuando el movimiento lo necesite. No inventes psicología, no diagnostiques, no hagas coaching, no repitas movimientos anteriores, no fuerces preguntas, acciones ni cierres. No uses la expresión "poco a poco". Escribe directamente el mensaje en español natural. Devuelve únicamente JSON con la propiedad message.',
+    system: 'Escribe una única intervención final para la persona. El servidor ya decidió el movimiento psicológico y la contribución nueva esperada: exprésalos, no los rediseñes. El campo new_contribution es el valor que DEBE entregar este mensaje; expected_takeaway es la única idea útil que debería quedar. No sustituyas esos campos por un aprendizaje anterior. Esta intervención forma parte de una secuencia: trabaja únicamente el movimiento asignado hoy y no adelantes aprendizajes de etapas posteriores aunque parezcan útiles. Si existe un aprendizaje entregado inmediatamente antes, construye desde él sin afirmar que la persona lo aplicó, lo aprendió o lo logró salvo que haya evidencia confirmada. La continuidad es válida; la repetición semántica no. Evita reiniciar innecesariamente desde la introducción del contexto. Usa solo hechos confirmados. Respeta las instrucciones de recepción y el momento del día. Entrega contexto reconocible, una distinción o insight y algo utilizable cuando el movimiento lo necesite. No inventes psicología, no diagnostiques, no hagas coaching, no repitas movimientos anteriores, no fuerces preguntas, acciones ni cierres. No uses la expresión "poco a poco". Escribe directamente el mensaje en español natural. Devuelve únicamente JSON con la propiedad message.',
     user: writerV2Prompt(input, options.repairReasons),
   });
   const value = result.value && typeof result.value === 'object' ? result.value as { message?: unknown } : {};

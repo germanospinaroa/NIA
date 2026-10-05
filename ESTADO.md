@@ -1,5 +1,13 @@
 # ESTADO — NIA
 
+## Contrato de novedad material — 2026-10-05
+- `DailyInterventionPlan` ahora exige `newContribution` y `expectedTakeaway`, decididos determinísticamente por el planner antes de Writer; Writer solo expresa el valor recibido y no puede decidir el qué.
+- El planner aplica un prefiltro conservador de novedad material contra exposiciones entregadas, planes prospectivos y planes del refill actual; prioriza valor canónico aún no usado y permite revisitas solo con una contribución distinta. El Semantic Fidelity Judge sigue siendo la autoridad semántica final.
+- Writer V2 y Judge reciben contribución, takeaway y contexto previo; el Judge exige `new_contribution_expressed`, rechaza `same_actionable_teaching_as_prior` y `semantic_redundancy`, y persiste en `approved_intervention_buffer.plan` solo los campos mínimos de auditoría junto al plan.
+- Añadida regresión offline Day1/Day5 que rechaza el mismo aprendizaje aunque cambien modo, ángulo, firma, hash o redacción. La planificación limpia de cinco días produce contribuciones explícitas y etapas `tuning`, `tuning`, `building`, `building`, `building`.
+- `scripts/test-prospective-buffer-real.mjs` ya no usa fallback a la usuaria QA histórica: exige `QA_CLEAN_CONTENT_USER_ID` y verifica contaminación antes de cualquier llamada de OpenAI. Las cinco filas activas del test real fallido permanecen intactas.
+- Suite offline material novelty, regresiones recurrentes, buffer/delivery, typecheck y build PASS; lint PASS con cuatro warnings heredados. En esta corrección: OpenAI 0, WhatsApp 0, Evolution 0, Supabase writes 0, deploy 0.
+
 ## Buffered delivery → learning loop — 2026-10-05
 - `loadDeliveredBufferExposures()` conecta `approved_intervention_buffer`, `interactions` y `whatsapp_daily_deliveries`: solo `consumed` + interacción `daily_message` coincidente + delivery `sent` entra en `movementExposures`.
 - `buildBrief()` fusiona exposiciones históricas de `interventions` con exposiciones recurrentes entregadas y deduplica por `interventionSignature` y hash normalizado.

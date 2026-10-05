@@ -20,6 +20,8 @@ export type MovementExposure = {
   message: string;
   normalizedMessageHash: string;
   interventionSignature: string;
+  newContribution?: string;
+  expectedTakeaway?: string;
 };
 
 export type DailyInterventionPlan = {
@@ -37,6 +39,17 @@ export type DailyInterventionPlan = {
   conditionalOnBufferItemId: string | null;
   dependsOnBufferItemId: string | null;
   projectedReceptionStage?: 'welcome' | 'tuning' | 'building' | 'established';
+  newContribution: string;
+  expectedTakeaway: string;
+  semanticAudit?: {
+    target_expressed: boolean;
+    adjacent_drift: boolean;
+    movement_value: boolean;
+    new_contribution_expressed: boolean;
+    same_actionable_teaching_as_prior: boolean;
+    novel_contribution: boolean;
+    semantic_redundancy: boolean;
+  };
 };
 
 export type ProspectiveLearning = {
@@ -46,6 +59,8 @@ export type ProspectiveLearning = {
   takeaway: string;
   message: string;
   interventionSignature: string;
+  newContribution?: string;
+  expectedTakeaway?: string;
 };
 
 export type DailyPlannerInput = {
@@ -138,6 +153,34 @@ export function interventionSignature(input: Pick<DailyInterventionPlan, 'canoni
   return [input.canonicalMovement, input.interventionMode, input.angle, input.depth, ...input.contextUsed].join('|');
 }
 
+const contributionStopWords = new Set('a al algo aunque antes así como con de del desde después el en es esta esto la las lo los más mi no para por que se si su sus también tener un una y ya reconocer reconoce reconoces señal señales concreta concreto patrón localizar poder distinguir puede puedo'.split(' '));
+
+function contributionTokens(value: string) {
+  return new Set(value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').match(/[a-z0-9]{4,}/g)?.filter(token => !contributionStopWords.has(token)) ?? []);
+}
+
+export function contributionSimilarity(left: string, right: string) {
+  const a = contributionTokens(left);
+  const b = contributionTokens(right);
+  if (!a.size || !b.size) return 0;
+  const overlap = [...a].filter(token => b.has(token)).length;
+  return overlap / Math.min(a.size, b.size);
+}
+
+export type ContributionRecord = { canonicalMovement?: string | null; newContribution?: string | null; expectedTakeaway?: string | null; takeaway?: string | null };
+
+/** Conservative prefilter only: semantic equivalence still belongs to the Judge. */
+export function materialContributionIsNovel(candidate: Pick<DailyInterventionPlan, 'canonicalMovement' | 'newContribution' | 'expectedTakeaway'>, previous: ContributionRecord[]) {
+  const candidateValues = [candidate.newContribution, candidate.expectedTakeaway].map(normalizeDailyMessage).filter(Boolean);
+  for (const record of previous) {
+    const previousValues = [record.newContribution, record.expectedTakeaway, record.takeaway].filter((value): value is string => Boolean(value?.trim())).map(normalizeDailyMessage);
+    const sameMovement = !record.canonicalMovement || !('canonicalMovement' in candidate) || !candidate.canonicalMovement || record.canonicalMovement === candidate.canonicalMovement;
+    const threshold = sameMovement ? 0.72 : 0.9;
+    if (candidateValues.some(value => previousValues.some(previousValue => value === previousValue || contributionSimilarity(value, previousValue) >= threshold))) return false;
+  }
+  return true;
+}
+
 function modeForExposure(count: number): InterventionMode {
   if (count === 0) return 'introduce';
   if (count === 1) return 'deepen';
@@ -157,6 +200,42 @@ function depthForExposure(count: number): InterventionDepth {
 function angleFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
   const scope = guidance?.inScope?.length ? guidance.inScope : ['aplicación concreta del movimiento'];
   return `${mode}:${scope[count % scope.length]}:round_${Math.floor(count / scope.length) + 1}`;
+}
+
+function contributionFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
+  const scopes = guidance?.inScope ?? [];
+  const scope = scopes[count % (scopes.length || 1)] ?? 'la señal concreta del movimiento';
+  const contributionByMode: Record<InterventionMode, string> = {
+    introduce: `Reconocer ${scope} como una señal concreta del patrón.`,
+    deepen: `Localizar qué ocurre alrededor de ${scope} para poder distinguirlo.`,
+    apply: `Probar ${scope} en una situación concreta sin convertirlo en una regla general.`,
+    contrast: `Distinguir ${scope} de una respuesta vecina que puede parecer igual.`,
+    anticipate: `Anticipar ${scope} antes de que la situación vuelva a repetirse.`,
+    reinforce: `Comprobar ${scope} con una observación concreta y no solo con una impresión.`,
+    integrate: `Conectar ${scope} con un criterio o aprendizaje ya nombrado.`,
+    transfer: `Trasladar ${scope} a otro contexto del mismo patrón.`,
+    evidence: `Registrar evidencia observable relacionada con ${scope}.`,
+    reflect_or_observe: `Revisar qué cambió en ${scope} sin inferir un resultado.`,
+  };
+  return contributionByMode[mode];
+}
+
+function expectedTakeawayFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
+  const scopes = guidance?.inScope ?? [];
+  const scope = scopes[count % (scopes.length || 1)] ?? 'la señal concreta';
+  const takeawayByMode: Record<InterventionMode, string> = {
+    introduce: `Puedo reconocer ${scope}.`,
+    deepen: `Puedo localizar qué ocurre alrededor de ${scope}.`,
+    apply: `Puedo probar ${scope} en una situación concreta.`,
+    contrast: `Puedo distinguir ${scope} de una respuesta vecina.`,
+    anticipate: `Puedo anticipar ${scope} antes de que se repita.`,
+    reinforce: `Puedo comprobar ${scope} con una observación.`,
+    integrate: `Puedo conectar ${scope} con un criterio propio.`,
+    transfer: `Puedo trasladar ${scope} a otro contexto.`,
+    evidence: `Puedo registrar evidencia sobre ${scope}.`,
+    reflect_or_observe: `Puedo revisar qué cambió en ${scope}.`,
+  };
+  return takeawayByMode[mode];
 }
 
 function relatedHistory(input: DailyPlannerInput) {
@@ -199,6 +278,10 @@ function candidatePlans(input: DailyPlannerInput): DailyInterventionPlan[] {
     const depth = depthForExposure(count);
     const angle = angleFor(guidance, mode, count);
     const contextUsed = [input.context, ...(input.confirmedEvidence ?? [])].filter(Boolean).slice(0, 4);
+    const newContribution = contributionFor(guidance, mode, count);
+    const expectedTakeaway = expectedTakeawayFor(guidance, mode, count);
+    const previousContributions: ContributionRecord[] = [...exposures, ...prospective];
+    if (!materialContributionIsNovel({ canonicalMovement: key, newContribution, expectedTakeaway }, previousContributions)) continue;
     const plan: DailyInterventionPlan = {
       canonicalMovement: key,
       interventionMode: mode,
@@ -217,6 +300,8 @@ function candidatePlans(input: DailyPlannerInput): DailyInterventionPlan[] {
       conditionalOnBufferItemId: eligibility.conditionalOnBufferItemId,
       dependsOnBufferItemId: eligibility.conditionalOnBufferItemId,
       projectedReceptionStage: input.projectedReceptionStage,
+      newContribution,
+      expectedTakeaway,
     };
     plan.interventionSignature = interventionSignature(plan);
     if (!exposures.some(exposure => exposure.interventionSignature === plan.interventionSignature) && !(input.plannedSignatures ?? []).includes(plan.interventionSignature)) plans.push(plan);
@@ -234,7 +319,8 @@ function candidatePlans(input: DailyPlannerInput): DailyInterventionPlan[] {
       if (!exposures.some(exposure => exposure.interventionSignature === fallback.interventionSignature) && !(input.plannedSignatures ?? []).includes(fallback.interventionSignature) && !plans.some(plan => plan.interventionSignature === fallback.interventionSignature)) plans.push(fallback);
     }
   }
-  return plans.sort((a, b) => (modeRank.get(a.interventionMode)! - modeRank.get(b.interventionMode)!) || (pathRank.get(a.canonicalMovement)! - pathRank.get(b.canonicalMovement)!)).slice(0, 3);
+  const priorMovements = new Set([...exposures.map(exposure => exposure.canonicalMovement), ...prospective.map(item => item.canonicalMovement)]);
+  return plans.sort((a, b) => (Number(priorMovements.has(a.canonicalMovement)) - Number(priorMovements.has(b.canonicalMovement))) || (modeRank.get(a.interventionMode)! - modeRank.get(b.interventionMode)!) || (pathRank.get(a.canonicalMovement)! - pathRank.get(b.canonicalMovement)!)).slice(0, 3);
 }
 
 export function planDailyIntervention(input: DailyPlannerInput) {
