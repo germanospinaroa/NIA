@@ -272,7 +272,6 @@ export function llmCandidateValidationErrors(value: unknown): string[] {
   if (!candidateFunctions.includes(candidate.function as typeof candidateFunctions[number])) errors.push(`function:${String(candidate.function)}`);
   if (!candidateStructures.includes(candidate.structure as typeof candidateStructures[number])) errors.push(`structure:${String(candidate.structure)}`);
   if (candidate.intervention_type === 'step_by_step' && blocks.filter(block => block.type === 'step').length < 2) errors.push('step_by_step_requires_two_steps');
-  if (candidate.intervention_type === 'tool' && !blocks.some(block => block.type === 'tool')) errors.push('tool_requires_tool_block');
   const text = composeCandidateText(candidate as LlmCandidate);
   if (!text.length) errors.push('composed_text_empty');
   if (blocks.length > 1 && (!text.includes('\n') || !text.includes('\n\n'))) errors.push('blocks_not_separated');
