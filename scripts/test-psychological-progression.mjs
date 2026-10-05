@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { derivePsychologicalProgression, progressionForCandidate } from '../lib/psychological-progression.ts';
+import { derivePsychologicalProgression, movementKey, progressionForCandidate, PSYCHOLOGICAL_MOVEMENT_PATHS } from '../lib/psychological-progression.ts';
+
+for (const [mechanism, movements] of Object.entries(PSYCHOLOGICAL_MOVEMENT_PATHS)) {
+  for (const canonical of movements) {
+    assert.equal(movementKey({ mechanismId: mechanism, movement: canonical }), canonical);
+    assert.equal(movementKey({ mechanismId: mechanism, psychologicalMovementKey: canonical, movement: 'descripción humana distinta' }), canonical);
+  }
+}
 
 const base = {
   goal: 'Confiar más en mi criterio.',
@@ -115,6 +122,35 @@ assert.deepEqual(trajectoryKeys, [
 // 8. A topic can return after other work when it has a new movement.
 const returning = derivePsychologicalProgression({ ...base, history: [{ mechanismId: 'progress_monitoring', movement: 'nombrar qué cambió', takeaway: 'Puedo observar lo que aprendí.' }] });
 assert.equal(progressionForCandidate(candidate('definir qué criterio usaré para decidir'), returning).approved, true);
+
+const profile1Path = PSYCHOLOGICAL_MOVEMENT_PATHS.external_validation;
+let profile1History = [];
+for (let index = 0; index < profile1Path.length; index += 1) {
+  const current = derivePsychologicalProgression({ ...base, history: profile1History, confirmedEvidence: [base.pattern, 'Tomé una decisión laboral y revisé el resultado.'] });
+  assert.equal(current.next_recommended_movement, profile1Path[index]);
+  profile1History = [{ mechanismId: 'external_validation', movement: profile1Path[index], psychologicalMovementKey: profile1Path[index], takeaway: `takeaway-${index}` }, ...profile1History];
+}
+const profile1Complete = derivePsychologicalProgression({ ...base, history: profile1History, confirmedEvidence: [base.pattern, 'Tomé una decisión laboral y revisé el resultado.'] });
+assert.equal(profile1Complete.next_recommended_movement, null);
+assert.deepEqual(profile1Complete.available_next_movements, []);
+assert.equal(profile1Complete.progression_reason, 'trajectory_complete');
+
+let profile2History = [];
+for (const expected of PSYCHOLOGICAL_MOVEMENT_PATHS.uncertainty_clarification) {
+  const current = derivePsychologicalProgression({ ...base, mechanismId: 'uncertainty_clarification', history: profile2History });
+  assert.equal(current.next_recommended_movement, expected);
+  profile2History = [{ mechanismId: 'uncertainty_clarification', movement: expected, psychologicalMovementKey: expected, takeaway: expected }, ...profile2History];
+}
+const persistedMovement = 'external_validation:decide_with_sufficient_information';
+const persistedSignature = { mechanismId: 'external_validation', psychologicalMovementKey: persistedMovement, movement: persistedMovement };
+const reconstructed = JSON.parse(JSON.stringify(persistedSignature));
+assert.equal(movementKey(reconstructed), persistedMovement);
+const persistedNext = derivePsychologicalProgression({ ...base, history: [reconstructed] });
+assert.equal(persistedNext.next_recommended_movement, 'external_validation:build_evidence_of_own_capacity');
+const persistedNextWithEvidence = derivePsychologicalProgression({ ...base, history: [reconstructed], confirmedEvidence: ['Tomé una decisión laboral que salió diferente de lo esperado y desde entonces pienso que no sé decidir bien.'] });
+assert.equal(persistedNextWithEvidence.next_recommended_movement, 'external_validation:review_outcome_without_self_punishment');
+const uncertaintyPersisted = 'uncertainty_clarification:identify_what_is_known';
+assert.equal(derivePsychologicalProgression({ ...base, mechanismId: 'uncertainty_clarification', history: [{ mechanismId: 'uncertainty_clarification', psychologicalMovementKey: uncertaintyPersisted, movement: uncertaintyPersisted }] }).next_recommended_movement, 'uncertainty_clarification:choose_a_sufficient_next_step');
 
 function trajectoryHistory(value) {
   return value.recent_movements.map((key, index) => ({ mechanismId: key.split(':')[0], movement: key.split(':').slice(1).join(' ').replaceAll('_', ' '), takeaway: `Historial ${index}` }));

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: "Una intervención breve para ayudarte a actuar como quieres cuando llega la fricción.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="es"

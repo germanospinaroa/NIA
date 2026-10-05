@@ -7,6 +7,7 @@ import { localDate } from '@/lib/server/whatsapp-schedule';
 import { recordEvent, recordExecutionStage, startIdempotentExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
 import type { ContextKey, FeedbackType } from '@/lib/mvp';
 import type { EvolutionInboundMessage } from '@/lib/server/whatsapp';
+import { ensureWelcome } from '@/lib/server/reception-welcome';
 
 type DbClient = SupabaseClient;
 type InboundRow = { id: string; user_id: string | null; provider: string; provider_message_id: string | null; status: string; execution_run_id: string | null; response_provider_message_id: string | null };
@@ -67,6 +68,17 @@ async function recordFeedback(admin: DbClient, inbound: InboundRow, userId: stri
 export async function processInboundMessage(admin: DbClient, message: EvolutionInboundMessage, inbound: InboundRow, userId: string) {
   const feedback = feedbackFromInbound(message.text);
   if (feedback) { await recordFeedback(admin, inbound, userId, feedback); return { kind: 'feedback' as const }; }
+  const { data: welcomeProfile } = await admin.from('profiles').select('first_name,timezone').eq('id', userId).maybeSingle();
+  const welcome = await ensureWelcome(admin, { userId, channel: 'whatsapp', firstName: welcomeProfile?.first_name ?? null, timezone: welcomeProfile?.timezone ?? null, waId: message.from });
+  if (!welcome.delivered) {
+    await updateInbound(admin, inbound.id, { user_id: userId, status: 'failed', processed_at: new Date().toISOString(), error_code: 'welcome_delivery_failed' });
+    return { kind: 'failed' as const, error: 'welcome_delivery_failed' };
+  }
+  if (welcome.created) {
+    await updateInbound(admin, inbound.id, { user_id: userId, status: 'completed', processed_at: new Date().toISOString() });
+    await recordEvent(admin, { userId, eventType: 'welcome_delivered', entityType: 'whatsapp_inbound', entityId: inbound.id, metadata: { providerMessageId: message.providerMessageId } });
+    return { kind: 'welcome' as const };
+  }
   const idempotencyKey = `whatsapp:evolution:${message.providerMessageId}`;
   const concurrencyKey = `whatsapp_inbound:${userId}:${message.providerMessageId}`;
   const claimed = await startIdempotentExecutionRun(admin, { userId, channel: 'whatsapp', triggerSource: 'whatsapp_inbound', idempotencyKey, requestId: randomUUID(), executionContext: 'production', concurrencyKey });

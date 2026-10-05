@@ -4,6 +4,7 @@ import { evaluateEditorialGates, sameDayRepetition, scoreEditorialCandidate } fr
 import { evaluatePsychologicalValue, type PsychologicalInterventionContract } from './psychological-contract.ts';
 import { progressionForCandidate, type PsychologicalProgression } from './psychological-progression.ts';
 import { auditBlueprintFidelity, type BlueprintAudit, type InterventionBlueprint, type SemaContract } from './intervention-blueprint.ts';
+import type { DailyInterventionPlan, MovementExposure } from './recurrent-daily.ts';
 
 export type InterventionFunction = 'remind' | 'anticipate' | 'reframe' | 'distinguish' | 'interrupt' | 'permit' | 'anchor' | 'redirect';
 export type InterventionStructure = 'context_does_not_mean' | 'before_then' | 'you_can_without' | 'distinguish_between' | 'when_then' | 'specific_permission';
@@ -79,6 +80,9 @@ export type InterventionBrief = {
   psychologicalProgression?: PsychologicalProgression;
   interventionBlueprint?: InterventionBlueprint | null;
   sema?: SemaContract | null;
+  confirmedEvidence?: string[];
+  dailyPlan?: DailyInterventionPlan;
+  movementExposures?: MovementExposure[];
 };
 
 export type CalibrationOption = { id: string; label: string; context_value: string };
@@ -108,6 +112,7 @@ export type CandidateAudit = {
   semanticStatus?: 'pass' | 'review' | 'fail';
   similarityBand?: SemanticSimilarityBand;
   semanticJudge?: SemanticJudgeResult;
+  semanticFidelity?: Record<string, unknown>;
   deterministic?: CandidateAudit;
   semantic?: CandidateAudit;
   llm?: Record<string, unknown>;
@@ -115,6 +120,9 @@ export type CandidateAudit = {
 
 export type InterventionCandidate = {
   text: string;
+  interventionMode?: string;
+  interventionSignature?: string;
+  interventionDepth?: string;
   topic?: string;
   interventionType?: EditorialInterventionType;
   depth?: EditorialDepth;
@@ -179,7 +187,7 @@ export type FeedbackSpec = {
   options: { key: string; label: string }[];
 };
 
-const forbidden = ['sostener', 'mantener tu dirección', 'volver a tu intención', 'honrar tu proceso', 'alineada'];
+const forbidden = ['sostener', 'mantener tu dirección', 'volver a tu intención', 'honrar tu proceso', 'alineada', 'poco a poco'];
 const clichés = ['confía en ti', 'cree en ti', 'tú puedes', 'eres suficiente', 'sé tu mejor versión', 'todo estará bien', 'no tengas miedo', 'recuerda quién eres', 'escucha tu corazón', 'da el primer paso', 'sal de tu zona de confort', 'todo pasa por algo'];
 const chatbotOpeners = ['entiendo que', 'es normal sentirse', 'recuerda que está bien', 'quizás podrías', 'te invito a reflexionar', 'es importante que', 'date permiso para'];
 const performativeCoachingPatterns = [

@@ -42,6 +42,8 @@ export type EditorialSignature = {
   riskFlags?: string[] | null;
   psychologicalMovementKey?: string | null;
   psychologicalProgression?: Record<string, unknown> | null;
+  interventionMode?: string | null;
+  interventionSignature?: string | null;
 };
 
 export type EditorialGates = {

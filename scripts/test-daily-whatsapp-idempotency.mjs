@@ -9,23 +9,25 @@ assert.deepEqual(dueSlots(schedule, new Date('2026-10-03T17:53:00.000Z')), [{ sl
 const deliveries = new Map();
 const sends = [];
 function claim(userId, date, slot) {
-  const key = `${userId}:${date}:${slot}`;
+  const key = `${userId}:${date}`;
   if (deliveries.has(key)) return false;
-  deliveries.set(key, { status: 'sent' });
-  sends.push(key);
+  deliveries.set(key, { status: 'sent', slot });
+  sends.push(`${key}:${slot}`);
   return true;
 }
 
 assert.equal(claim('u1', '2026-10-03', '1'), true);
 assert.equal(claim('u1', '2026-10-03', '1'), false);
-assert.equal(claim('u1', '2026-10-03', '2'), true);
-assert.equal(claim('u1', '2026-10-03', '2'), false);
-assert.deepEqual(sends, ['u1:2026-10-03:1', 'u1:2026-10-03:2']);
-assert.equal(new Set(sends).size, 2);
+assert.equal(claim('u1', '2026-10-03', '2'), false, 'second legacy slot cannot consume the daily quota');
+assert.deepEqual(sends, ['u1:2026-10-03:1']);
+assert.equal(new Set(sends).size, 1);
 
 const dailySource = fs.readFileSync(new URL('../lib/server/daily-message.ts', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/20261003060000_daily_interactions_by_slot.sql', import.meta.url), 'utf8');
-assert.match(dailySource, /daily:\$\{date\}:\$\{slot \?\? 'web'\}/);
+assert.match(dailySource, /dailyIdempotencyKey\(userId, date\)/);
+assert.match(dailySource, /releaseConsumedMessage/);
+const bufferSource = fs.readFileSync(new URL('../lib/server/approved-message-buffer.ts', import.meta.url), 'utf8');
+assert.match(bufferSource, /export async function releaseConsumedMessage/);
 assert.match(dailySource, /local_date: date, slot/);
 assert.match(migration, /interactions_daily_slot_once/);
 assert.match(migration, /drop index if exists public\.interactions_daily_once/);

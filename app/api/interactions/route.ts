@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { CalibrationRequiredError, resolveIntervention } from '@/lib/server/intervention';
 import { recordEvent, startExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
+import { ensureWelcome } from '@/lib/server/reception-welcome';
 
 export async function GET() { const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); const { data, error } = await supabase.from('interactions').select('*').order('created_at', { ascending: false }).limit(100); if (error) return NextResponse.json({ error: 'interactions_unavailable' }, { status: 500 }); return NextResponse.json({ interactions: data }); }
 export async function POST(request: Request) {
@@ -10,6 +11,9 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const body = await request.json();
   if (body.interaction_type !== 'nia_point' || !body.context_key) return NextResponse.json({ error: 'invalid_interaction' }, { status: 400 });
+  const { data: profile } = await supabase.from('profiles').select('first_name,timezone').eq('id', user.id).maybeSingle();
+  const welcome = await ensureWelcome(supabase, { userId: user.id, channel: 'web', firstName: profile?.first_name ?? null, timezone: profile?.timezone ?? null });
+  if (welcome.created) return NextResponse.json({ status: 'welcome', interaction: welcome.interaction });
   const idempotencyKey = request.headers.get('idempotency-key') || body.idempotency_key || undefined;
   let execution;
   try { execution = await startExecutionRun(supabase, { userId: user.id, channel: 'web', triggerSource: 'nia_point', idempotencyKey }); } catch { return NextResponse.json({ error: 'intervention_unavailable' }, { status: 503 }); }
@@ -44,8 +48,8 @@ export async function PATCH(request: Request) {
   if (body.intervention_id && body.question && body.dimension) {
     const learning = body.learning_signal ?? null;
     await supabase.from('intervention_feedback').insert({ intervention_id: body.intervention_id, user_id: user.id, question: body.question, dimension: body.dimension, options: body.options ?? [], selected_option: body.feedback_type, learning_signal: learning });
-    if (learning) {
-      const { data: sourceIntervention } = await supabase.from('interventions').select('concept,angle,function,structure,current_context_snapshot').eq('id', body.intervention_id).eq('user_id', user.id).maybeSingle();
+    const { data: sourceIntervention } = await supabase.from('interventions').select('execution_context,concept,angle,function,structure,current_context_snapshot').eq('id', body.intervention_id).eq('user_id', user.id).maybeSingle();
+    if (learning && sourceIntervention?.execution_context !== 'qa') {
       const value = { ...learning, concept: sourceIntervention?.concept, angle: sourceIntervention?.angle, function: sourceIntervention?.function, structure: sourceIntervention?.structure, context: sourceIntervention?.current_context_snapshot };
       const expiresAt = learning.signal === 'wording_quality' || learning.signal === 'angle_quality' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
       await supabase.from('learning_signals').insert({ user_id: user.id, signal: learning.signal, value, confidence: learning.confidence ?? null, source: 'intervention_feedback', expires_at: expiresAt });

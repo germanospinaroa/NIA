@@ -1,5 +1,67 @@
 # ESTADO — NIA
 
+## Continuidad longitudinal y elegibilidad de movement — 2026-10-05
+- Añadida continuidad derivada de la historia canónica: `previousDeliveredMovement`, `previousDeliveredTakeaway`, `previousDeliveredMessage` limitado al último registro y `continuityGuidance`. Writer V2 recibe estos datos como contexto server-side; no se afirma aplicación ni progreso de la persona sin evidencia confirmada.
+- Extendidos los 22 contratos canónicos con `deliveredLearning`, `buildsOn`, `evidenceRequirements` y `conditional`. No se creó una biblioteca paralela.
+- `derivePsychologicalProgression()` separa movimiento teórico de movimiento elegible. Requisitos deterministas: contexto base, aprendizaje entregado, evento confirmado y conducta confirmada. Los movimientos de revisión posterior requieren evento y conducta observables; `review_outcome_without_self_punishment` ya no se selecciona solo por posición en el path.
+- Para el contexto original de Adriana después de `decide_with_sufficient_information`, el siguiente teórico es `review_outcome_without_self_punishment` pero no es elegible; `build_evidence_of_own_capacity` sí es elegible como evidencia confirmada de que ya formula una primera respuesta. Con un resultado laboral y autojuicio confirmados, review pasa a ser elegible.
+- Añadido `scripts/test-longitudinal-continuity.mjs` y `test:longitudinal-continuity`. Continuidad, elegibilidad, 22 contratos, progression, Writer offline, reception, blueprint, TypeScript, build, lint y diff check PASS. Lint conserva cuatro warnings heredados. API USD 0.00. No deployment ni WhatsApp.
+
+## Estados terminales de progression — 2026-10-05
+- Corregido el estado terminal después de saltar un movement condicional: el cálculo ya no usa únicamente el índice más alto completado, conserva `pending_conditional_movements` y devuelve `no_eligible_next_movement` cuando queda una fase pendiente que requiere evidencia futura.
+- `trajectory_complete` queda reservado para paths completamente cubiertos. Adriana después de `build_evidence_of_own_capacity` conserva como pendiente `external_validation:review_outcome_without_self_punishment`; Lucía completa `uncertainty_clarification` con `trajectory_complete`.
+- Regresiones progression/eligibility/continuity, Writer V2 offline, reception, TypeScript, build, lint y diff check PASS. API USD 0.00. No deployment ni WhatsApp.
+
+## Semantic fidelity judge — 2026-10-05
+- Separadas las invariantes deterministas de las tres propiedades que requieren significado: `target_expressed`, `adjacent_drift` y `movement_value`. `movement-expression.ts` conserva señales diagnósticas, pero ya no decide por sí solo esos rechazos.
+- Añadido `lib/server/semantic-fidelity-judge.ts`: juez estructurado GPT-6 Luna, entrada mínima server-authoritative y salida de cinco campos. Writer V2 Sol permanece sin cambios; el camino V2 registra el juez como `semantic_judge` y solo aprueba cuando las tres propiedades pasan.
+- El juez distingue recognition de paráfrasis vacía y conserva `adjacent_movement_drift` como hard fail. Máximo un juez por output; no hay generación ni loop adicional.
+- Gold set real: 8/8 casos críticos PASS, 0 falsos positivos y 0 falsos negativos; incluye `name_the_concrete_question`, recognition, `define_decision_criterion`, drift, wrong movement, paráfrasis sin valor y distinction. Coste medido de la corrida final: USD 0.0009391; el total contabilizado de las corridas de benchmark fue USD 0.0026952, con dos respuestas vacías del proveedor sin usage reportado y límite conservador aún inferior a USD 0.01. No Sol, no deployment, no WhatsApp.
+- TypeScript, build y `git diff --check` PASS; lint PASS con cuatro warnings heredados. Benchmark: `scripts/test-semantic-fidelity-real.mjs`, comando `npm run test:semantic-fidelity-real`.
+
+## Resumed longitudinal experience test — 2026-10-05
+- Perfil 1 reutilizó sin API el movement 1 y pasó `recognition`; generó el movement 2, cuyo primer intento falló por valor y el repair pasó.
+- El movement 3 falló por `movement_not_expressed` en intento inicial y repair, aunque `movementValue` fue PASS. El test se detuvo antes de Perfil 2 conforme a la política.
+- 1 mensaje existente reutilizado, 4 generaciones Sol nuevas, 2 repairs, 2 deliveries aprobadas, 2,143 input tokens, 502 output tokens, coste adicional USD 0.009306. No deployment ni WhatsApp.
+
+## Movement-aware value gate — 2026-10-05
+- Los contratos de movement ahora incluyen `valueKind` (`recognition`, `distinction`, `clarification`, `criterion`, `action`, `practice`, `review`, `evidence`).
+- El valor se evalúa según la función del movement; `recognition` acepta una secuencia observable concreta sin exigir herramienta o CTA, pero rechaza paráfrasis vacías.
+- El repair real de Perfil 1 pasa `movement expression`, `adjacent drift` y `movement value` offline. Tests Writer V2, movement expression, progression, recepción, TypeScript, build, lint y diff check PASS. Coste API USD 0.00. No deployment.
+
+## Final longitudinal experience test — 2026-10-05
+- El test se detuvo en Perfil 1, movement `external_validation:notice_the_consulting_pattern`, tras fallar generación inicial y un único repair por `no_transferable_value`.
+- Ambos textos expresaron el target y no mostraron `adjacent_movement_drift`; no hubo delivery simulado, avance de history ni ejecución de Perfil 2.
+- 2 llamadas reales a GPT-6.1 Sol, 1 repair, 1,051 input tokens, 251 output tokens, coste estimado USD 0.004612. No deployment ni WhatsApp.
+
+## Disciplina de target del Writer — 2026-10-05
+- Reutilizada la biblioteca de contratos funcionales de movement para generar `targetMovementGuidance` server-side: propósito, alcance y movimientos fuera de alcance.
+- Writer V2 recibe esa frontera sin inflar el output; el system prompt exige trabajar únicamente el movimiento actual y no adelantar etapas posteriores.
+- El repair incorpora el movimiento dominante detectado por `adjacent_movement_drift` y ordena volver al target actual. Evaluator, progression y reception progression no fueron modificados.
+- Cobertura de guidance 22/22 y tests Writer V2, movement expression, TypeScript, lint, build y diff check PASS. La única prueba real de Perfil 1 usó 2 llamadas (una repair), aprobó el target `external_validation:notice_the_consulting_pattern` sin deriva, con coste USD 0.004222. No deployment.
+
+## Fidelity de expresión de movement — 2026-10-05
+- `movement_not_expressed` ya no compara tokens ingleses de una key canónica contra texto español. El evaluator recibe `canonicalTargetMovement` server-authoritative y usa contratos funcionales deterministas.
+- Se separan `movement_not_expressed` y `adjacent_movement_drift`; el segundo identifica cuándo el texto expresa el target pero domina un movimiento vecino.
+- Cobertura offline: 22 canonical movements con positivos y regresiones de deriva/ausencia; Writer V2, recepción y progression PASS. TypeScript, build, lint y diff check PASS; 4 warnings heredados. Coste API USD 0.00. No deployment.
+
+## Identidad canónica de progression — 2026-10-05
+- `movementKey()` prioriza `psychologicalMovementKey` y `movement` cuando son keys válidas de `PSYCHOLOGICAL_MOVEMENT_PATHS`; las heurísticas quedan únicamente como fallback para históricos legacy.
+- `psychologicalSignature()` y el adapter de Writer V2 conservan el target canónico server-side seleccionado por progression, separado de la descripción humana del movimiento.
+- Las trayectorias completas terminan con `next_recommended_movement = null`, `available_next_movements = []` y `progression_reason = trajectory_complete`; no se repite el último movimiento.
+- Regresión parametrizada: 22 canonical movement keys, perfiles 1/2 y roundtrip de persistencia PASS. TypeScript, build, lint y diff check PASS. Coste API USD 0.00. No deployment.
+
+## Progresión de recepción — 2026-10-05
+- Añadida capa determinista separada de la progresión psicológica: `welcome`, `tuning`, `building`, `established`, calculada únicamente con bienvenida e intervenciones psicológicas entregadas con éxito.
+- La bienvenida es fija, localizada por hora, idempotente y se persiste como `nia_welcome`; no llama al Writer, no entra en la historia psicológica ni altera el movimiento seleccionado. La migración aditiva `supabase/migrations/20261004180000_reception_welcome_interaction.sql` amplía el tipo y garantiza una sola bienvenida por usuario.
+- Writer V2 recibe `receptionStage`, cantidad entregada, `timeOfDay` (`morning|afternoon|evening`) e instrucciones de recepción. Composer dejó de añadir cierres automáticos; solo conserva un cierre si se entrega explícitamente.
+- `poco a poco` quedó en forbidden language global y en la evaluación crítica de Writer V2. Tests de recepción (20 casos), Writer V2, composer, daily WhatsApp, idempotencia, inbound, TypeScript, lint, build y diff check PASS. Coste API real: USD 0.00. No deployment.
+
+## Corrección de Quality Harness — 2026-10-05
+- El harness de batería ahora comprueba la etapa con `calculateReceptionStage()` y solo incrementa deliveries simuladas después de un PASS; un rechazo no avanza la relación.
+- El gate determinista de Writer V2 ya no depende de una keyword única para `no_transferable_value`: reconoce estructuras de distinción, criterio, pregunta concreta, observación aplicable y comparación antes/después, manteniendo el rechazo de paráfrasis vacías, motivación y observaciones vagas.
+- Añadidas regresiones offline para tres mensajes útiles, tres falsos positivos, psicología inventada y movement ya trabajado. TypeScript, build, lint y diff check PASS. Coste API: USD 0.00. No deployment.
+
 ## Writer V2 productivo — 2026-10-05
 - Integrado `Writer V2` como camino explícito de generación en las rutas productivas (`daily`, WhatsApp inbound, interacción web y QA admin), usando `gpt-6.1-sol` y una única salida `{ message }`.
 - El servidor conserva la decisión de progression/blueprint/SEMA; Writer V2 solo expresa el movimiento seleccionado. Los critical gates se ejecutan sin juez semántico, embeddings ni auditoría LLM adicional.
@@ -853,3 +915,40 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - La QA real confirmó que la generación podía ser válida pero producir 0 aprobaciones. Se añadió una única ronda de reparación con las razones de rechazo de la misma ejecución, manteniendo blueprint, contrato y movimiento; los gates vuelven a ejecutarse completos.
 - Si ambas rondas fallan, la ejecución termina con `status=no_approved_intervention` y `failure_code=no_approved_intervention_after_repair`, sin downstream ni envío.
 - La ruta QA usa dos intentos máximos y la trazabilidad suma candidatas/aprobaciones de ambas rondas. Regresiones controladas cubren reparación exitosa, reparación fallida, preservación de movimiento y ausencia de Evolution en rechazo.
+## Recurrent Daily Psychological Engine (2026-10-05)
+- Se añadió `lib/recurrent-daily.ts`: exposiciones (no movimientos agotados), modos server-side, depth, firmas, novelty/exact-hash, planner diario con hasta 3 planes conceptuales y fallback sin estado terminal.
+- `buildBrief` construye el plan diario desde historial entregado; Writer V2 recibe target recurrente, continuidad, novelty guidance y mensajes históricos. Se conserva la elegibilidad por evidencia y no se afirma progreso no confirmado.
+- Se añadió hash exacto por mensaje y clave `user + localDate`; el job WhatsApp procesa solo una intervención psicológica por día local, aunque exista configuración legacy de dos slots.
+- Se añadió contrato/tabla pendiente de aplicar `approved_intervention_buffer` y helpers server-side para approved/buffered/consumed/invalidated; no se desplegó ni se aplicó migración.
+- Semantic Fidelity Judge amplía su contrato offline a `novel_contribution` y `semantic_redundancy`; siguen siendo juez Luna en runtime, sin llamadas en esta fase.
+- Regresiones offline: `npm run test:recurrent-daily`, daily idempotency/WhatsApp, Writer V2, psychological progression, reception progression, typecheck, build, lint y diff check PASS. API USD 0.00. No deploy.
+- Simulación recurrente: Adriana 30/60 días con plan diario, firmas únicas, revisita y evidencia nueva en día 15 habilitando review; buffer/idempotencia/duplicado exacto/novelty offline PASS. El buffer queda preparado con migración pendiente; no deployment.
+
+## Production Buffer Integration (2026-10-05)
+- Migración `20261005190000_approved_intervention_buffer.sql` aplicada y verificada en Supabase Production: tabla, índices únicos, constraints, FK, RLS y policy de lectura del propietario PASS.
+- Se conectaron helpers de buffer, ruta protegida de refill y orquestador anticipado; el delivery permanece separado y el refill real queda deshabilitado por defecto mediante configuración.
+- Test user controlado: el refill real produjo dos items transitoriamente, luego fueron invalidados para no dejar datos de prueba activos. No se enviaron mensajes WhatsApp.
+- El test real no alcanzó los cinco items dentro del hard cap: coste estimado acumulado USD 0.033987 > USD 0.03; no se hicieron más llamadas ni deployment.
+- Tests offline finales, typecheck, build, lint (warnings heredados) y diff check PASS. Estado: NOT READY por falta de aceptación real del buffer y presupuesto agotado.
+- Revisión de revisita recurrente: el writer ya separa `allowMovementRevisit` del guard legacy; regresiones offline PASS. La revalidación real mínima alcanzó generación/juez pero falló al persistir por unicidad histórica sobre una fila `invalidated`; el coste individual de esa ejecución abortada no quedó registrado por el harness.
+
+## Buffer Uniqueness Semantics (2026-10-05)
+- Auditado el lifecycle: `approved`/`buffered` reservan futuro, `consumed` ya fue materializado para el día y `whatsapp_daily_deliveries.status=sent` es la evidencia de transporte exitoso; `invalidated` conserva auditoría pero nunca fue entregado.
+- Aplicada en Production la migration `20261005193000_approved_intervention_buffer_active_uniqueness.sql`. Las unicidades de fecha, firma y hash ahora son parciales para `status <> 'invalidated'`; no se borró historial.
+- Se recuperó sin API un candidato persistido previamente aprobado: firma/hash no tenían exposición entregada, se pudo insertar como buffer activo y luego se invalidó para limpiar el test.
+- Regressions recurrentes, writer, progression, idempotencia, typecheck, build, lint y diff check PASS. No deploy de aplicación ni WhatsApp.
+
+## Real 5-Day Recurrent Experience Test (2026-10-05)
+- Preflight detectó y corrigió la ventana de `consumed` sin interacción: si falla la inserción y no existe ganador, el mismo buffer vuelve a `buffered`; los fallos de transporte reintentan la misma interacción mediante `whatsapp_daily_deliveries`.
+- La corrida real produjo 3 buffers aprobados (`2026-10-06` a `2026-10-08`) sin WhatsApp. Al intentar planificar el cuarto día, el planner devolvió `daily_planner_no_valid_plan`.
+- Causa: la elegibilidad exige historial entregado para dependencias de path, mientras que los buffers futuros no cuentan como progreso; falta una vista de planificación que permita dependencias editoriales futuras sin convertirlas en exposures.
+- Los 3 buffers de prueba fueron invalidados; no queda inventario activo. Estado: BLOCKED, sin deploy.
+
+## Prospective Buffer Planning (2026-10-05)
+- Se añadió la separación de historial entregado, aprendizaje programado y evidencia confirmada. Los buffers futuros alimentan únicamente la vista de planificación; no incrementan exposiciones ni `receptionStage` real.
+- `DailyInterventionPlan` distingue `eligible_now` de `eligible_conditionally`, conserva `conditionalOnBufferItemId`/`dependsOnBufferItemId` en el JSONB existente y calcula `projectedReceptionStage` sin persistir progreso proyectado.
+- El refill planifica secuencialmente usando buffers previos; la dependencia directa se valida antes de delivery contra `whatsapp_daily_deliveries.status=sent` y la invalidación propaga a dependientes. Delivery no genera en tiempo real cuando la dependencia no fue entregada.
+- Regresiones offline PASS: cadena prospectiva de 5 días, protección de evento confirmado, éxito/fallo de dependencia, cascada de invalidación y ventana móvil de 30 días sin estado terminal.
+- Retest real controlado: 5 items generados y bufferizados, 0 WhatsApp. Se detectó y corrigió un bug de harness de normalización de filas; después se detectó una expresión de `confirmed_event` demasiado amplia que trataba `decidir` como evento ocurrido. Los 5 items se invalidaron para no dejar reservas inválidas.
+- API real registrada: 14 llamadas (7 Sol, 7 Luna; 5 repairs), coste estimado USD 0.029612. No se repitió el retest tras la corrección porque el presupuesto restante no permitía completar otra corrida de 5 días dentro del hard cap USD 0.05.
+- Estado: NOT READY; falta una corrida real válida posterior a la corrección de elegibilidad. No deploy ni WhatsApp.

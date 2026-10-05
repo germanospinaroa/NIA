@@ -74,9 +74,9 @@ export function recentClosings(contents: string[]) {
   return contents.map(closingFrom).filter((value): value is NonNullable<typeof value> => value !== null);
 }
 
-export function composeNiaMessage(input: { content: string; firstName?: string | null; timezone?: string | null; userKey?: string; now?: Date; recentContents?: string[] }) {
+export function composeNiaMessage(input: { content: string; firstName?: string | null; timezone?: string | null; userKey?: string; now?: Date; recentContents?: string[]; closing?: string | null }) {
   const now = input.now ?? new Date();
   const greeting = greetingFor(input.firstName, now, input.timezone, input.userKey);
-  const closing = closingFor(input.content, now, input.timezone, input.userKey, recentClosings(input.recentContents ?? []));
-  return `${greeting}\n\n${input.content.trim()}\n\n${closing}`;
+  const closing = input.closing?.trim() || null;
+  return closing ? `${greeting}\n\n${input.content.trim()}\n\n${closing}` : `${greeting}\n\n${input.content.trim()}`;
 }

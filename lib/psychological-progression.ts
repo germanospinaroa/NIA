@@ -1,3 +1,5 @@
+import { getMovementTargetGuidance } from './movement-expression.ts';
+
 export type PsychologicalMovementRecord = {
   id?: string | null;
   topic?: string | null;
@@ -8,7 +10,15 @@ export type PsychologicalMovementRecord = {
   editorialIdea?: string | null;
   concept?: string | null;
   angle?: string | null;
+  text?: string | null;
   createdAt?: string | null;
+};
+
+export type PsychologicalContinuity = {
+  previousDeliveredMovement: string | null;
+  previousDeliveredTakeaway: string | null;
+  previousDeliveredMessage: string | null;
+  continuityGuidance: string[];
 };
 
 export type PsychologicalProgression = {
@@ -22,15 +32,20 @@ export type PsychologicalProgression = {
   recent_takeaways: string[];
   next_recommended_movement: string | null;
   progression_reason: string;
+  theoretical_next_movement: string | null;
+  ineligible_next_movements: string[];
+  pending_conditional_movements: string[];
+  continuity: PsychologicalContinuity;
 };
 
-const paths: Record<string, string[]> = {
+export const PSYCHOLOGICAL_MOVEMENT_PATHS: Record<string, string[]> = {
   external_validation: ['external_validation:notice_the_consulting_pattern', 'external_validation:information_vs_delegating_decision', 'external_validation:define_decision_criterion', 'external_validation:set_reconsideration_threshold', 'external_validation:decide_with_sufficient_information', 'external_validation:review_outcome_without_self_punishment', 'external_validation:build_evidence_of_own_capacity'],
   uncertainty_clarification: ['uncertainty_clarification:name_the_concrete_question', 'uncertainty_clarification:identify_what_is_known', 'uncertainty_clarification:choose_a_sufficient_next_step', 'uncertainty_clarification:act_without_total_certainty'],
   decision_criteria: ['decision_criteria:name_the_decision_rule', 'decision_criteria:set_reconsideration_threshold', 'decision_criteria:decide_with_sufficient_information', 'decision_criteria:review_outcome_without_self_punishment'],
   implementation_intention: ['situational_preparation:notice_the_trigger', 'situational_preparation:prepare_an_alternative_response', 'situational_preparation:practice_the_response_in_context', 'situational_preparation:review_what_happened'],
   progress_monitoring: ['progress_monitoring:notice_two_observations', 'progress_monitoring:name_what_changed', 'progress_monitoring:build_evidence_of_own_capacity'],
 };
+const paths = PSYCHOLOGICAL_MOVEMENT_PATHS;
 
 function normalized(value: string | null | undefined) {
   return (value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ');
@@ -52,8 +67,11 @@ function sameTakeaway(left: string | null | undefined, right: string | null | un
 export function movementKey(record: PsychologicalMovementRecord): string | null {
   const mechanism = record.mechanismId?.trim();
   if (!mechanism) return null;
+  const path = paths[mechanism] ?? [];
   const persistedKey = record.psychologicalMovementKey?.trim();
-  if (persistedKey?.startsWith(`${mechanism}:`)) return persistedKey;
+  if (persistedKey && path.includes(persistedKey)) return persistedKey;
+  const declared = record.movement?.trim();
+  if (declared && path.includes(declared)) return declared;
   // Prefer the declared movement. Takeaways often contain words from a
   // neighboring phase (for example “criterio” and “decidir”) and must not
   // silently reclassify the intervention.
@@ -81,7 +99,35 @@ export function movementKey(record: PsychologicalMovementRecord): string | null 
   return `${mechanism}:new_functional_move`;
 }
 
-export function derivePsychologicalProgression(input: { goal: string; pattern: string; mechanismId: string; history: PsychologicalMovementRecord[] }): PsychologicalProgression {
+function hasConfirmedEvent(evidence: string[]) {
+  // A generic mention of “una decisión” is not evidence that a decision was
+  // taken or that an outcome occurred. Require an observable past event or
+  // its consequence before enabling review movements.
+  return evidence.some(value => /(tom[eé]|decid[ií]|resultado|sali[oó]|ocurri[oó]|pas[oó]|despu[eé]s|desde entonces|esperaba|termin[oó])/i.test(value));
+}
+
+function hasConfirmedBehavior(evidence: string[]) {
+  return evidence.some(value => /(suele|hace|hizo|tom[eé]|decid[ií]|pudo|pude|logr[oó]|actu[oó]|complet[oó]|avanz[oó]|primera respuesta|ya tiene|ya tienes|ya tenga|tenga)/i.test(value));
+}
+
+function movementEligible(key: string, history: PsychologicalMovementRecord[], evidence: string[]) {
+  const guidance = getMovementTargetGuidance(key);
+  if (!guidance) return { eligible: true, reason: null as string | null };
+  const completed = history.map(movementKey).filter((value): value is string => Boolean(value));
+  if (guidance.buildsOn && !completed.includes(guidance.buildsOn)) return { eligible: false, reason: `requires:${guidance.buildsOn}` };
+  const requirements = guidance.evidenceRequirements;
+  if (requirements.includes('base_context') && evidence.filter(Boolean).length === 0) return { eligible: false, reason: 'missing_base_context' };
+  if (requirements.includes('delivered_learning') && !guidance.buildsOn) return { eligible: false, reason: 'missing_delivered_learning' };
+  if (requirements.includes('confirmed_event') && !hasConfirmedEvent(evidence)) return { eligible: false, reason: 'missing_confirmed_event' };
+  if (requirements.includes('confirmed_behavior') && !hasConfirmedBehavior(evidence)) return { eligible: false, reason: 'missing_confirmed_behavior' };
+  return { eligible: true, reason: null as string | null };
+}
+
+export function isPsychologicalMovementEligible(key: string, history: PsychologicalMovementRecord[], evidence: string[]) {
+  return movementEligible(key, history, evidence);
+}
+
+export function derivePsychologicalProgression(input: { goal: string; pattern: string; mechanismId: string; history: PsychologicalMovementRecord[]; confirmedEvidence?: string[] }): PsychologicalProgression {
   const path = paths[input.mechanismId] ?? [];
   const allRecords = input.history.map(record => ({ ...record, key: movementKey(record) })).filter(record => record.key);
   // A new mechanism starts its own trajectory. Historical work from another
@@ -93,11 +139,34 @@ export function derivePsychologicalProgression(input: { goal: string; pattern: s
   const takeaways = records.slice(0, 10).map(record => record.takeaway).filter((value): value is string => Boolean(value));
   const completedIndexes = completed.map(key => path.indexOf(key)).filter(index => index >= 0);
   const highestCompletedIndex = completedIndexes.length ? Math.max(...completedIndexes) : -1;
-  const available = path.slice(highestCompletedIndex + 1).filter(key => !completed.includes(key));
-  const next = path.slice(highestCompletedIndex + 1).find(key => !completed.includes(key)) ?? (available[0] ?? (path.length ? path[path.length - 1] : null));
+  // A later eligible movement may be selected while an earlier conditional
+  // movement remains pending. Keep that branch visible without changing the
+  // legacy behavior for histories that begin in the middle of a path.
+  const pendingBeforeHighest = path.slice(0, highestCompletedIndex + 1).filter(key => !completed.includes(key));
+  const pendingConditional = pendingBeforeHighest.filter(key => getMovementTargetGuidance(key)?.conditional === true);
+  const afterHighest = path.slice(highestCompletedIndex + 1).filter(key => !completed.includes(key));
+  const theoreticalCandidates = [...afterHighest, ...pendingConditional];
+  const theoretical = theoreticalCandidates;
+  const eligibility = theoretical.map(key => ({ key, ...movementEligible(key, records, input.confirmedEvidence ?? [input.pattern]) }));
+  const available = eligibility.filter(item => item.eligible).map(item => item.key);
+  const ineligible = eligibility.filter(item => !item.eligible).map(item => item.key);
+  const next = available[0] ?? null;
+  const theoreticalNext = theoretical[0] ?? null;
   const current = recent[0] ?? 'not_started';
-  const reason = next ? completed.length ? `El movimiento reciente ${current} ya fue trabajado; el siguiente paso útil es ${next}.` : `No hay un movimiento histórico suficiente; se propone iniciar con ${next}.` : 'No existe una secuencia controlada para este mecanismo; conservar la decisión del planner sin inventar una fase.';
-  return { current_goal: input.goal, current_pattern: input.pattern, current_psychological_state: current, completed_movements: completed, recent_movements: recent, available_next_movements: available, blocked_repeated_movements: blocked, recent_takeaways: takeaways, next_recommended_movement: next, progression_reason: reason };
+  const trajectoryComplete = Boolean(path.length && completed.length >= path.length && available.length === 0);
+  const reason = trajectoryComplete
+    ? 'trajectory_complete'
+    : next
+      ? completed.length ? `El movimiento reciente ${current} ya fue trabajado; el siguiente movimiento elegible es ${next}.` : `No hay un movimiento histórico suficiente; se propone iniciar con ${next}.`
+      : theoretical.length ? 'no_eligible_next_movement' : 'No existe una secuencia controlada para este mecanismo; conservar la decisión del planner sin inventar una fase.';
+  const previous = records[0];
+  const continuity: PsychologicalContinuity = {
+    previousDeliveredMovement: previous ? movementKey(previous) : null,
+    previousDeliveredTakeaway: previous?.takeaway ?? null,
+    previousDeliveredMessage: previous?.text ?? null,
+    continuityGuidance: previous ? ['Construye desde el aprendizaje entregado inmediatamente antes.', 'No afirmes que la persona lo aplicó o lo logró sin evidencia confirmada.', 'Evita reiniciar innecesariamente desde la introducción del contexto.'] : [],
+  };
+  return { current_goal: input.goal, current_pattern: input.pattern, current_psychological_state: current, completed_movements: completed, recent_movements: recent, available_next_movements: available, blocked_repeated_movements: blocked, recent_takeaways: takeaways, next_recommended_movement: next, progression_reason: reason, theoretical_next_movement: theoreticalNext, ineligible_next_movements: ineligible, pending_conditional_movements: pendingConditional, continuity };
 }
 
 export function progressionForCandidate(candidate: PsychologicalMovementRecord, progression?: PsychologicalProgression | null) {

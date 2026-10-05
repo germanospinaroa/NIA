@@ -1,9 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ContextKey } from '@/lib/mvp';
 import { feedbackFor, type InterventionBrief, type InterventionCandidate, type InterventionResult } from '@/lib/intervention-engine';
-import { evaluateWriterV2, generateWriterV2, writerV2InputFromBrief, type WriterV2Evaluation } from '@/lib/server/writer-v2';
+import { applySemanticFidelity, evaluateWriterV2, generateWriterV2, writerV2InputFromBrief, type WriterV2Evaluation } from '@/lib/server/writer-v2';
+import { judgeSemanticFidelity, SEMANTIC_FIDELITY_MODEL } from '@/lib/server/semantic-fidelity-judge';
 import { finishGenerationAttempt, recordEvent, recordExecutionStage, recordProviderCall, startGenerationAttempt, updateExecutionRun, type ExecutionContext } from '@/lib/server/operational-observability';
 import { movementKey } from '@/lib/psychological-progression';
+import type { ReceptionSnapshot } from '@/lib/server/reception-progression';
+import { normalizedMessageHash } from '@/lib/recurrent-daily';
 
 export const WRITER_V2_MODEL = 'gpt-6.1-sol';
 export const WRITER_V2_MAX_ATTEMPTS = 2;
@@ -22,7 +25,7 @@ function candidateFromMessage(brief: InterventionBrief, message: string, audit: 
   const blueprint = brief.interventionBlueprint;
   const contract = brief.psychologicalContract;
   const progression = brief.psychologicalProgression;
-  const movement = blueprint?.movement ?? progression?.next_recommended_movement ?? contract?.psychological_move ?? 'context_clarification';
+  const movement = brief.dailyPlan?.canonicalMovement ?? progression?.next_recommended_movement ?? blueprint?.movement ?? contract?.psychological_move ?? 'context_clarification';
   const type = interventionType(brief);
   const blueprintType = blueprint?.intervention_type ?? 'espejo_contextual';
   const functionByType: Record<string, string> = {
@@ -31,7 +34,7 @@ function candidateFromMessage(brief: InterventionBrief, message: string, audit: 
     espejo_contextual: 'remind', interrupcion_breve: 'interrupt',
     recuperacion_posterior: 'reframe', evidencia_longitudinal: 'remind', recalibracion: 'redirect',
   };
-  const signatureKey = movementKey({ mechanismId: contract?.mechanism_id, movement, takeaway: blueprint?.expected_movement, editorialIdea: blueprint?.insight, concept: movement, angle: blueprint?.intervention_reason });
+  const signatureKey = movementKey({ mechanismId: contract?.mechanism_id, psychologicalMovementKey: brief.dailyPlan?.canonicalMovement ?? progression?.next_recommended_movement ?? undefined, movement, takeaway: blueprint?.expected_movement, editorialIdea: blueprint?.insight, concept: movement, angle: brief.dailyPlan?.angle ?? blueprint?.intervention_reason });
   return {
     text: message,
     topic: brief.editorialPlan?.recommended_topic ?? brief.contextDomain ?? 'intervención',
@@ -48,7 +51,7 @@ function candidateFromMessage(brief: InterventionBrief, message: string, audit: 
     function: (functionByType[type] ?? 'reframe') as InterventionCandidate['function'],
     concept: movement,
     conceptKey: signatureKey ?? undefined,
-    angle: blueprint?.intervention_reason ?? movement,
+    angle: brief.dailyPlan?.angle ?? blueprint?.intervention_reason ?? movement,
     structure: (blueprint?.micro_action ? 'before_then' : 'specific_permission') as InterventionCandidate['structure'],
     editorialType: ({ espejo_contextual: 'context_mirror', reencuadre: 'reframe', distincion: 'distinction', pregunta_precision: 'precision_question', preparacion_situacional: 'situational_preparation', microaccion: 'micro_action', interrupcion_breve: 'brief_interrupt', recuperacion_posterior: 'recovery', evidencia_longitudinal: 'longitudinal_evidence', recalibracion: 'recalibration' } as Record<string, string>)[blueprintType] as InterventionCandidate['editorialType'],
     signal: blueprint?.signal,
@@ -70,8 +73,11 @@ function candidateFromMessage(brief: InterventionBrief, message: string, audit: 
     riskFlags: contract?.risk_flags ?? [],
     interventionBlueprint: blueprint ?? null,
     sema: brief.sema ?? null,
-    psychologicalProgression: progression ? { approved: true, key: progression.next_recommended_movement, reason: progression.progression_reason, validDeepening: false } : undefined,
-    audit: { status: audit.approved ? 'approved' : 'rejected', approved: audit.approved, reasons: audit.hardFailures, hard_failures: audit.hardFailures, warnings: audit.warnings, checks: { writer_v2: true, critical_gates: audit.approved }, similarInterventions: [], similarity: 0 },
+    interventionMode: brief.dailyPlan?.interventionMode,
+    interventionSignature: brief.dailyPlan?.interventionSignature,
+    interventionDepth: brief.dailyPlan?.depth,
+    psychologicalProgression: progression ? { approved: true, key: brief.dailyPlan?.canonicalMovement ?? progression.next_recommended_movement, reason: brief.dailyPlan?.reason ?? progression.progression_reason, validDeepening: false } : undefined,
+    audit: { status: audit.approved ? 'approved' : 'rejected', approved: audit.approved, reasons: audit.hardFailures, hard_failures: audit.hardFailures, warnings: audit.warnings, checks: { writer_v2: true, critical_gates: audit.approved, semantic_fidelity_judge: Boolean(audit.semanticJudge) }, similarInterventions: [], similarity: 0, semanticFidelity: audit.semanticJudge },
   };
 }
 
@@ -93,6 +99,8 @@ function candidateRow(candidate: InterventionCandidate, userId: string, executio
     psychologicalMovementKey: candidate.conceptKey ?? null,
     interventionBlueprint: candidate.interventionBlueprint ?? null,
     sema: candidate.sema ?? null,
+    interventionMode: candidate.interventionMode ?? null,
+    interventionSignature: candidate.interventionSignature ?? null,
   };
   return {
     intervention_id: interventionId, user_id: userId, execution_context: executionContext,
@@ -125,9 +133,10 @@ export async function resolveWithWriterV2(input: {
   slot?: string | null;
   localDate?: string | null;
   brief: InterventionBrief;
+  reception?: ReceptionSnapshot;
 }): Promise<InterventionResult> {
   const { supabase, userId, contextKey, channel, idempotencyKey, execution, brief } = input;
-  const writerInput = writerV2InputFromBrief(brief);
+  const writerInput = writerV2InputFromBrief(brief, input.reception);
   const allCandidates: InterventionCandidate[] = [];
   let selected: InterventionCandidate | null = null;
   let totalInput = 0;
@@ -146,13 +155,43 @@ export async function resolveWithWriterV2(input: {
       const usage = { inputTokens: generated.usage?.prompt_tokens ?? 0, outputTokens: generated.usage?.completion_tokens ?? 0, totalTokens: generated.usage?.total_tokens ?? 0 };
       totalInput += usage.inputTokens; totalOutput += usage.outputTokens; totalTokens += usage.totalTokens;
       if (execution) await recordProviderCall(supabase, execution, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: WRITER_V2_MODEL, operation: 'generation', ...usage, latencyMs: Date.now() - started, status: 'success' });
-      const evaluation = evaluateWriterV2(generated.message, writerInput);
+      let evaluation = evaluateWriterV2(generated.message, writerInput);
+      if (evaluation.hardFailures.length === 0) {
+        const guidance = writerInput.targetMovementGuidance;
+        if (!guidance) {
+          evaluation = { ...evaluation, approved: false, hardFailures: [...evaluation.hardFailures, 'semantic_fidelity_guidance_missing'], deterministicHardFailures: [...evaluation.deterministicHardFailures, 'semantic_fidelity_guidance_missing'] };
+        } else {
+          const judgeStarted = Date.now();
+          try {
+            const judged = await judgeSemanticFidelity({
+              confirmedContext: writerInput.situation,
+              desiredChange: writerInput.desiredChange,
+              receptionStage: writerInput.receptionStage,
+              timeOfDay: writerInput.timeOfDay,
+              guidance,
+              adjacentMovements: guidance.outOfScope,
+              interventionMode: brief.dailyPlan?.interventionMode,
+              angle: brief.dailyPlan?.angle,
+              depth: brief.dailyPlan?.depth,
+              previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway,
+              recentTakeaways: brief.recentEditorialTakes ?? [],
+              relatedSignatures: (brief.movementExposures ?? []).filter(exposure => exposure.canonicalMovement === guidance.target).map(exposure => exposure.interventionSignature).slice(0, 12),
+              message: generated.message,
+            });
+            if (execution) await recordProviderCall(supabase, execution, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: SEMANTIC_FIDELITY_MODEL, operation: 'semantic_judge', inputTokens: judged.usage.prompt_tokens, outputTokens: judged.usage.completion_tokens, totalTokens: judged.usage.total_tokens, latencyMs: judged.latencyMs || Date.now() - judgeStarted, status: 'success' });
+            evaluation = applySemanticFidelity(evaluation, judged.result);
+          } catch (error) {
+            if (execution) await recordProviderCall(supabase, execution, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: SEMANTIC_FIDELITY_MODEL, operation: 'semantic_judge', latencyMs: Date.now() - judgeStarted, status: 'failed', errorMessage: error instanceof Error ? error.message : String(error) });
+            evaluation = { ...evaluation, approved: false, hardFailures: [...evaluation.hardFailures, 'semantic_fidelity_judge_unavailable'], deterministicHardFailures: [...evaluation.deterministicHardFailures, 'semantic_fidelity_judge_unavailable'] };
+          }
+        }
+      }
       const candidate = candidateFromMessage(brief, generated.message, evaluation);
       allCandidates.push(candidate);
       lastReasons = evaluation.hardFailures;
       if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'completed', candidateCount: 1, approvedCandidateCount: evaluation.approved ? 1 : 0, rejectionCount: evaluation.approved ? 0 : 1, usage });
       if (execution) {
-        await recordExecutionStage(supabase, execution, 'generation', { status: 'completed', writer_version: 'v2', model: WRITER_V2_MODEL, attempt, candidate_count: 1, writer_attempts: attempt, input_tokens: totalInput, output_tokens: totalOutput, total_tokens: totalTokens, estimated_cost_usd: estimatedCost(totalInput, totalOutput), repair_used: attempt > 1 });
+        await recordExecutionStage(supabase, execution, 'generation', { status: 'completed', writer_version: 'v2', model: WRITER_V2_MODEL, attempt, candidate_count: 1, writer_attempts: attempt, input_tokens: totalInput, output_tokens: totalOutput, total_tokens: totalTokens, estimated_cost_usd: estimatedCost(totalInput, totalOutput), repair_used: attempt > 1, reception_stage: input.reception?.stage ?? null, psychological_interventions_delivered: input.reception?.psychologicalInterventionsDelivered ?? null, time_of_day: input.reception?.timeOfDay ?? null });
         await recordExecutionStage(supabase, execution, 'critical_gates', { status: evaluation.approved ? 'completed' : 'failed', hard_failures: evaluation.hardFailures, warnings: evaluation.warnings, writer_attempts: attempt });
       }
       if (evaluation.approved) { selected = candidate; repairUsed = attempt > 1; break; }
@@ -186,6 +225,7 @@ export async function resolveWithWriterV2(input: {
     intention: selected.intention, editorial_type: selected.editorialType, functional_emotion: selected.functionalEmotion,
     directiveness: selected.directiveness, closing_type: selected.closingType, action_id: selected.actionId,
     editorial_signature: signature, audit_status: 'approved', audit_results: selected.audit, channel,
+    normalized_message_hash: normalizedMessageHash(selected.text),
     status: 'delivered', delivered_at: new Date().toISOString(), idempotency_key: idempotencyKey ?? null,
     slot: input.slot ?? null, local_date: input.localDate ?? null, editorial_strategy: brief.editorialPlan?.strategy ?? 'continue_topic',
     editorial_reason: brief.editorialPlan?.topic_reason ?? null, context_key: contextKey,

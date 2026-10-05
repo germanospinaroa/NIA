@@ -44,7 +44,8 @@ function firstSignal(brief: InterventionBrief) {
 }
 
 function targetMovement(brief: InterventionBrief) {
-  return brief.psychologicalProgression?.next_recommended_movement
+  return brief.dailyPlan?.canonicalMovement
+    || brief.psychologicalProgression?.next_recommended_movement
     || brief.editorialPlan?.target_movement
     || brief.psychologicalContract?.psychological_move
     || 'observar la situación con un criterio más útil';
