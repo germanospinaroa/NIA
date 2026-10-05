@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Fraunces, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -14,10 +15,10 @@ const body = Instrument_Sans({
 
 export const metadata: Metadata = {
   title: "NIA — Vuelve a tu propio criterio",
-    description: "Una intervención breve para ayudarte a actuar como quieres cuando llega la fricción.",
+  description: "Una intervención breve para ayudarte a actuar como quieres cuando llega la fricción.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="es"

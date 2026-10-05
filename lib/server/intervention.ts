@@ -182,19 +182,37 @@ function enrichAudit(candidate: InterventionCandidate, deterministic: ReturnType
   };
 }
 
+export function alignCandidateToPsychologicalContract(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract']): InterventionCandidate {
+  if (!contract?.sufficient) return candidate;
+  return {
+    ...candidate,
+    mechanismId: contract.mechanism_id,
+    mechanismConfidence: contract.mechanism_confidence,
+    interventionPurpose: contract.intervention_purpose,
+    psychologicalMove: contract.psychological_move,
+    expectedMovement: contract.expected_movement,
+    whyNow: contract.why_now,
+    riskFlags: contract.risk_flags,
+    situation: candidate.situation ?? contract.situation,
+    intention: candidate.intention ?? contract.user_direction,
+  };
+}
+
 function psychologicalSignature(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract'], progression?: InterventionBrief['psychologicalProgression']) {
+  const sourceMechanism = contract?.mechanism_id ?? candidate.mechanismId ?? null;
+  const sourceMovement = contract?.psychological_move ?? candidate.psychologicalMove ?? candidate.movement ?? null;
   return {
     psychologicalContract: contract ?? null,
-    mechanismId: candidate.mechanismId ?? null,
-    mechanismConfidence: candidate.mechanismConfidence ?? null,
-    interventionPurpose: candidate.interventionPurpose ?? null,
-    psychologicalMove: candidate.psychologicalMove ?? null,
-    expectedMovement: candidate.expectedMovement ?? null,
-    takeaway: candidate.takeaway ?? null,
-    optionalAction: candidate.optionalAction ?? null,
-    whyNow: candidate.whyNow ?? null,
-    riskFlags: candidate.riskFlags ?? [],
-    psychologicalMovementKey: movementKey({ mechanismId: candidate.mechanismId, movement: candidate.psychologicalMove ?? candidate.movement, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }),
+    mechanismId: sourceMechanism,
+    mechanismConfidence: contract?.mechanism_confidence ?? candidate.mechanismConfidence ?? null,
+    interventionPurpose: contract?.intervention_purpose ?? candidate.interventionPurpose ?? null,
+    psychologicalMove: sourceMovement,
+    expectedMovement: contract?.expected_movement ?? candidate.expectedMovement ?? null,
+    takeaway: candidate.takeaway ?? contract?.takeaway ?? null,
+    optionalAction: candidate.optionalAction ?? contract?.optional_action ?? null,
+    whyNow: contract?.why_now ?? candidate.whyNow ?? null,
+    riskFlags: contract?.risk_flags ?? candidate.riskFlags ?? [],
+    psychologicalMovementKey: movementKey({ mechanismId: sourceMechanism, movement: sourceMovement }),
     psychologicalProgression: progression ?? null,
   };
 }
@@ -280,7 +298,8 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     const auditStarted = Date.now();
     for (const candidate of generated) {
       if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_generated', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, candidateIndex: attemptCandidates.length } }));
-      const deterministic = auditCandidate(candidate, {
+      const normalizedCandidate = alignCandidateToPsychologicalContract(candidate, attemptBrief.psychologicalContract);
+    const deterministic = auditCandidate(normalizedCandidate, {
         ...attemptBrief,
         recentEditorialIdeas: [
           ...(attemptBrief.recentEditorialIdeas ?? []),
@@ -288,14 +307,14 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
         ],
       });
       if (!deterministic.approved) {
-        candidate.audit = deterministic;
-        attemptCandidates.push(candidate);
+        normalizedCandidate.audit = deterministic;
+        attemptCandidates.push(normalizedCandidate);
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'deterministic', reasons: deterministic.reasons } }));
         continue;
       }
       let embedding: number[];
       try {
-        const embeddingResult = await createEmbeddingWithMeta(candidate.text);
+        const embeddingResult = await createEmbeddingWithMeta(normalizedCandidate.text);
         embedding = embeddingResult.embedding;
         await recordProviderSnapshots(supabase, execution, [embeddingResult.usage ?? { completion_tokens: 0, cached_input_tokens: 0, cache_write_tokens: 0 }], { generationAttemptId: generationAttempt?.id, provider: 'openai', model: embeddingModel(), operation: 'embedding', latencyMs: embeddingResult.latencyMs, status: 'success' });
       } catch (error) {
@@ -318,37 +337,37 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       let semanticJudge;
       try {
         const semanticJudgeStarted = Date.now();
-        const semanticExecution = await judgeSemanticRelationshipsWithMeta(candidate, attemptBrief, activeMatches as Parameters<typeof judgeSemanticRelationshipsWithMeta>[2]);
+        const semanticExecution = await judgeSemanticRelationshipsWithMeta(normalizedCandidate, attemptBrief, activeMatches as Parameters<typeof judgeSemanticRelationshipsWithMeta>[2]);
         semanticJudge = semanticExecution.result;
         await recordSuccessfulRetryFailures(supabase, execution, semanticExecution.technicalFailures, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge' });
         await recordProviderSnapshots(supabase, execution, semanticExecution.callUsages, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge', latencyMs: semanticExecution.latencyMs || Date.now() - semanticJudgeStarted, status: 'success' });
       } catch (error) {
         await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge' });
         recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'semantic_judge' });
-        candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'semantic_judge_unavailable'], hard_failures: [...deterministic.hard_failures, 'semantic_judge_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, semantic_judge_ran: false }, similarInterventions: [], similarity: 0, semanticStatus: 'fail', deterministic };
-        attemptCandidates.push(candidate);
+        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'semantic_judge_unavailable'], hard_failures: [...deterministic.hard_failures, 'semantic_judge_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, semantic_judge_ran: false }, similarInterventions: [], similarity: 0, semanticStatus: 'fail', deterministic };
+        attemptCandidates.push(normalizedCandidate);
         continue;
       }
-      const semantic = auditSemanticCandidate(candidate, activeMatches as Parameters<typeof auditSemanticCandidate>[1], semanticJudge);
+      const semantic = auditSemanticCandidate(normalizedCandidate, activeMatches as Parameters<typeof auditSemanticCandidate>[1], semanticJudge);
       if (!semantic.approved) {
-        candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, ...semantic.reasons], hard_failures: [...deterministic.hard_failures, ...semantic.hard_failures], warnings: [...deterministic.warnings, ...semantic.warnings], checks: { ...deterministic.checks, ...semantic.checks }, similarInterventions: semantic.similarInterventions, similarity: semantic.similarity, semanticStatus: semantic.semanticStatus, similarityBand: semantic.similarityBand, semanticJudge: semantic.semanticJudge, deterministic, semantic };
-        attemptCandidates.push(candidate);
+        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, ...semantic.reasons], hard_failures: [...deterministic.hard_failures, ...semantic.hard_failures], warnings: [...deterministic.warnings, ...semantic.warnings], checks: { ...deterministic.checks, ...semantic.checks }, similarInterventions: semantic.similarInterventions, similarity: semantic.similarity, semanticStatus: semantic.semanticStatus, similarityBand: semantic.similarityBand, semanticJudge: semantic.semanticJudge, deterministic, semantic };
+        attemptCandidates.push(normalizedCandidate);
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'semantic', reasons: semantic.reasons, similarity: semantic.similarity } }));
         continue;
       }
       try {
-        const llmAudit = await auditCandidateWithLLMWithMeta(candidate, attemptBrief, activeMatches as Parameters<typeof auditCandidateWithLLMWithMeta>[2]);
+        const llmAudit = await auditCandidateWithLLMWithMeta(normalizedCandidate, attemptBrief, activeMatches as Parameters<typeof auditCandidateWithLLMWithMeta>[2]);
         await recordSuccessfulRetryFailures(supabase, execution, llmAudit.technicalFailures, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit' });
         await recordProviderSnapshots(supabase, execution, llmAudit.callUsages, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit', latencyMs: llmAudit.latencyMs, status: 'success' });
-        enrichAudit(candidate, deterministic, semantic, llmAudit.audit);
+        enrichAudit(normalizedCandidate, deterministic, semantic, llmAudit.audit);
         if (!llmAudit.audit.approved && execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'llm', reasons: llmAudit.audit.reasons } }));
       } catch (error) {
         await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit' });
         recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'llm_audit' });
-        candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable'], hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
+        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable'], hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'llm', reasons: ['llm_audit_unavailable'] } }));
       }
-      attemptCandidates.push(candidate);
+      attemptCandidates.push(normalizedCandidate);
     }
     if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'completed', candidateCount: generated.length, approvedCandidateCount: attemptCandidates.filter(candidate => candidate.audit?.approved).length, rejectionCount: attemptCandidates.filter(candidate => !candidate.audit?.approved).length, usage: generationUsage });
     if (execution) await observe(supabase, () => recordExecutionStage(supabase, execution, 'auditing', { duration_ms: Date.now() - auditStarted, attempt: attempt + 1, candidate_count: attemptCandidates.length, approved_count: attemptCandidates.filter(candidate => candidate.audit?.approved).length, rejected_count: attemptCandidates.filter(candidate => !candidate.audit?.approved).length }));

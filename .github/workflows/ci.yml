@@ -1,0 +1,71 @@
+name: NIA CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  full-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Psychological value
+        run: npm run test:psychological-value
+
+      - name: Context anchoring
+        run: npm run test:context-anchoring
+
+      - name: Psychological progression
+        run: npm run test:psychological-progression
+
+      - name: Contract alignment
+        run: npm run test:psychological-contract-alignment
+
+      - name: AI regressions
+        run: npm run test:ai-regressions
+
+      - name: Message composer
+        run: npm run test:message-composer
+
+      - name: WhatsApp contract
+        run: npm run test:whatsapp
+
+      - name: WhatsApp inbound
+        run: npm run test:whatsapp-inbound
+
+      - name: Execution idempotency
+        run: npm run test:execution-run-idempotency
+
+      - name: QA orchestration
+        run: npm run test:qa-e2e-orchestration
+
+      - name: QA isolation
+        run: npm run test:qa-execution-isolation
+
+      - name: Controlled E2E
+        run: npm run test:qa-e2e-controlled
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff check
+        run: git diff --check

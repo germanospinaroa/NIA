@@ -17,7 +17,24 @@ delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const tables = {
   profiles: [{ id: userId, first_name: 'Ana', direction_key: '', desired_change_original: 'Confiar más en mi criterio', current_context_original: 'Cuando alguien cuestiona una decisión que ya tomaste', current_context_domain: 'decisiones', desired_change_language: [], learning_profile: {}, communication_preference: 'adaptive', desired_change_concepts: [], voice_style: null }],
-  interventions: [], learning_signals: [], context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
+  interventions: [{
+    id: 'history-1',
+    user_id: userId,
+    created_at: '2026-10-03T12:00:00.000Z',
+    topic: 'criterio propio',
+    intervention_type: 'reflection',
+    text: 'Puedes escuchar una opinión sin entregar la decisión.',
+    editorial_idea: 'Distinguir información de entregar la decisión.',
+    concept: 'información y decisión',
+    angle: 'escuchar sin ceder',
+    editorial_signature: {
+      mechanismId: 'external_validation',
+      psychologicalMove: 'distinguir información de entregar la decisión',
+      takeaway: 'Escuchar información no equivale a entregar la decisión.',
+    },
+  }],
+  learning_signals: [],
+  context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
 };
 const counts = { openai: 0, evolution: 0 };
 let failNextGeneration = false;
@@ -86,7 +103,43 @@ const db = { tables, from(table) { return new Query(this, table); }, async rpc(n
 function jsonResponse(value, status = 200) { return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } }); }
 const audit = { context_fit: true, specificity: true, generic_motivation: false, chatbot_language: false, coaching_language: false, therapy_language: false, robotic_or_abstract_language: false, first_read_comprehension: true, editorial_novelty: true, experience_novelty: true, 'cliché': false, semantic_repetition: false, concept_repetition: false, structure_repetition: false, single_idea: true, natural_voice: true, unnecessary_advice: false, approved: true, reasons: [] };
 const candidates = [0, 1, 2].map(index => ({
-  topic: 'criterio propio', intervention_type: index === 0 ? 'brief_insight' : 'reflection', depth: index === 0 ? 'brief' : 'medium', editorial_take: index === 0 ? 'Una duda ajena no es una prueba de que estés equivocada.' : `Puedes escuchar una opinión y seguir pensando por tu cuenta ${index}.`, editorial_idea: index === 0 ? 'Una duda ajena no demuestra que tu decisión esté mal.' : `Escuchar una opinión no obliga a entregar la decisión ${index}.`, experience_type: index === 0 ? 'perspective_shift' : 'reflection', blocks: [{ type: 'idea', text: index === 0 ? 'A veces alguien cuestiona una decisión tuya y de inmediato empiezas a pensar que quizá sí te equivocaste.' : `Puedes escuchar una opinión sin convertirla en una instrucción ${index}.` }], function: index === 0 ? 'reframe' : 'distinguish', concept: index === 0 ? 'desacuerdo no es evidencia' : `escuchar sin ceder ${index}`, angle: index === 0 ? 'separar desacuerdo de evidencia' : `opinión y decisión ${index}`, structure: index === 0 ? 'context_does_not_mean' : 'distinguish_between', editorial_type: index === 0 ? 'reframe' : 'distinction', signal: 'alguien cuestiona una decisión', evidence_direction: 'la duda ajena no aporta evidencia por sí sola', movement: 'separar desacuerdo de error', opening_closing: 'idea breve', mechanism_id: 'external_validation', mechanism_confidence: 'medium', intervention_purpose: 'Separar información de entregar la decisión.', psychological_move: 'distinguir información de entregar la decisión', expected_movement: 'Podrás revisar qué cambió antes de decidir.', takeaway: 'Escuchar información no equivale a entregar la decisión.', optional_action: index === 0 ? 'Antes de cambiar, anota qué dato apareció.' : null, why_now: 'La situación confirma que una opinión aparece alrededor de una decisión.', risk_flags: [], insight_id: null, functional_emotion: 'clarity', directiveness: 'reflective', closing_type: 'none', action_id: null, situation: 'Cuando alguien cuestiona una decisión que ya tomaste', intention: 'Confiar más en mi criterio', longitudinal_evidence_refs: null, editorial_signature: { psychologicalContract: null },
+  topic: 'criterio propio', intervention_type: index === 0 ? 'brief_insight' : 'reflection', depth: index === 0 ? 'brief' : 'medium',
+  editorial_take: index === 0 ? 'Haz visible qué tendría que cumplir una opción antes de dejar que una duda ajena cambie tu decisión.' : `Define un criterio propio antes de usar una opinión externa para revisar una decisión ${index}.`,
+  editorial_idea: index === 0 ? 'Definir condiciones propias permite evaluar una opinión sin entregar la decisión.' : `Una condición propia ayuda a decidir qué información merece cambiar la decisión ${index}.`,
+  experience_type: index === 0 ? 'perspective_shift' : 'reflection',
+  blocks: [{
+    type: index === 0 ? 'tool' : 'idea',
+    text: index === 0
+      ? 'Antes de consultar, completa: «La opción que elija tendría que cumplir estas dos condiciones: …». Después escucha la opinión y revisa si aporta algo que cambie esas condiciones.'
+      : `Puedes escuchar una opinión y seguir decidiendo por tu cuenta ${index}. Primero define qué tendría que cumplir la opción para que la elijas; luego usa lo que escuches para comprobar si apareció información que realmente cambie ese criterio.`,
+  }],
+  function: index === 0 ? 'reframe' : 'distinguish',
+  concept: `definir criterio antes de consultar ${index}`,
+  angle: `condiciones propias y opinión externa ${index}`,
+  structure: index === 0 ? 'distinguish_between' : 'context_does_not_mean',
+  editorial_type: index === 0 ? 'reframe' : 'distinction',
+  signal: 'alguien cuestiona una decisión',
+  evidence_direction: 'una opinión externa no obliga a cambiar un criterio propio',
+  movement: 'definir qué condiciones tendría que cumplir una opción para elegirla',
+  opening_closing: 'idea y aplicación',
+  mechanism_id: 'external_validation',
+  mechanism_confidence: 'medium',
+  intervention_purpose: 'Ayudar a definir qué condiciones tendría que cumplir una opción para que la elijas.',
+  psychological_move: 'definir qué condiciones tendría que cumplir una opción para que la elijas',
+  expected_movement: 'Podrás precisar qué condición tendría que cumplir una opción antes de decidir.',
+  takeaway: 'Un criterio propio permite evaluar información sin entregar la decisión.',
+  optional_action: 'Completa dos condiciones que para ti tendría que cumplir la opción que estás considerando.',
+  why_now: 'La situación confirma que una opinión aparece alrededor de una decisión.',
+  risk_flags: [],
+  insight_id: null,
+  functional_emotion: 'clarity',
+  directiveness: 'reflective',
+  closing_type: 'none',
+  action_id: null,
+  situation: 'Cuando alguien cuestiona una decisión que ya tomaste',
+  intention: 'Confiar más en mi criterio',
+  longitudinal_evidence_refs: null,
+  editorial_signature: { psychologicalContract: null },
 }));
 
 globalThis.fetch = async (input, init = {}) => {
@@ -133,8 +186,10 @@ assert.equal(delivery.provider_message_id, 'controlled-provider-message');
 const finalRun = db.tables.execution_runs.find(row => row.id === execution.executionId);
 assert.equal(finalRun.status, 'approved');
 assert.ok(finalRun.intervention_id);
-assert.equal(db.tables.interventions.length, 1);
-assert.equal(db.tables.interventions[0].editorial_signature.psychologicalContract.mechanism_id, 'external_validation');
+assert.equal(db.tables.interventions.length, 2);
+const createdIntervention = db.tables.interventions.find(row => row.id !== 'history-1');
+assert.ok(createdIntervention?.editorial_signature?.psychologicalContract?.mechanism_id === 'external_validation');
+assert.equal(createdIntervention.editorial_signature.psychologicalMovementKey, 'external_validation:define_decision_criterion');
 assert.equal(db.tables.intervention_candidates.length, 3);
 assert.equal(counts.evolution, 1);
 assert.ok(counts.openai >= 4, `expected generation, embedding and audit provider calls, got ${counts.openai}`);
