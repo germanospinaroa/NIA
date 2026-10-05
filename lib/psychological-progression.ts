@@ -58,12 +58,17 @@ export function movementKey(record: PsychologicalMovementRecord): string | null 
   const text = declaredMovement || normalized([record.takeaway, record.editorialIdea, record.concept, record.angle].join(' '));
   if (mechanism === 'external_validation') {
     if (/(umbral|reconsider|cambiar|revisar)/.test(text)) return 'external_validation:set_reconsideration_threshold';
-    // Information-vs-decision is the earlier phase. Check it before
-    // decision-criteria because both can contain words such as "criterio" or
-    // "decisión"; the functional movement is determined by the distinction,
-    // not by isolated vocabulary.
+    // An explicit criterion-setting movement is a later phase. If the declared
+    // movement is about defining a rule/condition for choosing, do not let the
+    // mere presence of "información" or "decidir" collapse it into the earlier
+    // information-vs-decision phase.
+    const explicitCriterion = /(regla|condicion|definir|criterio|cumplir|elegir|opcion|prioridad|suficiente)/.test(text);
+    const consultationLanguage = /(opinion|consult|escuch|pregunt|consejo)/.test(text);
+    if (explicitCriterion && !consultationLanguage) return 'external_validation:define_decision_criterion';
+    // Information-vs-decision is the earlier phase when the declared movement
+    // actually describes handling an external opinion or consultation.
     if (/(informacion|dato|opinion|consult|escuch|pregunt|consejo)/.test(text) && /(decision|decidir|criterio|ceder|delegar|entregar|sustit)/.test(text)) return 'external_validation:information_vs_delegating_decision';
-    if (/(regla|suficiente|prioridad|pesa|peso|resultado|condicion|definir|identificar|nombrar|expresar|explicito|cumplir|convertir|traducir|senal|elegir|que .*criterio|criterio .*decidir)/.test(text)) return 'external_validation:define_decision_criterion';
+    if (explicitCriterion) return 'external_validation:define_decision_criterion';
     if (/(informacion|dato|opinion|consult|escuch|pregunt|consejo|registrar)/.test(text)) return 'external_validation:information_vs_delegating_decision';
     if (/(incertidumbre|seguridad|certeza|duda)/.test(text)) return 'external_validation:decide_with_sufficient_information';
     if (/(despues|resultado|salio|revisar|ocurrio)/.test(text)) return 'external_validation:review_outcome_without_self_punishment';
