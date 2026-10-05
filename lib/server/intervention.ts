@@ -144,12 +144,13 @@ async function persistCalibrationState(supabase: DbClient, userId: string, profi
   if (error) throw new Error('calibration_state_save_failed');
 }
 
-function retryBrief(brief: InterventionBrief, attempt: number) {
+function retryBrief(brief: InterventionBrief, attempt: number, rejectionReasons: string[] = []) {
   if (attempt === 0) return brief;
   const constraints = [...(brief.generationConstraints ?? []), 'No cambies el desired_change ni inventes una dirección nueva.'];
   if (attempt >= 1) constraints.push('Ancla cada candidato a una situación concreta confirmada por la usuaria y usa detalles disponibles.');
   if (attempt >= 1 && brief.generationConstraints?.some(value => value.includes('acaba de ser confirmado'))) constraints.push('No repitas el concepto, ángulo ni estructura de las intervenciones anteriores; busca una formulación realmente distinta dentro del nuevo contexto.');
   if (attempt >= 2) constraints.push('Prioriza un comportamiento observable expresado por la usuaria; si no existe, no lo inventes.');
+  if (rejectionReasons.length) constraints.push(`Repara únicamente estos problemas detectados en la ronda anterior, sin cambiar el movimiento psicológico ni el blueprint: ${[...new Set(rejectionReasons)].slice(0, 12).join(' | ')}`);
   return { ...brief, generationConstraints: [...new Set(constraints)] };
 }
 
@@ -238,7 +239,8 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
   const configuredMaxAttempts = brief.feedbackGoal === 'specific_context' || brief.generationConstraints?.some(value => value.includes('acaba de ser confirmado')) ? interventionConfig.maxGenerationRounds : 1;
   const maxAttempts = options?.maxGenerationAttempts ?? configuredMaxAttempts;
   for (let attempt = 0; attempt < maxAttempts && !selected; attempt += 1) {
-    const attemptBrief = retryBrief(brief, attempt);
+    const previousRejectionReasons = attempt > 0 ? candidates.flatMap(candidate => candidate.audit?.reasons ?? []) : [];
+    const attemptBrief = retryBrief(brief, attempt, previousRejectionReasons);
     const generationAttempt = execution ? await startGenerationAttempt(supabase, execution, { attemptNumber: attempt + 1, attemptType: attempt === 0 ? 'generation' : 'quality_retry', provider: 'openai', model: llmModel() }) : null;
     if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'generation_started', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, attemptType: attempt === 0 ? 'generation' : 'quality_retry' } }));
     let generated: InterventionCandidate[];
@@ -351,10 +353,11 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
   if (!selected) {
     await persistRejectedCandidates(supabase, userId, candidates, null, options?.executionContext ?? 'production', brief.psychologicalContract, execution?.executionId ?? null, brief.psychologicalProgression);
     if (execution) {
-      await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'no_approved_intervention', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { candidateCount: candidates.length, retries: Math.max(0, maxAttempts - 1), rejectionReasons: candidates.flatMap(candidate => candidate.audit?.reasons ?? []), candidateRejections: candidates.map((candidate, index) => ({ index, approved: candidate.audit?.approved === true, rejectionReason: candidate.audit?.reasons ?? ['generation_failed'] })) } }));
-      await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'no_approved_intervention', failure: new Error('no_approved_intervention'), candidateCount: candidates.length, retryCount: Math.max(0, maxAttempts - 1) }));
+      const failureCode = maxAttempts > 1 ? 'no_approved_intervention_after_repair' : 'no_approved_intervention';
+      await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'no_approved_intervention', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { candidateCount: candidates.length, retries: Math.max(0, maxAttempts - 1), failureCode, rejectionReasons: candidates.flatMap(candidate => candidate.audit?.reasons ?? []), candidateRejections: candidates.map((candidate, index) => ({ index, approved: candidate.audit?.approved === true, rejectionReason: candidate.audit?.reasons ?? ['generation_failed'] })) } }));
+      await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'no_approved_intervention', failure: new Error(failureCode), candidateCount: candidates.length, retryCount: Math.max(0, maxAttempts - 1) }));
     }
-    throw new Error('no_approved_intervention');
+    throw new Error(maxAttempts > 1 ? 'no_approved_intervention_after_repair' : 'no_approved_intervention');
   }
   const persistenceStarted = Date.now();
   let selectedEmbedding: number[];

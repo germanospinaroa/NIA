@@ -842,3 +842,8 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Se añadió diagnóstico detallado para errores de validación del schema de candidatos y se corrigió la persistencia de `selected_candidate`: en una ejecución aprobada exactamente una candidata queda marcada como seleccionada; en una ejecución sin aprobación, ninguna.
 - Validación local: regresión de progresión, structured output, E2E controlado, typecheck, lint, build y `git diff --check` PASS; lint conserva 4 warnings heredados.
 - Validación real server-side sin Evolution/WhatsApp: tras el deployment, Adriana completó nuevamente progression → blueprint/SEMA → psychological contract → OpenAI real → 3 candidatas → 1 aprobada, 2 rechazadas → intervention persistida, con ejecución `approved`; exactamente una candidata quedó marcada como seleccionada.
+
+## Fase 4J — Reparación limitada de cero aprobaciones — 2026-10-05
+- La QA real confirmó que la generación podía ser válida pero producir 0 aprobaciones. Se añadió una única ronda de reparación con las razones de rechazo de la misma ejecución, manteniendo blueprint, contrato y movimiento; los gates vuelven a ejecutarse completos.
+- Si ambas rondas fallan, la ejecución termina con `status=no_approved_intervention` y `failure_code=no_approved_intervention_after_repair`, sin downstream ni envío.
+- La ruta QA usa dos intentos máximos y la trazabilidad suma candidatas/aprobaciones de ambas rondas. Regresiones controladas cubren reparación exitosa, reparación fallida, preservación de movimiento y ausencia de Evolution en rechazo.

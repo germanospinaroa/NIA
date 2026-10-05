@@ -22,6 +22,9 @@ const tables = {
 const counts = { openai: 0, evolution: 0 };
 let failNextGeneration = false;
 let rejectNextGeneration = false;
+let repairNextGeneration = false;
+let repairGenerationCalls = 0;
+let repairAlwaysFails = false;
 
 function rowId() { return randomUUID(); }
 function clone(value) { return value === undefined ? value : JSON.parse(JSON.stringify(value)); }
@@ -105,8 +108,10 @@ globalThis.fetch = async (input, init = {}) => {
         timeout.name = 'AbortError';
         throw timeout;
       }
-      const responseCandidates = rejectNextGeneration ? candidates.map(candidate => ({ ...candidate, intervention_type: 'practical_guidance', text: 'Confía en ti y recuerda que eres capaz.', blocks: [{ type: 'idea', text: 'Confía en ti y recuerda que eres capaz.' }], takeaway: 'Una frase bonita para sentirte mejor.', optional_action: null, optionalAction: null })) : candidates;
+      const invalidCandidates = candidates.map(candidate => ({ ...candidate, intervention_type: 'practical_guidance', text: 'Confía en ti y recuerda que eres capaz.', blocks: [{ type: 'idea', text: 'Confía en ti y recuerda que eres capaz.' }], takeaway: 'Una frase bonita para sentirte mejor.', optional_action: null, optionalAction: null }));
+      const responseCandidates = rejectNextGeneration || repairAlwaysFails || (repairNextGeneration && repairGenerationCalls++ === 0) ? invalidCandidates : candidates;
       rejectNextGeneration = false;
+      if (repairNextGeneration && repairGenerationCalls > 1) repairNextGeneration = false;
       return jsonResponse({ id: 'controlled-generation', model: 'controlled-model', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ candidates: responseCandidates }) } }], usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 } });
     }
     if (name === 'nia_intervention_audit') return jsonResponse({ id: 'controlled-audit', model: 'controlled-model', choices: [{ message: { content: JSON.stringify(audit) } }], usage: { prompt_tokens: 50, completion_tokens: 50, total_tokens: 100 } });
@@ -185,4 +190,37 @@ assert.equal(db.tables.intervention_candidates.filter(row => row.editorial_signa
 assert.equal(db.tables.interactions.filter(row => row.slot === `qa:${rejectionExecution.executionId}`).length, 0);
 assert.equal(db.tables.whatsapp_daily_deliveries.filter(row => row.slot === `qa:${rejectionExecution.executionId}`).length, 0);
 assert.equal(counts.evolution, 1, 'rejected editorial run must not call Evolution');
+
+// Execution D proves one bounded repair can use the first round's rejection
+// reasons, preserve the same movement, and continue when the repair passes.
+repairNextGeneration = true;
+const repairExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_repair', idempotencyKey: `qa-repair:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_repair:${userId}` });
+const repaired = await resolveIntervention(db, userId, 'intention', 'whatsapp', repairExecution.idempotencyKey, repairExecution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${repairExecution.executionId}`, localDate: '2026-10-04' });
+assert.ok(repaired.interventionId, 'repair should continue to intervention');
+const repairRun = db.tables.execution_runs.find(row => row.id === repairExecution.executionId);
+assert.equal(repairRun.status, 'approved');
+assert.equal(repairRun.candidate_count, 6);
+assert.equal(db.tables.generation_attempts.filter(row => row.execution_run_id === repairExecution.executionId).length, 2);
+const repairCandidates = db.tables.intervention_candidates.filter(row => row.editorial_signature?.executionRunId === repairExecution.executionId);
+assert.equal(repairCandidates.length, 6);
+assert.equal(repairCandidates.filter(row => row.selected_candidate === true).length, 1);
+assert.equal(repairCandidates.find(row => row.selected_candidate === true).intervention_id, repaired.interventionId);
+assert.ok(repairCandidates.slice(0, 3).every(row => row.selected_candidate === false));
+assert.equal(repairCandidates.find(row => row.selected_candidate === true).editorial_signature?.psychologicalMovementKey, repairCandidates[0].editorial_signature?.psychologicalMovementKey, 'repair must preserve the first round movement');
+
+// Execution E proves that a failed repair has an explicit terminal code and
+// never proceeds to intervention or delivery.
+repairAlwaysFails = true;
+const failedRepairExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_repair_failure', idempotencyKey: `qa-repair-failure:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_repair_failure:${userId}` });
+await assert.rejects(
+  resolveIntervention(db, userId, 'intention', 'whatsapp', failedRepairExecution.idempotencyKey, failedRepairExecution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${failedRepairExecution.executionId}`, localDate: '2026-10-04' }),
+  /no_approved_intervention_after_repair/,
+);
+const failedRepairRun = db.tables.execution_runs.find(row => row.id === failedRepairExecution.executionId);
+assert.equal(failedRepairRun.status, 'no_approved_intervention');
+assert.equal(failedRepairRun.failure_code, 'no_approved_intervention_after_repair');
+assert.equal(failedRepairRun.intervention_id ?? null, null);
+assert.equal(db.tables.intervention_candidates.filter(row => row.editorial_signature?.executionRunId === failedRepairExecution.executionId).length, 6);
+assert.equal(counts.evolution, 1, 'failed repair must not call Evolution');
+
 console.log(JSON.stringify({ status: 'PASS', execution_run: finalRun.id, planner: 'executed', candidates: db.tables.intervention_candidates.length, intervention: finalRun.intervention_id, composer: 'real', interaction: interaction.id, delivery: delivery.id, provider_message_id: delivery.provider_message_id, openai_boundary_calls: counts.openai, evolution_boundary_calls: counts.evolution }, null, 2));
