@@ -89,7 +89,7 @@ export function normalizedMessageHash(message: string) {
   return createHash('sha256').update(normalizeDailyMessage(message), 'utf8').digest('hex');
 }
 
-export function hasExactMessageDuplicate(message: string, historicalMessages: string[] | { normalizedMessageHash?: string | null; message?: string | null }[]) {
+export function hasExactMessageDuplicate(message: string, historicalMessages: (string | { normalizedMessageHash?: string | null; message?: string | null })[]) {
   const hash = normalizedMessageHash(message);
   return historicalMessages.some(item => typeof item === 'string' ? normalizedMessageHash(item) === hash : item.normalizedMessageHash === hash || (item.message ? normalizedMessageHash(item.message) === hash : false));
 }
@@ -99,10 +99,12 @@ export function dailyIdempotencyKey(userId: string, localDate: string) {
 }
 
 export function projectedReceptionStage(deliveredCount: number, scheduledPredecessors = 0): 'welcome' | 'tuning' | 'building' | 'established' {
-  const count = deliveredCount + scheduledPredecessors;
-  if (count < 1) return 'welcome';
-  if (count < 2) return 'tuning';
-  if (count < 5) return 'building';
+  // Refill plans psychological interventions after the deterministic welcome.
+  // The item being planned is the next intervention, so D1 is tuning rather
+  // than welcome; scheduled predecessors count toward its projected ordinal.
+  const projectedPsychologicalNumber = deliveredCount + scheduledPredecessors + 1;
+  if (projectedPsychologicalNumber <= 2) return 'tuning';
+  if (projectedPsychologicalNumber <= 5) return 'building';
   return 'established';
 }
 

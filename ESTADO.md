@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Buffered delivery → learning loop — 2026-10-05
+- `loadDeliveredBufferExposures()` conecta `approved_intervention_buffer`, `interactions` y `whatsapp_daily_deliveries`: solo `consumed` + interacción `daily_message` coincidente + delivery `sent` entra en `movementExposures`.
+- `buildBrief()` fusiona exposiciones históricas de `interventions` con exposiciones recurrentes entregadas y deduplica por `interventionSignature` y hash normalizado.
+- Refill usa filas activas (`approved`/`buffered`) como aprendizaje prospectivo, filas no invalidadas —incluidas `consumed`— como reservas de fecha/signature/hash, y filas enviadas consumidas como historia entregada. Las invalidadas no reservan.
+- `projectedReceptionStage()` proyecta el futuro psicológico después de la bienvenida: D1-D2 `tuning`, D3-D5 `building`, D6+ `established`. Refill pasa esa misma etapa proyectada a Writer y Judge sin convertirla en progreso real.
+- Añadido `scripts/test-buffer-delivered-exposure-loop.mjs` y `test:buffer-delivered-exposure-loop`: escenarios sent/failed/pending/invalidated y rolling lifecycle offline de 365 días. Mecanismos raíz reales: `external_validation`, `uncertainty_clarification`, `decision_criteria`, `implementation_intention`, `progress_monitoring`. No se modificaron Writer V2, Judge, contratos, migraciones ni proveedores.
+
 ## Long-horizon recurrent buffer refill — 2026-10-05
 - Añadido `scripts/test-recurrent-long-horizon.mjs`: descubre dinámicamente los cinco mecanismos de `PSYCHOLOGICAL_MOVEMENT_PATHS`, simula 365 días por mecanismo, verifica progresión de depth, revisitas con nuevas signatures, aislamiento de evidencia confirmada y escenarios de buffer/dependencias/contexto.
 - Añadida simulación rolling de buffer: objetivo 5 días, mínimo 3; consume y entrega diariamente, rellena hasta 5 y conserva el buffer ante fallos puntuales o consecutivos. Resultado: mínimo observado 4 después del consumo, 0 underflows, 0 signatures/hash duplicados y 0 estados terminales.

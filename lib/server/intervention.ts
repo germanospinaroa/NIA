@@ -15,6 +15,7 @@ import { buildInterventionBlueprint } from '@/lib/intervention-blueprint';
 import { resolveWithWriterV2 } from '@/lib/server/writer-v2-intervention';
 import { getReceptionSnapshot } from '@/lib/server/reception-progression';
 import { planDailyIntervention, interventionSignature as dailyInterventionSignature, normalizedMessageHash, type InterventionDepth, type InterventionMode, type MovementExposure } from '@/lib/recurrent-daily';
+import { loadDeliveredBufferExposures } from '@/lib/server/approved-message-buffer';
 
 type DbClient = SupabaseClient;
 type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; status?: string | null; delivered_at?: string | null; execution_context?: 'production' | 'qa' | null; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; editorial_idea?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null; situation?: string | null; intention?: string | null; editorial_type?: string | null; insight_id?: string | null; functional_emotion?: string | null; directiveness?: string | null; closing_type?: string | null; action_id?: string | null; editorial_signature?: EditorialSignature | null; editorial_score?: Record<string, unknown> | null; gate_results?: Record<string, unknown> | null; same_day_repetition?: boolean | null; saturation_state?: string | null; regeneration_reason?: string | null; longitudinal_evidence_refs?: string[] | null; slot?: string | null; local_date?: string | null };
@@ -133,7 +134,7 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
     return { id: row.id, topic: row.topic, mechanismId: signature.mechanismId, psychologicalMovementKey: signature.psychologicalMovementKey, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: row.editorial_idea ?? signature.editorialIdea, concept: row.concept, angle: row.angle, text: row.text, createdAt: row.created_at };
   });
   appliedBrief.psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory, confirmedEvidence: appliedBrief.confirmedEvidence });
-  const movementExposures: MovementExposure[] = activeRows
+  const historicalMovementExposures: MovementExposure[] = activeRows
     .filter(row => row.audit_status === 'approved' && (row.status === 'delivered' || Boolean(row.delivered_at)))
     .map(row => {
       const signature = row.editorial_signature ?? {};
@@ -144,6 +145,16 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
       const planLike = { canonicalMovement: canonicalMovement ?? `${signature.mechanismId ?? 'unknown'}:unknown`, interventionMode: mode, angle: signature.angle ?? row.angle, depth, contextUsed };
       return { canonicalMovement: planLike.canonicalMovement, deliveredAt: row.delivered_at ?? row.created_at, takeaway: signature.takeaway ?? row.editorial_take ?? row.editorial_idea ?? '', interventionMode: mode, angle: planLike.angle, depth, contextUsed, message: row.text, normalizedMessageHash: normalizedMessageHash(row.text), interventionSignature: typeof signature.interventionSignature === 'string' ? signature.interventionSignature : dailyInterventionSignature(planLike) };
     });
+  const deliveredBufferExposures = await loadDeliveredBufferExposures(supabase, userId);
+  const seenExposureSignatures = new Set<string>();
+  const seenExposureHashes = new Set<string>();
+  const movementExposures: MovementExposure[] = [];
+  for (const exposure of [...historicalMovementExposures, ...deliveredBufferExposures]) {
+    if (seenExposureSignatures.has(exposure.interventionSignature) || seenExposureHashes.has(exposure.normalizedMessageHash)) continue;
+    seenExposureSignatures.add(exposure.interventionSignature);
+    seenExposureHashes.add(exposure.normalizedMessageHash);
+    movementExposures.push(exposure);
+  }
   appliedBrief.movementExposures = movementExposures;
   const dailyPlan = planDailyIntervention({ goal: desiredChange, context: activeContext, confirmedEvidence: appliedBrief.confirmedEvidence, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory, exposures: movementExposures, recentTakeaways: activeRows.slice(0, 10).map(row => row.editorial_take).filter((value): value is string => Boolean(value)) });
   appliedBrief.dailyPlan = dailyPlan.selected;

@@ -159,9 +159,9 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const maxCostUsd = options.maxCostUsd ?? Number(process.env.REFILL_MAX_COST_USD || DEFAULT_MAX_COST_USD);
   const { data: profile, error: profileError } = await admin.from('profiles').select('id,timezone').eq('id', userId).single();
   if (profileError || !profile) throw new Error('refill_profile_unavailable');
-  const { data: existing, error: existingError } = await admin.from('approved_intervention_buffer').select('*').eq('user_id', userId).in('status', ['approved', 'buffered']).order('intended_local_date', { ascending: true });
+  const { data: existing, error: existingError } = await admin.from('approved_intervention_buffer').select('*').eq('user_id', userId).neq('status', 'invalidated').order('intended_local_date', { ascending: true });
   if (existingError) throw new Error('refill_buffer_unavailable');
-  const existingRows = (existing ?? []).map(row => ({
+  const reservedRows = (existing ?? []).map(row => ({
     id: row.id,
     intendedLocalDate: row.intended_local_date,
     plan: row.plan,
@@ -172,11 +172,12 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     contextVersion: row.context_version,
     createdAt: row.created_at,
   })) as ApprovedBufferItem[];
+  const existingRows = reservedRows.filter(row => row.status === 'approved' || row.status === 'buffered');
   if (existingRows.length >= targetBufferDays) return { userId, minBufferDays, targetBufferDays, created: [], skipped: ['buffer_at_target'], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0 }, usageRecords: [] };
 
   const { brief } = await buildBrief(admin, userId, 'intention');
   const deliveredExposures = brief.movementExposures ?? [];
-  const plannedSignatures = new Set(existingRows.map(row => row.interventionSignature));
+  const plannedSignatures = new Set(reservedRows.map(row => row.interventionSignature));
   const created: ApprovedBufferItem[] = [];
   const skipped: string[] = [];
   const usage = { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0 };
@@ -195,7 +196,8 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     const planned = planDailyIntervention({ goal: brief.desiredChange, context: brief.currentContext, confirmedEvidence: brief.confirmedEvidence, mechanismId: brief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: deliveredExposures.map(exposure => ({ mechanismId: brief.psychologicalContract?.mechanism_id, psychologicalMovementKey: exposure.canonicalMovement, movement: exposure.canonicalMovement, takeaway: exposure.takeaway, text: exposure.message })), exposures: deliveredExposures, plannedSignatures: [...plannedSignatures], prospectiveLearning, intendedLocalDate, projectedReceptionStage: projectedReceptionStage(deliveredExposures.length, prospectiveLearning.length) }).selected;
     if (plannedSignatures.has(planned.interventionSignature)) { skipped.push(`${intendedLocalDate}:signature_collision`); continue; }
     const nextBrief = { ...brief, dailyPlan: planned, recentInterventions: [...historicalMessages, ...created.map(item => item.message)] };
-    const input = writerV2InputFromBrief(nextBrief, { receptionStage: 'established', psychologicalInterventionsDelivered: deliveredExposures.length, timeOfDay: 'morning', receptionInstructions: [] });
+    const projectedStage = planned.projectedReceptionStage ?? projectedReceptionStage(deliveredExposures.length, prospectiveLearning.length);
+    const input = writerV2InputFromBrief(nextBrief, { receptionStage: projectedStage, psychologicalInterventionsDelivered: deliveredExposures.length, timeOfDay: 'morning', receptionInstructions: [] });
     let generated = await generateWriterV2(input, { model: 'gpt-6.1-sol', maxOutputTokens: 240 });
     calls.writer += 1;
     usage.writerInput += generated.usage?.prompt_tokens ?? 0;
@@ -205,7 +207,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     let evaluation = evaluateWriterV2(generated.message, input);
     const guidance = getMovementTargetGuidance(planned.canonicalMovement);
     if (!guidance) { skipped.push(`${intendedLocalDate}:missing_movement_guidance`); continue; }
-    const judge = async () => judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: 'established', timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], relatedSignatures: [...plannedSignatures], message: generated.message });
+    const judge = async () => judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], relatedSignatures: [...plannedSignatures], message: generated.message });
     let judged = await judge();
     calls.judge += 1;
     usage.judgeInput += judged.usage.prompt_tokens ?? 0;
@@ -222,7 +224,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
       usage.estimatedCostUsd = estimatedWriterCost(usage.writerInput, usage.writerOutput) + estimatedJudgeCost(usage.judgeInput, usage.judgeOutput);
       await recordUsage({ model: 'gpt-6.1-sol', purpose: 'writer', intendedLocalDate, attempt: 2, inputTokens: generated.usage?.prompt_tokens ?? 0, outputTokens: generated.usage?.completion_tokens ?? 0, estimatedCostUsd: estimatedWriterCost(generated.usage?.prompt_tokens ?? 0, generated.usage?.completion_tokens ?? 0) });
       evaluation = evaluateWriterV2(generated.message, input);
-      judged = await judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: 'established', timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], relatedSignatures: [...plannedSignatures], message: generated.message });
+      judged = await judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: planned.interventionMode, angle: planned.angle, depth: planned.depth, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: [...(brief.recentEditorialTakes ?? []), ...prospectiveLearning.map(item => item.message)], relatedSignatures: [...plannedSignatures], message: generated.message });
       calls.judge += 1;
       usage.judgeInput += judged.usage.prompt_tokens ?? 0;
       usage.judgeOutput += judged.usage.completion_tokens ?? 0;
@@ -230,7 +232,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
       usage.estimatedCostUsd = estimatedWriterCost(usage.writerInput, usage.writerOutput) + estimatedJudgeCost(usage.judgeInput, usage.judgeOutput);
       evaluation = applySemanticFidelity(evaluation, judged.result);
     }
-    if (!evaluation.approved || hasExactMessageDuplicate(generated.message, [...historicalMessages, ...created.map(item => item.message)])) { skipped.push(`${intendedLocalDate}:${evaluation.hardFailures.join('|') || 'exact_message_duplicate'}`); if (usage.estimatedCostUsd > maxCostUsd) break; continue; }
+    if (!evaluation.approved || hasExactMessageDuplicate(generated.message, [...historicalMessages, ...reservedRows, ...created.map(item => item.message)])) { skipped.push(`${intendedLocalDate}:${evaluation.hardFailures.join('|') || 'exact_message_duplicate'}`); if (usage.estimatedCostUsd > maxCostUsd) break; continue; }
     const item = { user_id: userId, intended_local_date: intendedLocalDate, plan: planned, message: generated.message, status: 'buffered' as const, normalized_message_hash: normalizedMessageHash(generated.message), intervention_signature: planned.interventionSignature, context_version: contextVersion(brief.currentContext, brief.desiredChange) };
     const storedRow = await storeApprovedMessage(admin, item);
     const stored = {

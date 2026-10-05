@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ApprovedBufferItem } from '@/lib/recurrent-daily';
+import { interventionSignature as dailyInterventionSignature, normalizedMessageHash, type ApprovedBufferItem, type InterventionDepth, type InterventionMode, type MovementExposure } from '@/lib/recurrent-daily';
 
 type BufferRow = {
   id: string;
@@ -12,6 +12,7 @@ type BufferRow = {
   intervention_signature: string;
   context_version: string;
   created_at: string;
+  consumed_at?: string | null;
 };
 
 export const BUFFER_DEPENDENCY_NOT_DELIVERED = 'approved_buffer_dependency_not_delivered';
@@ -90,4 +91,66 @@ export async function storeApprovedMessage(admin: SupabaseClient, input: Omit<Bu
 export async function invalidateFutureApprovedMessages(admin: SupabaseClient, userId: string, contextVersion: string) {
   const { error } = await admin.from('approved_intervention_buffer').update({ status: 'invalidated', invalidated_at: new Date().toISOString() }).eq('user_id', userId).neq('context_version', contextVersion).in('status', ['approved', 'buffered']);
   if (error && error.code !== '42P01') throw new Error('approved_buffer_invalidation_failed');
+}
+
+function planMode(value: unknown): InterventionMode {
+  return value === 'introduce' || value === 'deepen' || value === 'apply' || value === 'contrast' || value === 'anticipate' || value === 'reinforce' || value === 'integrate' || value === 'transfer' || value === 'evidence' || value === 'reflect_or_observe' ? value : 'introduce';
+}
+
+function planDepth(value: unknown): InterventionDepth {
+  return value === 'foundational' || value === 'developed' || value === 'advanced' ? value : 'foundational';
+}
+
+function bufferMovementExposure(row: BufferRow, deliveredAt: string): MovementExposure {
+  const plan = row.plan;
+  const interventionMode = planMode(plan.interventionMode);
+  const depth = planDepth(plan.depth);
+  const canonicalMovement = plan.canonicalMovement;
+  const contextUsed = Array.isArray(plan.contextUsed) ? plan.contextUsed.filter((value): value is string => typeof value === 'string') : [];
+  return {
+    canonicalMovement,
+    deliveredAt,
+    takeaway: plan.reason,
+    interventionMode,
+    angle: plan.angle,
+    depth,
+    contextUsed,
+    message: row.message,
+    normalizedMessageHash: row.normalized_message_hash || normalizedMessageHash(row.message),
+    interventionSignature: row.intervention_signature || dailyInterventionSignature({ canonicalMovement, interventionMode, angle: plan.angle, depth, contextUsed }),
+  };
+}
+
+/**
+ * A consumed buffer row is learning history only after its materialized daily
+ * interaction has a successful WhatsApp delivery. Consumed/pending/failed
+ * rows remain reservations, but are deliberately excluded from exposures.
+ */
+export async function loadDeliveredBufferExposures(admin: SupabaseClient, userId: string): Promise<MovementExposure[]> {
+  const { data: consumed, error: bufferError } = await admin.from('approved_intervention_buffer').select('*').eq('user_id', userId).eq('status', 'consumed');
+  if (bufferError?.code === '42P01') return [];
+  if (bufferError) throw new Error('approved_buffer_delivery_lookup_failed');
+  const rows = (consumed ?? []) as BufferRow[];
+  if (!rows.length) return [];
+  const dates = [...new Set(rows.map(row => row.intended_local_date))];
+  const { data: interactions, error: interactionError } = await admin.from('interactions').select('id,local_date,content').eq('user_id', userId).eq('interaction_type', 'daily_message').in('local_date', dates);
+  if (interactionError) throw new Error('approved_buffer_interaction_lookup_failed');
+  const matching = (interactions ?? []).filter(interaction => rows.some(row => row.intended_local_date === interaction.local_date && row.message === interaction.content));
+  if (!matching.length) return [];
+  const interactionIds = matching.map(interaction => interaction.id).filter(Boolean);
+  const { data: deliveries, error: deliveryError } = await admin.from('whatsapp_daily_deliveries').select('interaction_id,sent_at').eq('user_id', userId).eq('status', 'sent').in('interaction_id', interactionIds);
+  if (deliveryError) throw new Error('approved_buffer_delivery_lookup_failed');
+  const deliveryByInteraction = new Map((deliveries ?? []).map(delivery => [delivery.interaction_id, delivery.sent_at ?? null]));
+  const exposures: MovementExposure[] = [];
+  const seenRows = new Set<string>();
+  for (const interaction of matching) {
+    const sentAt = deliveryByInteraction.get(interaction.id);
+    if (!sentAt) continue;
+    const row = rows.find(candidate => candidate.intended_local_date === interaction.local_date && candidate.message === interaction.content);
+    if (row && !seenRows.has(row.id)) {
+      seenRows.add(row.id);
+      exposures.push(bufferMovementExposure(row, sentAt));
+    }
+  }
+  return exposures;
 }

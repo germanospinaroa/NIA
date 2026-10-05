@@ -30,6 +30,7 @@
     "test:buffered-daily-delivery": "node scripts/test-buffered-daily-delivery.mjs",
     "test:recurrent-long-horizon": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-recurrent-long-horizon.mjs",
     "test:buffer-refill-orchestration": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-buffer-refill-orchestration.mjs",
+    "test:buffer-delivered-exposure-loop": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-buffer-delivered-exposure-loop.mjs",
     "test:hotmart-access": "node --experimental-strip-types scripts/test-hotmart-access.mjs",
     "test:profile-settings": "node scripts/test-profile-settings.mjs",
     "test:admin-qa-daily-intervention": "node scripts/test-admin-qa-daily-intervention.mjs",
