@@ -140,6 +140,8 @@ assert.equal(db.tables.interventions.length, 1);
 assert.equal(db.tables.interventions.find(row => row.id === finalRun.intervention_id).editorial_signature.psychologicalContract.mechanism_id, 'external_validation');
 assert.ok(db.tables.interventions.find(row => row.id === finalRun.intervention_id).editorial_signature.interventionBlueprint);
 assert.equal(db.tables.intervention_candidates.length, 3);
+assert.equal(db.tables.intervention_candidates.filter(row => row.selected_candidate === true).length, 1, 'exactly one candidate must be marked selected');
+assert.equal(db.tables.intervention_candidates.find(row => row.selected_candidate === true).intervention_id, finalRun.intervention_id);
 assert.equal(counts.evolution, 1);
 assert.ok(counts.openai >= 4, `expected generation, embedding and audit provider calls, got ${counts.openai}`);
 

@@ -836,3 +836,9 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Migración pendiente de aplicar: `supabase/migrations/20261003153000_qa_execution_context.sql`. No se hizo deployment ni prueba real; OpenAI, Evolution, WhatsApp y cron: 0.
 - QA usa el mismo `composeNiaMessage()` de producción. La exclusión ocurre después: memoria/interacciones productivas ignoran QA y el feedback QA no crea `learning_signals` productivos.
 - La reclamación QA es transaccional mediante `claim_qa_execution_run`: una ejecución activa menor o igual a 15 minutos bloquea la siguiente; una mayor se marca `failed` con `qa_stale_execution`, conserva trazabilidad y permite crear la nueva. Producción no entra en esta función.
+
+## Fase 4I — Progresión E2E y selección persistida — 2026-10-04
+- La progresión ahora deriva `recent_movements` desde la clave canónica persistida `psychologicalMovementKey`, evitando que `recent_takeaways` y movimientos ejecutados diverjan.
+- Se añadió diagnóstico detallado para errores de validación del schema de candidatos y se corrigió la persistencia de `selected_candidate`: en una ejecución aprobada exactamente una candidata queda marcada como seleccionada; en una ejecución sin aprobación, ninguna.
+- Validación local: regresión de progresión, structured output, E2E controlado, typecheck, lint, build y `git diff --check` PASS; lint conserva 4 warnings heredados.
+- Validación real server-side sin Evolution/WhatsApp: Adriana completó progression → blueprint/SEMA → psychological contract → OpenAI real → 3 candidatas → 2 aprobadas, 1 rechazada → intervention persistida, con ejecución `approved`. El nuevo recorrido post-fix queda pendiente de ejecutarse tras el deployment de esta corrección.
