@@ -47,6 +47,7 @@
     "test:context-anchoring": "node --experimental-strip-types scripts/test-context-anchoring.mjs",
     "test:psychological-progression": "node --experimental-strip-types scripts/test-psychological-progression.mjs",
     "test:psychological-contract-alignment": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-psychological-contract-alignment.mjs",
+    "test:production-shaped-replay": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-production-shaped-replay.mjs",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",
     "semantic:replay": "node scripts/replay-semantic-calibration.mjs"
