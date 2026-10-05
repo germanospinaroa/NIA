@@ -2,6 +2,7 @@ export type PsychologicalMovementRecord = {
   id?: string | null;
   topic?: string | null;
   mechanismId?: string | null;
+  psychologicalMovementKey?: string | null;
   movement?: string | null;
   takeaway?: string | null;
   editorialIdea?: string | null;
@@ -51,6 +52,8 @@ function sameTakeaway(left: string | null | undefined, right: string | null | un
 export function movementKey(record: PsychologicalMovementRecord): string | null {
   const mechanism = record.mechanismId?.trim();
   if (!mechanism) return null;
+  const persistedKey = record.psychologicalMovementKey?.trim();
+  if (persistedKey?.startsWith(`${mechanism}:`)) return persistedKey;
   // Prefer the declared movement. Takeaways often contain words from a
   // neighboring phase (for example “criterio” and “decidir”) and must not
   // silently reclassify the intervention.

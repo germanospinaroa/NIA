@@ -42,6 +42,34 @@ assert.equal(adrianaProduction.next_recommended_movement, 'external_validation:d
 assert.equal(progressionForCandidate(candidate('volver a distinguir información de delegar el cierre', 'Consultar no significa entregar la decisión.'), adrianaProduction).approved, false);
 assert.equal(progressionForCandidate(candidate('definir qué criterio usaré para decidir con la información suficiente', 'Un criterio propio ayuda a saber cuándo ya tengo base para decidir.'), adrianaProduction).approved, true);
 
+// Production-shaped history: the persisted machine key is authoritative even
+// when the human-readable movement still describes the previous phase.
+const canonicalApprovedHistory = derivePsychologicalProgression({
+  ...base,
+  history: [{
+    mechanismId: 'external_validation',
+    psychologicalMovementKey: 'external_validation:define_decision_criterion',
+    movement: 'distinguir información de entregar la decisión',
+    takeaway: 'Las condiciones propias sirven para valorar lo que escuchas.',
+  }],
+});
+assert.equal(canonicalApprovedHistory.completed_movements[0], 'external_validation:define_decision_criterion');
+assert.equal(canonicalApprovedHistory.next_recommended_movement, 'external_validation:set_reconsideration_threshold');
+assert.equal(progressionForCandidate(candidate('definir qué tendría que cambiar para reconsiderar la decisión', 'Una condición concreta ayuda a saber cuándo revisar.'), canonicalApprovedHistory).approved, true);
+
+// Rejected candidates are not part of the canonical intervention history.
+const historyWithoutRejectedCandidate = derivePsychologicalProgression({
+  ...base,
+  history: [{
+    mechanismId: 'external_validation',
+    psychologicalMovementKey: 'external_validation:information_vs_delegating_decision',
+    movement: 'distinguir información de entregar la decisión',
+    takeaway: 'Consultar no significa entregar la decisión.',
+  }],
+});
+assert.equal(historyWithoutRejectedCandidate.completed_movements.includes('external_validation:define_decision_criterion'), false);
+assert.equal(historyWithoutRejectedCandidate.next_recommended_movement, 'external_validation:define_decision_criterion');
+
 // 1. Same wording: reject the movement already worked.
 assert.equal(progressionForCandidate(candidate('distinguir información de entregar la decisión', 'Consultar no significa entregar la decisión.'), progression).reason, 'repeated_movement');
 

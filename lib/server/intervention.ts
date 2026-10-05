@@ -126,7 +126,7 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   appliedBrief.psychologicalContract = formulatePsychologicalIntervention({ currentContext: activeContext, desiredChange, relevantSituations: appliedBrief.relevantSituations, recurringPatterns: appliedBrief.recurringPatterns, learningSignals: effectiveSignals });
   const progressionHistory = activeRows.map(row => {
     const signature = row.editorial_signature ?? {};
-    return { id: row.id, topic: row.topic, mechanismId: signature.mechanismId, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: row.editorial_idea ?? signature.editorialIdea, concept: row.concept, angle: row.angle, createdAt: row.created_at };
+    return { id: row.id, topic: row.topic, mechanismId: signature.mechanismId, psychologicalMovementKey: signature.psychologicalMovementKey, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: row.editorial_idea ?? signature.editorialIdea, concept: row.concept, angle: row.angle, createdAt: row.created_at };
   });
   appliedBrief.psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory });
   appliedBrief.editorialPlan = planEditorial({ desiredChange, currentContext: activeContext, communicationPreference: appliedBrief.communicationPreference, memory: editorialMemory, relevantTopics, feedbackGoal: appliedBrief.feedbackGoal, rejectedPatterns: appliedBrief.rejectedPatterns, psychologicalProgression: appliedBrief.psychologicalProgression });
