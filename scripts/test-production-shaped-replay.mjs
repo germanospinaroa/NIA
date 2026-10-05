@@ -54,6 +54,7 @@ assert.match(aligned.text, /qué concesión/);
 assert.match(aligned.text, /qué tendría que cumplir/);
 
 console.log('production-shaped replay: PASS');
+// Exact production rejection pattern is now covered by this replay.
 console.log(JSON.stringify({
   movementKey: movementKey({ mechanismId: aligned.mechanismId, movement: aligned.psychologicalMove }),
   progressionAccepted: progression.accepted,
