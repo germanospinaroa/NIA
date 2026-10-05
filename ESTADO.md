@@ -4,6 +4,7 @@
 - La progresión ahora usa `editorial_signature.psychologicalMovementKey` de intervenciones aprobadas como clave canónica; conserva el movimiento humano solo como fallback para históricos antiguos.
 - Los candidatos rechazados no entran en `progressionHistory`, por lo que no avanzan ni bloquean la trayectoria.
 - Añadidas regresiones production-shaped para clave persistida, historial aprobado y exclusión de candidatos rechazados.
+- El validador Structured Output ahora registra el campo/condición exacta que falla sin cambiar las reglas de aceptación.
 
 ## Motor real de intervenciones — 2026-10-04
 - Añadido blueprint server-side y contrato SEMA antes de la generación: señal, enlace, movimiento, apertura, insight, herramienta/microacción, transferencia, evidencia, timing y prohibiciones.

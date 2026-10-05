@@ -238,18 +238,50 @@ export function composeCandidateText(candidate: LlmCandidate) {
   return formatCandidateText(parts.join('\n\n')).trim();
 }
 
-export function validateLlmCandidate(value: unknown): value is LlmCandidate {
-  if (!value || typeof value !== 'object') return false;
+export function llmCandidateValidationErrors(value: unknown): string[] {
+  if (!value || typeof value !== 'object') return ['candidate_not_object'];
   const candidate = value as Partial<LlmCandidate>;
   const blocks = Array.isArray(candidate.blocks) ? candidate.blocks : [];
   const validBlocks = blocks.length >= 1 && blocks.length <= 7 && blocks.every(block => block && typeof block === 'object' && candidateBlockTypes.includes((block as EditorialBlock).type) && typeof (block as EditorialBlock).text === 'string' && (block as EditorialBlock).text.trim().length > 0 && !/[\r\n]/.test((block as EditorialBlock).text));
-  if (typeof candidate.topic !== 'string' || !candidate.topic.trim() || typeof candidate.editorial_take !== 'string' || candidate.editorial_take.trim().length < 8 || typeof candidate.editorial_idea !== 'string' || candidate.editorial_idea.trim().length < 8 || !candidate.experience_type || !validBlocks || !candidate.editorial_type || !candidate.functional_emotion || !candidate.directiveness || !candidate.closing_type || !candidate.signal?.trim() || !candidate.evidence_direction?.trim() || !candidate.movement?.trim() || !candidate.opening_closing?.trim() || !candidate.mechanism_id?.trim() || !candidate.mechanism_confidence || !candidate.intervention_purpose?.trim() || !candidate.psychological_move?.trim() || !candidate.expected_movement?.trim() || !candidate.takeaway?.trim() || !candidate.why_now?.trim() || !Array.isArray(candidate.risk_flags)) return false;
-  if (!['brief_insight', 'reflection', 'practical_guidance', 'tool', 'step_by_step', 'example', 'deep_dive'].includes(candidate.intervention_type as string) || !['brief', 'medium', 'deep'].includes(candidate.depth as string)) return false;
-  if (typeof candidate.concept !== 'string' || candidate.concept.trim().length < 2 || typeof candidate.angle !== 'string' || candidate.angle.trim().length < 2 || !candidateFunctions.includes(candidate.function as typeof candidateFunctions[number]) || !candidateStructures.includes(candidate.structure as typeof candidateStructures[number])) return false;
-  if (candidate.intervention_type === 'step_by_step' && blocks.filter(block => block.type === 'step').length < 2) return false;
-  if (candidate.intervention_type === 'tool' && !blocks.some(block => block.type === 'tool')) return false;
+  const errors: string[] = [];
+  if (typeof candidate.topic !== 'string' || !candidate.topic.trim()) errors.push('topic');
+  if (typeof candidate.editorial_take !== 'string' || candidate.editorial_take.trim().length < 8) errors.push('editorial_take');
+  if (typeof candidate.editorial_idea !== 'string' || candidate.editorial_idea.trim().length < 8) errors.push('editorial_idea');
+  if (!candidate.experience_type) errors.push('experience_type');
+  if (!validBlocks) errors.push('blocks');
+  if (!candidate.editorial_type) errors.push('editorial_type');
+  if (!candidate.functional_emotion) errors.push('functional_emotion');
+  if (!candidate.directiveness) errors.push('directiveness');
+  if (!candidate.closing_type) errors.push('closing_type');
+  if (!candidate.signal?.trim()) errors.push('signal');
+  if (!candidate.evidence_direction?.trim()) errors.push('evidence_direction');
+  if (!candidate.movement?.trim()) errors.push('movement');
+  if (!candidate.opening_closing?.trim()) errors.push('opening_closing');
+  if (!candidate.mechanism_id?.trim()) errors.push('mechanism_id');
+  if (!candidate.mechanism_confidence) errors.push('mechanism_confidence');
+  if (!candidate.intervention_purpose?.trim()) errors.push('intervention_purpose');
+  if (!candidate.psychological_move?.trim()) errors.push('psychological_move');
+  if (!candidate.expected_movement?.trim()) errors.push('expected_movement');
+  if (!candidate.takeaway?.trim()) errors.push('takeaway');
+  if (!candidate.why_now?.trim()) errors.push('why_now');
+  if (!Array.isArray(candidate.risk_flags)) errors.push('risk_flags');
+  if (!['brief_insight', 'reflection', 'practical_guidance', 'tool', 'step_by_step', 'example', 'deep_dive'].includes(candidate.intervention_type as string)) errors.push(`intervention_type:${String(candidate.intervention_type)}`);
+  if (!['brief', 'medium', 'deep'].includes(candidate.depth as string)) errors.push(`depth:${String(candidate.depth)}`);
+  if (typeof candidate.concept !== 'string' || candidate.concept.trim().length < 2) errors.push('concept');
+  if (typeof candidate.angle !== 'string' || candidate.angle.trim().length < 2) errors.push('angle');
+  if (!candidateFunctions.includes(candidate.function as typeof candidateFunctions[number])) errors.push(`function:${String(candidate.function)}`);
+  if (!candidateStructures.includes(candidate.structure as typeof candidateStructures[number])) errors.push(`structure:${String(candidate.structure)}`);
+  if (candidate.intervention_type === 'step_by_step' && blocks.filter(block => block.type === 'step').length < 2) errors.push('step_by_step_requires_two_steps');
+  if (candidate.intervention_type === 'tool' && !blocks.some(block => block.type === 'tool')) errors.push('tool_requires_tool_block');
   const text = composeCandidateText(candidate as LlmCandidate);
-  return text.length > 0 && (blocks.length === 1 || (text.includes('\n') && text.includes('\n\n'))) && text.length <= 1400;
+  if (!text.length) errors.push('composed_text_empty');
+  if (blocks.length > 1 && (!text.includes('\n') || !text.includes('\n\n'))) errors.push('blocks_not_separated');
+  if (text.length > 1400) errors.push('composed_text_too_long');
+  return errors;
+}
+
+export function validateLlmCandidate(value: unknown): value is LlmCandidate {
+  return llmCandidateValidationErrors(value).length === 0;
 }
 
 export async function generateCandidatesWithLLM(brief: InterventionBrief): Promise<InterventionCandidate[]> {
@@ -266,7 +298,9 @@ export async function generateCandidatesWithLLMWithMeta(brief: InterventionBrief
     addUsage(usage, response.usage);
     const value = response.value as { candidates?: unknown };
     const structuredCandidates = Array.isArray(value.candidates) ? value.candidates : [];
-    if (structuredCandidates.length !== 3 || !structuredCandidates.every(validateLlmCandidate)) throw new Error('llm_candidate_schema_invalid');
+    if (structuredCandidates.length !== 3) throw new Error(`llm_candidate_schema_invalid:candidate_count:${structuredCandidates.length}`);
+    const validationErrors = structuredCandidates.map((candidate, index) => ({ index, errors: llmCandidateValidationErrors(candidate) })).filter(item => item.errors.length > 0);
+    if (validationErrors.length > 0) throw new Error(`llm_candidate_schema_invalid:${JSON.stringify(validationErrors)}`);
     return structuredCandidates as LlmCandidate[];
   }, { maxAttempts: options.maxTechnicalAttempts });
     return { candidates: execution.value.map(candidate => ({ text: composeCandidateText(candidate), topic: candidate.topic, editorialTake: candidate.editorial_take, editorialIdea: candidate.editorial_idea, experienceType: candidate.experience_type, territoryKey: candidate.topic, interventionType: candidate.intervention_type, depth: candidate.depth, blocks: candidate.blocks, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, editorialType: candidate.editorial_type ?? brief.editorialPlan?.recommended_editorial_type, signal: candidate.signal, evidenceDirection: candidate.evidence_direction, movement: brief.interventionBlueprint?.movement ?? candidate.movement ?? candidate.psychological_move ?? candidate.function, openingClosing: candidate.opening_closing, situation: candidate.situation ?? undefined, intention: candidate.intention ?? undefined, insightId: candidate.insight_id, functionalEmotion: candidate.functional_emotion ?? brief.editorialPlan?.recommended_functional_emotion, directiveness: candidate.directiveness ?? brief.editorialPlan?.recommended_directiveness, closingType: candidate.closing_type ?? brief.editorialPlan?.recommended_closing_type, actionId: candidate.action_id, longitudinalEvidenceRefs: candidate.longitudinal_evidence_refs, mechanismId: candidate.mechanism_id ?? brief.psychologicalContract?.mechanism_id, mechanismConfidence: candidate.mechanism_confidence ?? brief.psychologicalContract?.mechanism_confidence, interventionPurpose: candidate.intervention_purpose ?? brief.interventionBlueprint?.intervention_reason, psychologicalMove: brief.psychologicalContract?.psychological_move ?? candidate.psychological_move ?? brief.interventionBlueprint?.movement, expectedMovement: candidate.expected_movement ?? brief.interventionBlueprint?.expected_movement, takeaway: candidate.takeaway, optionalAction: candidate.optional_action ?? brief.interventionBlueprint?.micro_action ?? null, whyNow: candidate.why_now ?? brief.interventionBlueprint?.intervention_reason, riskFlags: candidate.risk_flags, interventionBlueprint: brief.interventionBlueprint ?? null, sema: brief.sema ?? null, exercisePresent: candidate.blocks.some(block => block.type === 'step' || block.type === 'tool'), questionPresent: candidate.blocks.some(block => block.type === 'question'), feedbackRequested: candidate.experience_type === 'feedback_request', audit: undefined })), calls: execution.calls, technicalRetries: execution.calls - 1, technicalFailures: execution.failedCalls, usage, callUsages, latencyMs: Date.now() - started };
