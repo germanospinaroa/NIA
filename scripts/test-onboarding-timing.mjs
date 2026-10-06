@@ -6,7 +6,7 @@ const funnel = fs.readFileSync('lib/funnel.ts', 'utf8');
 assert.match(source, /message_time_1: time/);
 assert.match(source, /timezone/);
 assert.match(source, /\/api\/profile/);
-assert.match(source, /\/api\/daily/);
+assert.match(source, /\/api\/buffer\/prepare/);
 assert.match(source, /\/api\/calibration/);
 assert.match(source, /calibration_required/);
 assert.match(source, /onboardingStage: nextStage/);

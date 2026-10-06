@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Ciclo welcome → primer mensaje psicológico — 2026-10-05
+- `daily-message` ya solo resuelve `daily_message` desde `approved_intervention_buffer`; no crea, devuelve ni envía `nia_welcome`.
+- Onboarding dejó de llamar `/api/daily` y ya no muestra una primera intervención fuera de horario. Tras guardar configuración prepara el buffer mediante `/api/buffer/prepare`, que reutiliza `refillApprovedBuffer`; la entrega queda para el horario programado.
+- Welcome permanece en los puntos de activación existentes (`api/interactions` y `whatsapp-inbound`), independiente del cupo y de la progresión psicológica.
+- La recepción psicológica depende únicamente de mensajes psicológicos entregados: 0–1 `tuning`, 2–4 `building`, 5+ `established`; welcome no cuenta. Tests de lifecycle, recepción, buffer/delivery, onboarding, typecheck y build PASS; lint PASS con cuatro warnings heredados. Sin Supabase writes, OpenAI, WhatsApp, Evolution ni deploy.
+
 ## Fuente de migración forward-safe — 2026-10-05
 - Reemplazada la lógica basada en `created_at` de `supabase/migrations/20261005200000_one_daily_intervention.sql` por `interactions.daily_unique_enforced`: filas existentes se marcan `false`, nuevas filas heredan `true`, y el índice parcial protege una sola `daily_message` por usuario/fecha sin reescribir ni borrar historia.
 - Añadida unicidad futura de `whatsapp_daily_deliveries.interaction_id`; se conserva el índice histórico por usuario/fecha/slot. La bienvenida sigue siendo compatible con su propio `interaction_type`.

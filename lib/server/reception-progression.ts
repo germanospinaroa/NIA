@@ -26,14 +26,19 @@ export async function getReceptionSnapshot(supabase: import('@supabase/supabase-
 }
 
 export function calculateReceptionStage(input: { welcomeDelivered: boolean; psychologicalInterventionsDelivered: number }): ReceptionStage {
-  if (!input.welcomeDelivered) return 'welcome';
+  // Welcome is activation, not psychological progress. Psychological
+  // reception starts at tuning even when activation transport is pending.
+  void input.welcomeDelivered;
   if (input.psychologicalInterventionsDelivered < 2) return 'tuning';
   if (input.psychologicalInterventionsDelivered < 5) return 'building';
   return 'established';
 }
 
 export function shouldGeneratePsychologicalIntervention(stage: ReceptionStage) {
-  return stage !== 'welcome';
+  // There is no special first-intervention path. Every psychological item
+  // uses the same planner, buffer and delivery lifecycle.
+  void stage;
+  return true;
 }
 
 export function receptionTimeOfDay(now = new Date(), timezone?: string | null): ReceptionTimeOfDay {

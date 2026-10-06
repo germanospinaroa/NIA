@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { CalibrationRequiredError } from '@/lib/server/intervention';
 import { getOrCreateDailyInteraction } from '@/lib/server/daily-message';
 import { localDate } from '@/lib/server/whatsapp-schedule';
 
@@ -12,7 +11,6 @@ export async function GET() {
     const result = await getOrCreateDailyInteraction(supabase, user.id, 'web');
     return NextResponse.json({ interaction: result.interaction, local_date: result.localDate });
   } catch (error) {
-    if (error instanceof CalibrationRequiredError) return NextResponse.json({ status: 'calibration_required', calibration: error.calibration });
     if (error instanceof Error && error.message === 'valid_intention_required') return NextResponse.json({ status: 'intention_required', error: 'valid_intention_required' }, { status: 422 });
     return NextResponse.json({ error: error instanceof Error && error.message === 'profile_unavailable' ? 'profile_unavailable' : 'daily_unavailable' }, { status: 500 });
   }

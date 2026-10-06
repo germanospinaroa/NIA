@@ -6,8 +6,8 @@ import { evaluateWriterV2, writerV2Prompt } from '../lib/server/writer-v2.ts';
 const bogota = 'America/Bogota';
 const utc = value => new Date(value);
 
-assert.equal(calculateReceptionStage({ welcomeDelivered: false, psychologicalInterventionsDelivered: 0 }), 'welcome');
-assert.equal(shouldGeneratePsychologicalIntervention('welcome'), false);
+assert.equal(calculateReceptionStage({ welcomeDelivered: false, psychologicalInterventionsDelivered: 0 }), 'tuning');
+assert.equal(shouldGeneratePsychologicalIntervention('welcome'), true);
 assert.equal(calculateReceptionStage({ welcomeDelivered: true, psychologicalInterventionsDelivered: 0 }), 'tuning');
 assert.equal(calculateReceptionStage({ welcomeDelivered: true, psychologicalInterventionsDelivered: 1 }), 'tuning');
 assert.equal(calculateReceptionStage({ welcomeDelivered: true, psychologicalInterventionsDelivered: 2 }), 'building');
@@ -36,8 +36,8 @@ assert.equal(evaluateWriterV2('Define qué dato concreto tendría que cambiar pa
 const dailySource = fs.readFileSync(new URL('../lib/server/daily-message.ts', import.meta.url), 'utf8');
 const inboundSource = fs.readFileSync(new URL('../lib/server/whatsapp-inbound.ts', import.meta.url), 'utf8');
 const engineSource = fs.readFileSync(new URL('../lib/intervention-engine.ts', import.meta.url), 'utf8');
-assert.match(dailySource, /ensureWelcome/);
-assert.match(dailySource, /kind: 'welcome'/);
+assert.doesNotMatch(dailySource, /ensureWelcome/);
+assert.doesNotMatch(dailySource, /kind: 'welcome'/);
 assert.match(inboundSource, /ensureWelcome/);
 assert.match(inboundSource, /if \(welcome\.created\)/);
 assert.match(engineSource, /poco a poco/);

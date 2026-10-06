@@ -11,10 +11,10 @@ assert.doesNotMatch(page, /Quiero confiar más en mi criterio/);
 assert.doesNotMatch(page, /Estoy dudando de mí/);
 assert.match(page, /stage === 'context'/);
 assert.match(page, /PROFILE_SAVE_ERROR/);
-assert.match(page, /DAILY_GENERATION_ERROR/);
+assert.match(page, /BUFFER_PREPARE_ERROR/);
 assert.match(page, /CALIBRATION_ERROR/);
-assert.match(page, /first_intervention/);
-assert.match(page, /firstInterventionContent/);
+assert.doesNotMatch(page, /first_intervention/);
+assert.doesNotMatch(page, /firstInterventionContent/);
 assert.match(middleware, /supabaseResponse = NextResponse\.next\(\{ request \}\)/);
 assert.match(middleware, /return supabaseResponse/);
 assert.match(calibration, /export async function GET/);
@@ -65,20 +65,8 @@ const payload = {
 };
 const saved = await fetch(`${baseUrl}/api/profile`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
 assert.equal(saved.status, 200, 'authenticated profile PATCH must persist');
-let daily = await fetch(`${baseUrl}/api/daily`, { headers });
-let dailyBody = await daily.json();
-if (dailyBody.status === 'calibration_required') {
-  const option = dailyBody.calibration?.options?.[0];
-  assert.ok(option?.id, 'calibration must expose a selectable option');
-  const resolved = await fetch(`${baseUrl}/api/calibration`, { method: 'POST', headers, body: JSON.stringify({ selected_option: option.id }) });
-  assert.equal(resolved.status, 200, 'calibration POST must resolve');
-  daily = await fetch(`${baseUrl}/api/daily`, { headers });
-  dailyBody = await daily.json();
-}
-assert.equal(daily.status, 200, `daily must return 200, got ${daily.status}`);
-assert.ok(dailyBody.interaction?.content, 'daily must return a first interaction');
-const feedback = await fetch(`${baseUrl}/api/daily`, { method: 'PATCH', headers, body: JSON.stringify({ feedback_type: 'serves' }) });
-assert.ok(feedback.status < 300, `feedback must persist, got ${feedback.status}`);
+const prepared = await fetch(`${baseUrl}/api/buffer/prepare`, { method: 'POST', headers });
+assert.equal(prepared.status, 200, `buffer prepare must return 200, got ${prepared.status}`);
 const refresh = await fetch(`${baseUrl}/onboarding`, { headers });
 assert.equal(refresh.status, 200, 'refresh must keep authenticated onboarding available');
 console.log('onboarding auth E2E: PASS');

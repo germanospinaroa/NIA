@@ -82,10 +82,6 @@ export async function runDailyWhatsApp(admin: DbClient, now = new Date(), option
         results.push({ userId: profile.id, slot: due.slot, status: 'skipped', reason: error instanceof Error ? error.message : 'generation_failed' });
         continue;
       }
-      if (daily.kind === 'welcome') {
-        results.push({ userId: profile.id, slot: 'welcome', status: 'sent_or_pending' });
-        continue;
-      }
       const claim = await claimDelivery(admin, { userId: profile.id, interactionId: String(daily.interaction.id), localDate: due.localDate, slot: due.slot });
       if (!claim) continue;
       if (options.dryRun) {

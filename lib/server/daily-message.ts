@@ -2,19 +2,16 @@ import { recordEvent } from '@/lib/server/operational-observability';
 import { intentionLabel, invalidIntention, validCustomIntention } from '@/lib/intention';
 import { localDate } from '@/lib/server/whatsapp-schedule';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ensureWelcome } from '@/lib/server/reception-welcome';
 import { BUFFER_DEPENDENCY_NOT_DELIVERED, consumeApprovedMessage, loadApprovedMessageForDate, releaseConsumedMessage } from '@/lib/server/approved-message-buffer';
 
 type DbClient = SupabaseClient;
 
-export type DailyInteractionResult = { interaction: Record<string, unknown>; localDate: string; created: boolean; kind?: 'welcome' | 'intervention' };
+export type DailyInteractionResult = { interaction: Record<string, unknown>; localDate: string; created: boolean; kind: 'intervention' };
 
 export async function getOrCreateDailyInteraction(supabase: DbClient, userId: string, channel: 'web' | 'whatsapp' = 'web', now = new Date(), slot: string | null = null): Promise<DailyInteractionResult> {
   const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
   if (profileError || !profile) throw new Error('profile_unavailable');
   const date = localDate(profile.timezone, now);
-  const welcome = await ensureWelcome(supabase, { userId, channel, firstName: typeof profile.first_name === 'string' ? profile.first_name : null, timezone: typeof profile.timezone === 'string' ? profile.timezone : null, now });
-  if (!welcome.delivered || welcome.created) return { interaction: welcome.interaction, localDate: date, created: welcome.created, kind: 'welcome' };
   const storedDirection = typeof profile.desired_change_original === 'string' ? profile.desired_change_original.trim() : typeof profile.direction_text === 'string' ? profile.direction_text.trim() : '';
   const direction = validCustomIntention(storedDirection) ? storedDirection : intentionLabel(profile.direction_key);
   if (!direction || invalidIntention(direction) || profile.direction_key === 'intention_unclear') throw new Error('valid_intention_required');
