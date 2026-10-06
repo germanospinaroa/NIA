@@ -373,9 +373,11 @@ a { text-decoration: none; }
 .nia-continuity-frame .whatsapp-connection-panel-connected .whatsapp-connected-label { color: var(--continuity-copper); }
 .nia-continuity-frame .whatsapp-connection-panel-connected .whatsapp-connected-copy { color: var(--continuity-ink); }
 .nia-continuity-frame .whatsapp-connection-panel-connected .whatsapp-connected-phone { color: var(--continuity-muted); }
-.nia-continuity-frame .whatsapp-connect-dialog { background: linear-gradient(145deg, #2b211c, #1d1815); color: var(--continuity-ink); border: 1px solid var(--continuity-line); }
+.nia-continuity-frame .whatsapp-connect-dialog { min-width: 0; background: linear-gradient(145deg, #2b211c, #1d1815); color: var(--continuity-ink); border: 1px solid var(--continuity-line); }
 .nia-continuity-frame .whatsapp-connect-dialog h3 { max-width: 100%; overflow-wrap: anywhere; font-size: clamp(30px, 8vw, 34px); }
+.nia-continuity-frame .whatsapp-connect-dialog p { overflow-wrap: anywhere; }
 .nia-continuity-frame .whatsapp-dialog-intro { max-width: 34ch; margin-top: 12px; color: var(--continuity-muted); font-size: 14px; line-height: 1.45; }
+.nia-continuity-frame .whatsapp-dialog-emphasis { margin-top: 28px; color: var(--continuity-ink); font-family: var(--font-display); font-size: 24px; line-height: 1.08; letter-spacing: -.025em; }
 .nia-continuity-frame .whatsapp-connect-dialog .whatsapp-field-label { display: block; margin-top: 18px; color: var(--continuity-muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .nia-continuity-frame .whatsapp-dialog-select, .nia-continuity-frame .whatsapp-phone-input { width: 100%; margin-top: 8px; border: 1px solid var(--continuity-line); border-radius: 14px; background: rgb(255 248 236 / .06); color: var(--continuity-ink); }
 .nia-continuity-frame .whatsapp-dialog-select { min-height: 50px; padding: 0 14px; }

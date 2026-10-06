@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## WhatsApp UX simplificada — 2026-10-06
+- `WhatsAppConnectionPanel` conserva la validación E.164, token pendiente, `expected_phone`, deep link prellenado, polling y verificación inbound; la UI posterior a confirmar el número ahora muestra únicamente `Confirma tu WhatsApp` + `Confirmar WhatsApp`, y después espera automáticamente.
+- Código de verificación y número de negocio ya no se renderizan en NIA; se mantienen solo para crear el enlace seguro. Se retiró `Ya envié el mensaje` y el límite de polling que obligaba a otra acción.
+- Tests WhatsApp/inbound, locale, finalización, auth, typecheck y build PASS; lint conserva cuatro warnings heredados. QA visual local de confirmación/espera en 375/390/430; sin WhatsApps reales ni cambios de proveedor.
+
 ## Ajustes UI/copy funnel y onboarding — 2026-10-06
 - Evidencia refinada a una composición más compacta y editorial: `+40.000`, `14.321`, AER 2024, copy breve y recurso visual CSS estructural sin estadísticas inventadas. Reveal conserva `Te presentamos a NIA.`.
 - Activación muestra el requisito real `Tu contraseña debe tener al menos 8 caracteres.` y mantiene validación de 8 caracteres y coincidencia.

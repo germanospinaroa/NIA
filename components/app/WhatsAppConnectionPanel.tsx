@@ -28,16 +28,12 @@ export function WhatsAppConnectionPanel({ value, defaultCountryCode = 'CO', onCh
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [testBusy, setTestBusy] = useState(false);
-  const [code, setCode] = useState('');
-  const [deepLink, setDeepLink] = useState('');
-  const [niaNumber, setNiaNumber] = useState('');
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(false);
-  const [timedOut, setTimedOut] = useState(false);
   const [localError, setLocalError] = useState('');
   const [phoneCountry, setPhoneCountry] = useState(defaultCountryCode);
   const [nationalPhone, setNationalPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [confirmedPhone, setConfirmedPhone] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function stopPolling() {
@@ -57,10 +53,7 @@ export function WhatsAppConnectionPanel({ value, defaultCountryCode = 'CO', onCh
   function beginPolling() {
     stopPolling();
     setWaiting(true);
-    setTimedOut(false);
-    let checks = 0;
     pollRef.current = setInterval(async () => {
-      checks += 1;
       try {
         const next = await refreshConnection();
         if (next.status === 'connected') {
@@ -71,18 +64,12 @@ export function WhatsAppConnectionPanel({ value, defaultCountryCode = 'CO', onCh
       } catch {
         // A transient poll failure should not erase a valid pending code.
       }
-      if (checks >= 20) {
-        stopPolling();
-        setWaiting(false);
-        setTimedOut(true);
-      }
     }, 3000);
   }
 
-  async function startLink(expectedPhone: string) {
+  async function startLink(expectedPhone: string): Promise<string | null> {
     setBusy(true);
     setLocalError('');
-    setTimedOut(false);
     try {
       const response = await fetch('/api/whatsapp/link', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ expected_phone: expectedPhone }) });
       const result = await response.json().catch(() => ({})) as LinkResponse;
@@ -90,15 +77,13 @@ export function WhatsAppConnectionPanel({ value, defaultCountryCode = 'CO', onCh
         if (result.status === 'not_configured') onChange({ status: 'not_configured', message: result.message });
         throw new Error(result.message || 'link_unavailable');
       }
-      setCode(result.code);
-      setDeepLink(result.deep_link);
-      setNiaNumber(result.nia_number || '');
-      setExpiresAt(result.expires_at || null);
       onChange({ status: 'connecting', deep_link: result.deep_link });
       beginPolling();
+      return result.deep_link;
     } catch {
       setLocalError('No pudimos preparar la conexión. Inténtalo de nuevo.');
       onError('No pudimos preparar la conexión de WhatsApp. Inténtalo de nuevo.');
+      return null;
     } finally {
       setBusy(false);
     }
@@ -108,14 +93,24 @@ export function WhatsAppConnectionPanel({ value, defaultCountryCode = 'CO', onCh
     setOpen(true);
     setLocalError('');
     setPhoneError('');
-    if (value.status === 'connecting' && !code) setTimedOut(false);
+    if (value.status !== 'connecting') setConfirmedPhone('');
   }
 
   function continueWithPhone() {
     const normalized = normalizeNationalPhone(nationalPhone, phoneCountry);
     if (!normalized) { setPhoneError('Escribe un número móvil válido.'); return; }
     setPhoneError('');
-    void startLink(normalized);
+    setConfirmedPhone(normalized);
+  }
+
+  function confirmWhatsApp() {
+    if (!confirmedPhone) return;
+    const popup = window.open('about:blank', '_blank');
+    void startLink(confirmedPhone).then(link => {
+      if (link && popup) popup.location.href = link;
+      else if (link) window.location.href = link;
+      else popup?.close();
+    });
   }
 
   useEffect(() => () => stopPolling(), []);
@@ -142,12 +137,10 @@ export function WhatsAppConnectionPanel({ value, defaultCountryCode = 'CO', onCh
     </>}
     {open && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-6" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="whatsapp-connect-title" className="whatsapp-connect-dialog max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] p-6 shadow-2xl sm:rounded-[28px] sm:p-8">
-        <div className="flex items-start justify-between gap-4"><div><h3 id="whatsapp-connect-title" className="text-[34px] leading-[.98] tracking-[-.04em] [font-family:var(--font-display)]">Conecta tu WhatsApp</h3><p className="whatsapp-dialog-intro">Tu número recibirá aquí los mensajes de NIA. Completa estos tres pasos.</p></div><button type="button" aria-label="Cerrar" onClick={() => setOpen(false)} className="text-2xl leading-none text-[var(--text-secondary)]">×</button></div>
-        {!code ? <div className="whatsapp-phone-step"><p className="font-semibold">1. Confirma tu número</p><label htmlFor="whatsapp-phone-country" className="whatsapp-field-label">País del número<select id="whatsapp-phone-country" value={phoneCountry} onChange={event => setPhoneCountry(event.target.value)} className="whatsapp-dialog-select">{COUNTRY_OPTIONS.map(country => <option key={country.code} value={country.code}>{country.flag} {country.callingCode} · {country.name}</option>)}</select></label><label htmlFor="whatsapp-national-number" className="whatsapp-field-label">Número móvil<div className="whatsapp-phone-input"><span>{countryByCode(phoneCountry)?.callingCode}</span><input id="whatsapp-national-number" inputMode="tel" autoComplete="tel-national" value={nationalPhone} onChange={event => setNationalPhone(event.target.value)} placeholder="3228204878" /></div></label><p className="whatsapp-dialog-helper">Escribe solo tu número, sin el código del país.</p>{phoneError && <p role="alert" className="whatsapp-dialog-error">{phoneError}</p>}<button type="button" disabled={busy || !nationalPhone.trim()} onClick={continueWithPhone} className="whatsapp-dialog-primary">{busy ? 'Preparando…' : 'Continuar'}</button></div> : <ol className="mt-6 space-y-5"><li><p className="font-semibold">2. Escríbele a NIA</p><p className="whatsapp-dialog-label">Número de NIA</p><p className="whatsapp-business-number">{niaNumber ? `+${niaNumber.replace(/\D/g, '')}` : 'Cargando número…'}</p><button type="button" disabled={!deepLink || busy} onClick={() => window.open(deepLink, '_blank', 'noopener,noreferrer')} className="whatsapp-dialog-secondary">Abrir WhatsApp</button></li><li><p className="font-semibold">3. Envía este mensaje</p><p className="whatsapp-code">{busy ? 'Generando…' : code}</p><p className="whatsapp-dialog-helper">Envíalo tal cual desde el número que acabas de confirmar.</p></li></ol>}
-        {(waiting || value.status === 'connecting') && <div className="mt-6 rounded-[18px] border border-[var(--accent)]/30 bg-[var(--chip-bg)] p-4"><p className="font-semibold">Estamos esperando tu mensaje.</p><p className="mt-1 text-[14px] text-[var(--text-secondary)]">Cuando llegue desde ese número, lo conectaremos automáticamente con tu cuenta.</p>{expiresAt && <p className="mt-2 text-[12px] text-[var(--text-secondary)]">Este código es válido durante unos minutos.</p>}</div>}
-        {timedOut && <div className="mt-5 rounded-[18px] border border-[var(--continuity-line)] bg-[rgb(255_248_236_/_0.06)] p-4"><p className="text-[14px]">Todavía no hemos recibido tu mensaje. Comprueba que lo enviaste desde el número que quieres usar con NIA.</p><button type="button" onClick={continueWithPhone} className="mt-3 font-semibold text-[var(--continuity-copper)]">Intentar de nuevo</button></div>}
-        {localError && <p role="alert" className="whatsapp-dialog-error mt-5">{localError}</p>}
-        {code && <button type="button" disabled={!code || busy} onClick={() => { setWaiting(true); beginPolling(); }} className="whatsapp-dialog-primary mt-6">Ya envié el mensaje</button>}
+        <div className="flex items-start justify-between gap-4"><div><h3 id="whatsapp-connect-title" className="text-[34px] leading-[.98] tracking-[-.04em] [font-family:var(--font-display)]">{waiting || value.status === 'connecting' ? 'Esperando tu confirmación…' : 'Confirma tu WhatsApp'}</h3>{!waiting && value.status !== 'connecting' && <p className="whatsapp-dialog-intro">{confirmedPhone ? 'Vamos a abrir WhatsApp con un mensaje listo para enviar.' : 'Primero confirma el número en el que recibirás tus mensajes de NIA.'}</p>}</div><button type="button" aria-label="Cerrar" onClick={() => setOpen(false)} className="text-2xl leading-none text-[var(--text-secondary)]">×</button></div>
+        {!waiting && value.status !== 'connecting' && !confirmedPhone && <div className="whatsapp-phone-step"><label htmlFor="whatsapp-phone-country" className="whatsapp-field-label">País del número<select id="whatsapp-phone-country" value={phoneCountry} onChange={event => setPhoneCountry(event.target.value)} className="whatsapp-dialog-select">{COUNTRY_OPTIONS.map(country => <option key={country.code} value={country.code}>{country.flag} {country.callingCode} · {country.name}</option>)}</select></label><label htmlFor="whatsapp-national-number" className="whatsapp-field-label">Número móvil<div className="whatsapp-phone-input"><span>{countryByCode(phoneCountry)?.callingCode}</span><input id="whatsapp-national-number" inputMode="tel" autoComplete="tel-national" value={nationalPhone} onChange={event => setNationalPhone(event.target.value)} placeholder="3228204878" /></div></label><p className="whatsapp-dialog-helper">Escribe solo tu número, sin el código del país.</p>{phoneError && <p role="alert" className="whatsapp-dialog-error">{phoneError}</p>}<button type="button" disabled={busy || !nationalPhone.trim()} onClick={continueWithPhone} className="whatsapp-dialog-primary">Continuar</button></div>}
+        {!waiting && value.status !== 'connecting' && confirmedPhone && <div className="whatsapp-confirm-step"><p className="whatsapp-dialog-emphasis">Solo toca Enviar. No cambies el mensaje.</p>{localError && <p role="alert" className="whatsapp-dialog-error">{localError}</p>}<button type="button" disabled={busy} onClick={confirmWhatsApp} className="whatsapp-dialog-primary">{busy ? 'Abriendo WhatsApp…' : 'Confirmar WhatsApp'}</button></div>}
+        {(waiting || value.status === 'connecting') && <div className="mt-6 rounded-[18px] border border-[var(--accent)]/30 bg-[var(--chip-bg)] p-4"><p className="font-semibold">Esperando tu confirmación…</p><p className="mt-1 text-[14px] text-[var(--text-secondary)]">En cuanto envíes el mensaje, conectaremos tu WhatsApp automáticamente.</p></div>}
       </section>
     </div>}
   </>;
