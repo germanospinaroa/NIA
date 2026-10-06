@@ -1,5 +1,13 @@
 # ESTADO — NIA
 
+## Correcciones de revisión + OTP — 2026-10-06
+- Funnel premium consolidado de 10 a 8 pantallas en `components/funnel/PremiumDiscover.tsx`: pantallas 1–6 conservadas, continuidad fusionada como pantalla 7, futuro/CTA como pantalla 8; ejemplo WhatsApp usa Juanita y screen 2 usa `paso a paso`.
+- `/api/auth/access/request` conserva la elegibilidad Hotmart, admite únicamente emails exactos de `NIA_ADMIN_EMAILS` como puente QA controlado, crea usuario/profile solo para ese allowlist cuando falta, usa contraseña interna aleatoria y verifica el resultado real de `signInWithOtp`.
+- `/acceso` ya no afirma que el OTP fue enviado para respuestas genéricas; el fallo autorizado devuelve 503 y mantiene la pantalla de email con mensaje de reintento. Recovery mantiene OTP de 6 dígitos.
+- Verificaciones locales: tests de funnel/discover/Hotmart/auth-access, suite solicitada de onboarding/welcome/lifecycle/WhatsApp/reception/delivery, typecheck, lint (4 warnings heredados) y build PASS. Visual QA manual capturado en `output/playwright/qa-correction-{discover,continuity}-{375,390,430}.png` y acceso 390.
+- Production env read-only: `NIA_ADMIN_EMAILS` configurada; no aparecen variables `HOTMART_*`. Supabase REST read-only: `hotmart_entitlements` 0 filas y `subscriptions` 0 filas. Template hosted de Supabase no inspeccionable desde las herramientas disponibles; requiere acción manual antes de declarar OTP completo.
+- Pendiente: inspección/configuración manual de plantilla Auth OTP en Supabase; commit/push/deploy de esta pasada.
+
 ## Continuidad premium post-funnel — 2026-10-06
 - Se añadió una capa visual únicamente para la experiencia posterior a `/descubre`: planes, acceso/OTP, activación, login, recuperación y onboarding comparten fondo editorial espresso, marfil cálido, cobre contenido, tipografías de marca, estados de foco, opciones táctiles y CTA de alta presencia.
 - `FunnelFrame` ahora acepta una clase visual y conserva toda la navegación existente; el onboarding, WhatsApp, persistencia, OTP, login y delivery no fueron modificados. `/descubre` mantiene el copy y la secuencia, eliminando solamente el contador visible `01 / 10`.

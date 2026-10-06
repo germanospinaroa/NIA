@@ -10,9 +10,9 @@ const files = [
 for (const file of files) assert.ok(fs.existsSync(file), file + ' exists');
 const source = files.map(file => fs.readFileSync(file, 'utf8')).join('\n');
 const events = [
-  'discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed',
+  'discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed', 'access_code_requested',
   'name_completed', 'demo_viewed', 'demo_whatsapp_viewed', 'how_it_works_viewed', 'future_experience_viewed',
-  'plans_viewed', 'plan_selected', 'access_started', 'access_code_sent', 'access_code_verified', 'onboarding_started',
+  'plans_viewed', 'plan_selected', 'access_started', 'access_code_verified', 'onboarding_started',
 ];
 for (const event of events) assert.match(source, new RegExp(event), event + ' is tracked');
 assert.match(source, /useState\(0\)/);
@@ -22,10 +22,15 @@ for (const copy of [
   '¿Y si eso se pudiera entrenar?', 'No. No te pasa solo a ti.',
   'Esa fue exactamente la pregunta que nos hicimos.', 'Esto es NIA.',
   'Imagina que mañana tienes una conversación que llevas días evitando.',
-  'Buenos días, Laura.', 'Tal vez la conversación siga siendo incómoda.',
-  'Y eso fue solo un día.', 'Porque cambiar no ocurre por entender algo una vez.',
+  'Buenos días, Juanita.', 'Tal vez la conversación siga siendo incómoda.',
+  'Pero tú ya no llegas igual.', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.',
   'Imagina dentro de unos meses…', 'Quiero vivir NIA',
 ]) assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), copy + ' copy');
+assert.equal((source.match(/const screens: Screen\[\] = \[/)?.length ?? 0), 1);
+assert.equal((source.match(/cta: 'Quiero seguir'/g) ?? []).length, 1);
+const premiumSource = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
+assert.doesNotMatch(premiumSource, /Buenos días, Laura\.|poco a poco|Y eso fue solo un día\./);
+assert.equal((premiumSource.match(/Porque cambiar no ocurre por entender algo una vez\./g) ?? []).length, 1);
 assert.match(source, /US\$6\.99/);
 assert.match(source, /US\$39\.99/);
 assert.match(fs.readFileSync('lib/funnel.ts', 'utf8'), /checkoutMode.*bypass/);

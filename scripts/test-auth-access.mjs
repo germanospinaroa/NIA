@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const route = fs.readFileSync('app/api/auth/access/request/route.ts', 'utf8');
+const access = fs.readFileSync('app/acceso/page.tsx', 'utf8');
+const recovery = fs.readFileSync('app/forgot-password/page.tsx', 'utf8');
+
+assert.match(route, /isAdminEmail\(email\)/, 'QA access uses the existing admin allowlist');
+assert.match(route, /signInWithOtp\(\{ email, options: \{ shouldCreateUser: false \} \}\)/, 'OTP never creates arbitrary users');
+assert.match(route, /randomBytes\(32\)\.toString\('hex'\)/, 'QA user password is cryptographically random');
+assert.match(route, /email_confirm: true/);
+assert.match(route, /must_set_password: true/);
+assert.match(route, /account_status: 'pending_activation'/);
+assert.match(route, /profiles.*upsert/s);
+assert.match(route, /if \(!eligible && !qaAuthorized\) return NextResponse\.json\(\{ ok: true \}\)/);
+assert.match(route, /otp\.error/);
+assert.match(route, /otp_delivery_failed/);
+assert.match(route, /console\.error\('\[auth\] otp delivery failed'/);
+assert.doesNotMatch(route, /console\.error\([^\n]*email/);
+assert.doesNotMatch(route, /inviteUserByEmail|emailRedirectTo|resetPasswordForEmail/);
+assert.match(access, /Si ese correo corresponde a tu compra, recibirás un código de 6 dígitos para confirmar tu acceso\./);
+assert.doesNotMatch(access, /Te enviamos un código de 6 dígitos/);
+assert.match(access, /No pudimos enviar el código ahora\. Inténtalo de nuevo en unos minutos\./);
+assert.match(access, /if \(!eligibility\.ok\) throw/);
+assert.match(recovery, /signInWithOtp\(\{ email: email\.trim\(\)\.toLowerCase\(\), options: \{ shouldCreateUser: false \} \}\)/);
+assert.doesNotMatch(recovery, /emailRedirectTo|ConfirmationURL|inviteUserByEmail|resetPasswordForEmail/);
+assert.match(recovery, /verifyOtp\(\{ email: email\.trim\(\)\.toLowerCase\(\), token: code, type: 'email' \}\)/);
+assert.match(recovery, /pattern="\[0-9\]\{6\}"/);
+console.log('auth access tests: PASS');
