@@ -6,7 +6,7 @@
 - `/acceso` ya no afirma que el OTP fue enviado para respuestas genéricas; el fallo autorizado devuelve 503 y mantiene la pantalla de email con mensaje de reintento. Recovery mantiene OTP de 6 dígitos.
 - Verificaciones locales: tests de funnel/discover/Hotmart/auth-access, suite solicitada de onboarding/welcome/lifecycle/WhatsApp/reception/delivery, typecheck, lint (4 warnings heredados) y build PASS. Visual QA manual capturado en `output/playwright/qa-correction-{discover,continuity}-{375,390,430}.png` y acceso 390.
 - Production env read-only: `NIA_ADMIN_EMAILS` configurada; no aparecen variables `HOTMART_*`. Supabase REST read-only: `hotmart_entitlements` 0 filas y `subscriptions` 0 filas. Template hosted de Supabase no inspeccionable desde las herramientas disponibles; requiere acción manual antes de declarar OTP completo.
-- Pendiente: inspección/configuración manual de plantilla Auth OTP en Supabase; commit/push/deploy de esta pasada.
+- Commit de código: `a19cea8c30cb5e994503cd8b877b08a866f827b8`, publicado en `origin/main`; deployment Vercel `dpl_2hEXdYZq7KzAHzJnTdWQDaMmbwte` READY y alias `https://nia.gritlab.pro`. La plantilla Auth OTP sigue pendiente de inspección/configuración manual en Supabase.
 
 ## Continuidad premium post-funnel — 2026-10-06
 - Se añadió una capa visual únicamente para la experiencia posterior a `/descubre`: planes, acceso/OTP, activación, login, recuperación y onboarding comparten fondo editorial espresso, marfil cálido, cobre contenido, tipografías de marca, estados de foco, opciones táctiles y CTA de alta presencia.
