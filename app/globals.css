@@ -231,6 +231,15 @@ a { text-decoration: none; }
 .premium-evidence-intro { display: grid; gap: clamp(28px, 5vh, 56px); max-width: 390px; }
 .premium-evidence-intro > p { margin: 0; color: color-mix(in oklab, currentColor 86%, transparent); font-size: clamp(15px, 1.45vw, 18px); line-height: 1.42; }
 .premium-evidence-closing { font-size: clamp(18px, 2vw, 25px) !important; line-height: 1.18 !important; }
+.premium-evidence-artifact { display: grid; gap: 12px; margin: 0; padding: 16px; border: 1px solid color-mix(in oklab, currentColor 20%, transparent); background: linear-gradient(145deg, rgb(255 248 236 / .08), rgb(255 248 236 / .02)); }
+.premium-evidence-artifact-top { display: flex; justify-content: space-between; gap: 12px; color: color-mix(in oklab, currentColor 62%, transparent); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.premium-evidence-artifact-grid { display: grid; grid-template-columns: repeat(8, 1fr); align-items: end; gap: 6px; height: 52px; padding: 0 2px 8px; border-bottom: 1px solid color-mix(in oklab, currentColor 20%, transparent); background: repeating-linear-gradient(to top, transparent 0 16px, color-mix(in oklab, currentColor 9%, transparent) 16px 17px); }
+.premium-evidence-artifact-grid i { display: block; width: 100%; height: 20%; border-radius: 999px 999px 0 0; background: color-mix(in oklab, var(--premium-copper) 72%, transparent); opacity: .8; }
+.premium-evidence-artifact-grid i:nth-child(2), .premium-evidence-artifact-grid i:nth-child(5) { height: 46%; opacity: .52; }
+.premium-evidence-artifact-grid i:nth-child(3), .premium-evidence-artifact-grid i:nth-child(7) { height: 70%; opacity: .68; }
+.premium-evidence-artifact-grid i:nth-child(4) { height: 34%; opacity: .42; }
+.premium-evidence-artifact-grid i:nth-child(6), .premium-evidence-artifact-grid i:nth-child(8) { height: 58%; opacity: .58; }
+.premium-evidence-artifact > p { margin: 0; color: color-mix(in oklab, currentColor 60%, transparent); font-size: 11px; letter-spacing: .04em; }
 .premium-evidence-modules { display: grid; gap: 0; border-top: 1px solid color-mix(in oklab, currentColor 22%, transparent); }
 .premium-evidence-modules article { display: grid; grid-template-columns: minmax(90px, .45fr) minmax(0, 1fr); gap: 8px 24px; padding: 20px 0; border-bottom: 1px solid color-mix(in oklab, currentColor 22%, transparent); }
 .premium-evidence-number, .premium-evidence-source { grid-row: span 2; align-self: start; color: var(--premium-copper); font-family: var(--font-display); font-size: clamp(28px, 4vw, 52px); line-height: .92; letter-spacing: -.05em; }
@@ -302,11 +311,11 @@ a { text-decoration: none; }
   .premium-screen-3 .premium-evidence-intro > p:first-child { font-size: 15px; }
   .premium-screen-3 .premium-evidence-intro .premium-evidence-closing { margin-top: 22px; font-size: 20px !important; }
   .premium-screen-3 .premium-evidence-modules { margin-top: 24px; }
-  .premium-screen-3 .premium-evidence-modules article { grid-template-columns: 82px minmax(0, 1fr); gap: 5px 12px; padding: 12px 0; }
-  .premium-screen-3 .premium-evidence-number { font-size: 34px; }
+  .premium-screen-3 .premium-evidence-modules article { grid-template-columns: 108px minmax(0, 1fr); gap: 5px 12px; padding: 12px 0; min-width: 0; }
+  .premium-screen-3 .premium-evidence-number { font-size: 30px; }
   .premium-screen-3 .premium-evidence-source { font-size: 17px; }
   .premium-screen-3 .premium-evidence-modules strong { font-size: 12px; }
-  .premium-screen-3 .premium-evidence-modules p { font-size: 12px; line-height: 1.28; }
+  .premium-screen-3 .premium-evidence-modules p { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.28; }
 }
 
 /* Premium continuity for auth, plans and onboarding. Visual-only layer. */
@@ -365,6 +374,8 @@ a { text-decoration: none; }
 .nia-continuity-frame .whatsapp-connection-panel-connected .whatsapp-connected-copy { color: var(--continuity-ink); }
 .nia-continuity-frame .whatsapp-connection-panel-connected .whatsapp-connected-phone { color: var(--continuity-muted); }
 .nia-continuity-frame .whatsapp-connect-dialog { background: linear-gradient(145deg, #2b211c, #1d1815); color: var(--continuity-ink); border: 1px solid var(--continuity-line); }
+.nia-continuity-frame .whatsapp-connect-dialog h3 { max-width: 100%; overflow-wrap: anywhere; font-size: clamp(30px, 8vw, 34px); }
+.nia-continuity-frame .whatsapp-dialog-intro { max-width: 34ch; margin-top: 12px; color: var(--continuity-muted); font-size: 14px; line-height: 1.45; }
 .nia-continuity-frame .whatsapp-connect-dialog .whatsapp-field-label { display: block; margin-top: 18px; color: var(--continuity-muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .nia-continuity-frame .whatsapp-dialog-select, .nia-continuity-frame .whatsapp-phone-input { width: 100%; margin-top: 8px; border: 1px solid var(--continuity-line); border-radius: 14px; background: rgb(255 248 236 / .06); color: var(--continuity-ink); }
 .nia-continuity-frame .whatsapp-dialog-select { min-height: 50px; padding: 0 14px; }
@@ -404,6 +415,8 @@ main:has(#funnel-email) a, main:has(#access-code) a, main:has(#login-email) a, m
 main:has(#funnel-email) label, main:has(#access-code) label, main:has(#login-email) label, main:has(#activation-password) label, main:has(#recovery-email) label { color: #cfc3b3; }
 main:has(#funnel-email) input, main:has(#access-code) input, main:has(#login-email) input, main:has(#activation-password) input, main:has(#recovery-email) input, main:has(#new-password) input { border-color: rgb(245 238 226 / .3); color: #f5eee2; }
 main:has(#funnel-email) input:focus, main:has(#access-code) input:focus, main:has(#login-email) input:focus, main:has(#activation-password) input:focus, main:has(#recovery-email) input:focus, main:has(#new-password) input:focus { border-color: #d8a278; }
+main:has(#activation-password) .activation-password-helper { color: #cfc3b3; }
+main:has(#activation-password) .activation-error { padding: 13px 15px; border: 1px solid rgb(232 148 124 / .45); border-radius: 12px; background: rgb(135 49 36 / .2); color: #f4c1ae; }
 main:has(#funnel-email) input::placeholder, main:has(#access-code) input::placeholder { color: rgb(245 238 226 / .46); }
 main:has(#funnel-email) button, main:has(#access-code) button, main:has(#login-email) button, main:has(#activation-password) button, main:has(#recovery-email) button, main:has(#new-password) button { min-height: 60px; border-radius: 14px; background: #f5eee2; color: #241c18; box-shadow: 0 14px 30px rgb(0 0 0 / .2); }
 main:has(#funnel-email) button:disabled, main:has(#access-code) button:disabled, main:has(#login-email) button:disabled, main:has(#activation-password) button:disabled, main:has(#recovery-email) button:disabled, main:has(#new-password) button:disabled { background: rgb(245 238 226 / .42); }

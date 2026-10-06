@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Ajustes UI/copy funnel y onboarding — 2026-10-06
+- Evidencia refinada a una composición más compacta y editorial: `+40.000`, `14.321`, AER 2024, copy breve y recurso visual CSS estructural sin estadísticas inventadas. Reveal conserva `Te presentamos a NIA.`.
+- Activación muestra el requisito real `Tu contraseña debe tener al menos 8 caracteres.` y mantiene validación de 8 caracteres y coincidencia.
+- Timing hace explícitos país, zona horaria IANA y referencia de hora. WhatsApp conserva lógica existente y refuerza jerarquía/copy/contraste del modal y la instrucción del número nacional.
+- La última UI activa con `poco a poco` fue reemplazada por `paso a paso`. Tests relevantes, typecheck y build PASS; lint conserva cuatro warnings heredados. QA visual local en 375/390/430/1440; sin emails, WhatsApps, OpenAI ni Hotmart.
+
 ## Review pass 2 — evidencia, locale y WhatsApp — 2026-10-06
 - Evidencia del funnel reducida a una composición editorial mobile-first con cifras reales (115, 40.000+, 14.321, AER 2024); reveal usa `Te presentamos a NIA.`. Activación muestra `Mínimo 8 caracteres.` sin añadir reglas de complejidad.
 - Onboarding detecta país/zona horaria del navegador cuando existe, permite edición explícita, persiste `country_code` ISO-2 y conserva timezone IANA con offset DST calculado. `/api/profile` valida el código.
