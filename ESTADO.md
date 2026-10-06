@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Welcome de activación — 2026-10-06
+- `ensureActivationWelcome()` es ahora el único dueño del welcome: crea o devuelve una sola interacción `nia_welcome`, sin canal, WhatsApp, Evolution ni delivery externo.
+- `/api/activation/complete` activa la cuenta, asegura el welcome idempotente y devuelve su contenido; `/activate` lo muestra antes de continuar a `/app`.
+- Punto NIA e inbound de WhatsApp ya no crean ni envían welcomes tardíos. La recepción considera presente el welcome por la interacción de activación, y home solo muestra `daily_message`/`nia_point` como contenido psicológico.
+- Añadida regresión `test:activation-welcome`; suite enfocada, typecheck y build PASS; lint PASS con cuatro warnings heredados. Sin Supabase writes, OpenAI, WhatsApp, Evolution ni deploy.
+
 ## Ciclo welcome → primer mensaje psicológico — 2026-10-05
 - `daily-message` ya solo resuelve `daily_message` desde `approved_intervention_buffer`; no crea, devuelve ni envía `nia_welcome`.
 - Onboarding dejó de llamar `/api/daily` y ya no muestra una primera intervención fuera de horario. Tras guardar configuración prepara el buffer mediante `/api/buffer/prepare`, que reutiliza `refillApprovedBuffer`; la entrega queda para el horario programado.

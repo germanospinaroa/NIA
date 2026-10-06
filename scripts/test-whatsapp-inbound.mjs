@@ -19,6 +19,7 @@ assert.equal(feedbackFromInbound('Más real'), 'needs_grounding');
 assert.equal(feedbackFromInbound('Otro enfoque'), 'different_angle');
 assert.equal(feedbackFromInbound('Hola NIA'), null);
 assert.match(fs.readFileSync(new URL('../lib/server/whatsapp-inbound.ts', import.meta.url), 'utf8'), /allowRelevantFallback: false/);
+assert.doesNotMatch(fs.readFileSync(new URL('../lib/server/whatsapp-inbound.ts', import.meta.url), 'utf8'), /ensureWelcome|ensureActivationWelcome|welcome_delivery_failed/);
 const route = fs.readFileSync(new URL('../app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../supabase/migrations/20261004170000_whatsapp_inbound_messages.sql', import.meta.url), 'utf8');
 assert.match(route, /after\(/);

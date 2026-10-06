@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { buildWelcomeMessage, calculateReceptionStage, receptionInstructions, receptionTimeOfDay, shouldGeneratePsychologicalIntervention, welcomeDeliveryNeeded } from '../lib/server/reception-progression.ts';
+import { buildWelcomeMessage, calculateReceptionStage, receptionInstructions, receptionTimeOfDay, shouldGeneratePsychologicalIntervention } from '../lib/server/reception-progression.ts';
 import { evaluateWriterV2, writerV2Prompt } from '../lib/server/writer-v2.ts';
 
 const bogota = 'America/Bogota';
@@ -21,9 +21,7 @@ assert.equal(receptionTimeOfDay(utc('2026-10-04T01:00:00Z'), bogota), 'evening')
 const welcome = buildWelcomeMessage('Adriana', utc('2026-10-03T13:00:00Z'), bogota);
 assert.match(welcome, /^Buenos días, Adriana\. Soy NIA\./);
 assert.equal(/poco\s+a\s+poco/i.test(welcome), false);
-assert.equal(welcomeDeliveryNeeded({ exists: false, delivered: false }), true);
-assert.equal(welcomeDeliveryNeeded({ exists: true, delivered: false }), true);
-assert.equal(welcomeDeliveryNeeded({ exists: true, delivered: true }), false);
+assert.match(fs.readFileSync(new URL('../lib/server/reception-welcome.ts', import.meta.url), 'utf8'), /ensureActivationWelcome/);
 assert.deepEqual(receptionInstructions('tuning').length > 0, true);
 
 const input = { situation: 'ya tienes un criterio y consultas varias opiniones', desiredChange: 'confiar más en tu criterio', psychologicalMove: 'define_decision_criterion', movementExplanation: 'define un criterio antes de consultar', confirmedFacts: ['ya tienes un criterio'], recentMovements: [], communicationPreference: null, safetyConstraints: [], receptionStage: 'tuning', psychologicalInterventionsDelivered: 0, timeOfDay: 'morning', receptionInstructions: ['entra suavemente'] };
@@ -38,8 +36,7 @@ const inboundSource = fs.readFileSync(new URL('../lib/server/whatsapp-inbound.ts
 const engineSource = fs.readFileSync(new URL('../lib/intervention-engine.ts', import.meta.url), 'utf8');
 assert.doesNotMatch(dailySource, /ensureWelcome/);
 assert.doesNotMatch(dailySource, /kind: 'welcome'/);
-assert.match(inboundSource, /ensureWelcome/);
-assert.match(inboundSource, /if \(welcome\.created\)/);
+assert.doesNotMatch(inboundSource, /ensureWelcome|ensureActivationWelcome/);
 assert.match(engineSource, /poco a poco/);
 
 console.log('reception progression tests: PASS (20 cases)');

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { CalibrationRequiredError, resolveIntervention } from '@/lib/server/intervention';
 import { recordEvent, startExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
-import { ensureWelcome } from '@/lib/server/reception-welcome';
 
 export async function GET() { const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 }); const { data, error } = await supabase.from('interactions').select('*').order('created_at', { ascending: false }).limit(100); if (error) return NextResponse.json({ error: 'interactions_unavailable' }, { status: 500 }); return NextResponse.json({ interactions: data }); }
 export async function POST(request: Request) {
@@ -11,9 +10,6 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const body = await request.json();
   if (body.interaction_type !== 'nia_point' || !body.context_key) return NextResponse.json({ error: 'invalid_interaction' }, { status: 400 });
-  const { data: profile } = await supabase.from('profiles').select('first_name,timezone').eq('id', user.id).maybeSingle();
-  const welcome = await ensureWelcome(supabase, { userId: user.id, channel: 'web', firstName: profile?.first_name ?? null, timezone: profile?.timezone ?? null });
-  if (welcome.created) return NextResponse.json({ status: 'welcome', interaction: welcome.interaction });
   const idempotencyKey = request.headers.get('idempotency-key') || body.idempotency_key || undefined;
   let execution;
   try { execution = await startExecutionRun(supabase, { userId: user.id, channel: 'web', triggerSource: 'nia_point', idempotencyKey }); } catch { return NextResponse.json({ error: 'intervention_unavailable' }, { status: 503 }); }

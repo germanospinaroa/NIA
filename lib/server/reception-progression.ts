@@ -5,12 +5,9 @@ export type ReceptionSnapshot = { stage: ReceptionStage; welcomeDelivered: boole
 export const WELCOME_INTERACTION_TYPE = 'nia_welcome' as const;
 
 export async function getReceptionSnapshot(supabase: import('@supabase/supabase-js').SupabaseClient, userId: string, channel: 'web' | 'whatsapp', now = new Date(), timezone?: string | null) {
+  void channel;
   const { data: welcome } = await supabase.from('interactions').select('id').eq('user_id', userId).eq('interaction_type', WELCOME_INTERACTION_TYPE).limit(1).maybeSingle();
-  let welcomeDelivered = Boolean(welcome);
-  if (channel === 'whatsapp' && welcome?.id) {
-    const { data: delivery } = await supabase.from('whatsapp_daily_deliveries').select('id').eq('user_id', userId).eq('interaction_id', welcome.id).eq('status', 'sent').limit(1).maybeSingle();
-    welcomeDelivered = Boolean(delivery);
-  }
+  const welcomeDelivered = Boolean(welcome);
   const { data: interactions } = await supabase.from('interactions').select('id').eq('user_id', userId).in('interaction_type', ['daily_message', 'nia_point']);
   const ids = (interactions ?? []).map(row => row.id).filter(Boolean);
   let deliveredCount = 0;
@@ -58,10 +55,6 @@ export function receptionInstructions(stage: ReceptionStage): string[] {
   if (stage === 'building') return ['Puedes desarrollar la distinción y explicar por qué importa.', 'Introduce una herramienta o aplicación concreta cuando el movimiento lo requiera.', 'Conserva una entrada contextual natural.'];
   if (stage === 'established') return ['Usa la profundidad que el movimiento necesite.', 'Puedes conectar aprendizajes anteriores si existe evidencia.', 'No añadas intensidad, longitud ni confrontación sin fundamento.'];
   return ['La bienvenida es determinista; no generes una intervención psicológica.'];
-}
-
-export function welcomeDeliveryNeeded(input: { exists: boolean; delivered: boolean }) {
-  return !input.exists || !input.delivered;
 }
 
 export function buildWelcomeMessage(firstName: string | null | undefined, now = new Date(), timezone?: string | null) {

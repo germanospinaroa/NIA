@@ -8,11 +8,15 @@ import { trackMvp } from '@/lib/mvp';
 import { formatNextMessageSentence, getNextMessageSlot } from '@/lib/next-message';
 
 type Profile = { first_name?: string; direction_key?: string | null; direction_text?: string | null; desired_change_original?: string | null; message_frequency?: number | null; message_time_1?: string | null; message_time_2?: string | null; timezone?: string | null };
-type Interaction = { content?: string | null };
+type Interaction = { content?: string | null; interaction_type?: string | null };
 
 function usableMessage(content: unknown) {
   if (typeof content !== 'string') return false;
   return hasInterventionValue(content);
+}
+
+function isPsychologicalInteraction(item: Interaction) {
+  return item.interaction_type === 'daily_message' || item.interaction_type === 'nia_point';
 }
 
 export default function AppHomePage() {
@@ -27,7 +31,7 @@ export default function AppHomePage() {
       fetch('/api/interactions').then(response => response.ok ? response.json() : null),
     ]).then(([profilePayload, interactionsPayload]) => {
       setProfile(profilePayload?.profile ?? null);
-      const candidate = interactionsPayload?.interactions?.find((item: Interaction) => usableMessage(item.content));
+      const candidate = interactionsPayload?.interactions?.find((item: Interaction) => isPsychologicalInteraction(item) && usableMessage(item.content));
       setLatest(candidate ?? null);
     }).catch(() => setError(true));
   }, []);

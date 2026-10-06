@@ -19,6 +19,7 @@
     "test:discover-recognition": "node scripts/test-discover-recognition.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "test:message-lifecycle": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-message-lifecycle.mjs",
+    "test:activation-welcome": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-activation-welcome.mjs",
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
     "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",
     "test:whatsapp-buttons": "node --experimental-strip-types scripts/test-whatsapp-buttons.mjs",
