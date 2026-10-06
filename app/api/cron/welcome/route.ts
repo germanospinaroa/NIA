@@ -5,7 +5,7 @@ import { sendDueWelcomeDeliveries } from '@/lib/server/welcome-delivery';
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
+  const secret = process.env.WELCOME_CRON_SECRET;
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   try {
     const results = await sendDueWelcomeDeliveries(createAdminClient());

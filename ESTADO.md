@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Welcome scheduler en Supabase Cron — 2026-10-06
+- Vercel Hobby no admite cron cada minuto; se eliminó `vercel.json` y el worker `/api/cron/welcome` usa exclusivamente `WELCOME_CRON_SECRET`.
+- La migración `20261006134000_welcome_dispatch_cron.sql` crea/verifica pg_cron y pg_net, lee `nia_welcome_cron_secret` desde `vault.decrypted_secrets`, reemplaza de forma idempotente `nia-welcome-dispatch` y llama únicamente al worker de bienvenida.
+- Suite inicial, welcome delivery, recurrente, novelty, Writer, typecheck y build PASS; lint PASS con cuatro warnings heredados. Secretos y migraciones de producción aún no aplicados.
+
 ## Experiencia inicial activation → onboarding → WhatsApp — 2026-10-06
 - La activación ya no crea welcome ni usa enlaces mágicos: Hotmart crea el usuario con contraseña interna aleatoria no expuesta; `/acceso` verifica elegibilidad y solicita código OTP de 6 dígitos; `/activate` establece contraseña y envía a `/onboarding`; login normal usa email + contraseña.
 - Onboarding reúne configuración, una sola hora (`08:00` por defecto, `America/Bogota`), conexión WhatsApp y finalización. Persiste `message_frequency=1` y `message_time_2=null`. El primer buffer usa la misma ruta recurrente y el margen de 15 minutos decide hoy vs mañana.
