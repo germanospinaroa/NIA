@@ -45,6 +45,13 @@
 
   /* ── DERIVADOS (no se tocan: se recalculan solos desde --accent) ── */
   --chip-bg: color-mix(in oklab, var(--accent) 10%, transparent);
+
+  /* ── CONTINUIDAD POST-FUNNEL (mismo brand, superficie nocturna calmada) ── */
+  --continuity-bg: #241c18;
+  --continuity-bg-deep: #1d1815;
+  --continuity-ink: #f5eee2;
+  --continuity-muted: #cfc3b3;
+  --continuity-copper: #d8a278;
 }
 
 /* ============================================================================

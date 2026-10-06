@@ -41,7 +41,7 @@ export default function PremiumDiscover() {
     const nextIndex = index + 1; trackFunnel('discover_screen_viewed', { screen: nextIndex + 1 }); setIndex(nextIndex);
   }
   return <main className={`premium-funnel ${screen.dark ? 'is-dark' : ''}`}>
-    <header className="premium-header"><a href="/descubre" className="premium-mark" aria-label="NIA inicio"><span />NIA</a><span className="premium-progress" aria-label={`Pantalla ${index + 1} de 10`}>{String(index + 1).padStart(2, '0')} / 10</span></header>
+    <header className="premium-header"><a href="/descubre" className="premium-mark" aria-label="NIA inicio"><span />NIA</a></header>
     <div className="premium-stage" style={screen.image ? { '--premium-image': `url(${screen.image})` } as CSSProperties : undefined}>
       <AnimatePresence mode="wait"><motion.section key={index} className={`premium-screen premium-screen-${index + 1} ${screen.kind ? `is-${screen.kind}` : ''}`} initial={reduce ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -12 }} transition={{ duration: reduce ? 0 : .38, ease: [0.22, 1, 0.36, 1] }} aria-labelledby="premium-title">
         {screen.image && <div className="premium-image" aria-hidden="true" />}<div className="premium-vignette" aria-hidden="true" />

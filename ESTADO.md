@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Continuidad premium post-funnel — 2026-10-06
+- Se añadió una capa visual únicamente para la experiencia posterior a `/descubre`: planes, acceso/OTP, activación, login, recuperación y onboarding comparten fondo editorial espresso, marfil cálido, cobre contenido, tipografías de marca, estados de foco, opciones táctiles y CTA de alta presencia.
+- `FunnelFrame` ahora acepta una clase visual y conserva toda la navegación existente; el onboarding, WhatsApp, persistencia, OTP, login y delivery no fueron modificados. `/descubre` mantiene el copy y la secuencia, eliminando solamente el contador visible `01 / 10`.
+- QA visual local con Playwright: acceso 390/375/430/1440, planes 390, login 390, activación 390, recuperación 390, reset 390 y `/descubre` 390. El CTA de planes se ajustó tras detectar clipping en 390×844.
+- Tests de funnel, Hotmart, auth/onboarding/timing, initial experience, activation welcome, message lifecycle, welcome delivery, WhatsApp/inbound, recepción, buffer/delivery e idempotencia PASS; typecheck/build PASS; lint PASS con cuatro warnings heredados. Sin llamadas reales ni cambios de backend.
+
 ## Premium mobile funnel `/descubre` — 2026-10-06
 - Se reemplazó únicamente la entrada pública `/descubre` por una secuencia editorial de 10 estados dentro de un solo flujo: marfil/carbón/copper, Fraunces + Instrument Sans, fotografía editorial existente y transiciones suaves con `prefers-reduced-motion`.
 - El copy del brief quedó congelado en `components/funnel/PremiumDiscover.tsx`; el CTA final mantiene el flujo real existente hacia `/descubre/planes`. La landing original `/` y el motor psicológico no se tocaron.
