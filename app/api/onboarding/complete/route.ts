@@ -5,6 +5,7 @@ import { ensureActivationWelcome } from '@/lib/server/reception-welcome';
 import { scheduleWelcomeDelivery } from '@/lib/server/welcome-delivery';
 import { refillApprovedBuffer } from '@/lib/server/refill-approved-buffer';
 import { firstPsychologicalLocalDate } from '@/lib/server/whatsapp-schedule';
+import { chooseFirstIntendedLocalDate, normalizeOnboardingSchedule } from '@/lib/server/onboarding-finalization';
 
 export const maxDuration = 300;
 
@@ -20,16 +21,26 @@ export async function POST() {
   if (!connection?.wa_id) return NextResponse.json({ error: 'whatsapp_not_connected' }, { status: 409 });
   if (!profile.message_time_1) return NextResponse.json({ error: 'message_time_required' }, { status: 422 });
 
-  const now = new Date();
-  const timezone = profile.timezone || 'America/Bogota';
-  const intendedLocalDate = firstPsychologicalLocalDate(timezone, profile.message_time_1, now);
   const admin = createAdminClient();
   try {
+    const now = new Date();
+    const timezone = profile.timezone || 'America/Bogota';
+    const normalizedProfile = normalizeOnboardingSchedule(profile);
+    const { error: normalizationError } = await admin.from('profiles').update({ message_frequency: normalizedProfile.message_frequency, message_time_2: normalizedProfile.message_time_2 }).eq('id', user.id);
+    if (normalizationError) throw new Error('onboarding_schedule_normalization_failed');
+
+    const candidateLocalDate = firstPsychologicalLocalDate(timezone, profile.message_time_1, now);
+    const [{ data: dailyInteraction, error: dailyInteractionError }, { data: sentDelivery, error: sentDeliveryError }] = await Promise.all([
+      admin.from('interactions').select('id').eq('user_id', user.id).eq('interaction_type', 'daily_message').eq('local_date', candidateLocalDate).limit(1).maybeSingle(),
+      admin.from('whatsapp_daily_deliveries').select('id').eq('user_id', user.id).eq('local_date', candidateLocalDate).eq('status', 'sent').limit(1).maybeSingle(),
+    ]);
+    if (dailyInteractionError || sentDeliveryError) throw new Error('onboarding_delivery_lookup_failed');
+    const intendedLocalDate = chooseFirstIntendedLocalDate({ candidate: candidateLocalDate, timezone, now, occupied: Boolean(dailyInteraction || sentDelivery) });
     const prepared = await refillApprovedBuffer(admin, user.id, { now, minBufferDays: 1, targetBufferDays: 1, maxCostUsd: Number(process.env.REFILL_MAX_COST_USD || 0.03), firstIntendedLocalDate: intendedLocalDate });
     if (prepared.created.length === 0 && !prepared.skipped.includes('buffer_at_target')) throw new Error('first_buffer_not_prepared');
     const welcome = await ensureActivationWelcome(admin, { userId: user.id, firstName: profile.first_name, timezone, now });
     const delivery = await scheduleWelcomeDelivery(admin, { userId: user.id, interactionId: String(welcome.interaction.id), dueAt: new Date(now.getTime() + 60_000) });
-    const { error: completionError } = await admin.from('profiles').update({ onboarding_completed: true, onboarding_completed_at: now.toISOString(), message_frequency: 1, message_time_2: null, timezone }).eq('id', user.id);
+    const { error: completionError } = await admin.from('profiles').update({ onboarding_completed: true, onboarding_completed_at: now.toISOString(), message_frequency: normalizedProfile.message_frequency, message_time_2: normalizedProfile.message_time_2, timezone }).eq('id', user.id);
     if (completionError) throw new Error('onboarding_completion_failed');
     return NextResponse.json({ success: true, intended_local_date: intendedLocalDate, welcome_scheduled: true, welcome_due_at: delivery.due_at, buffer_prepared: prepared.created.length > 0 || prepared.skipped.includes('buffer_at_target') });
   } catch (error) {

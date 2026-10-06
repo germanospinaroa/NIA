@@ -18,6 +18,7 @@
     "test:funnel": "node scripts/test-funnel.mjs",
     "test:discover-recognition": "node scripts/test-discover-recognition.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
+    "test:onboarding-finalization": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-onboarding-finalization.mjs",
     "test:initial-experience": "node --experimental-strip-types scripts/test-initial-experience.mjs",
     "test:welcome-delivery": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-welcome-delivery.mjs",
     "test:message-lifecycle": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-message-lifecycle.mjs",

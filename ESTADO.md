@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Finalización onboarding + contraste WhatsApp — 2026-10-06
+- El alcance premium ahora conserva el fondo oscuro de continuidad en onboarding y corrige, solo dentro de `.nia-continuity-frame`, superficie, borde, textos, teléfono y acento del panel WhatsApp. El estado de carga usa `Estamos terminando tu configuración…` con contraste legible; el fixture de QA temporal fue retirado.
+- `/api/onboarding/complete` normaliza antes del buffer `message_frequency=1` y `message_time_2=null`, consulta la verdad de entrega (`interactions.daily_message` y `whatsapp_daily_deliveries.status=sent`) para la fecha candidata y desplaza al día local siguiente si ya está ocupada. Welcome y completion siguen idempotentes.
+- Regresiones enfocadas y suite solicitada PASS; typecheck, lint y build PASS (4 warnings heredados de lint). QA visual local renderizado en 390×844, 375×812 y 430×932, con estado conectado/carga y estado listo.
+- Pendiente al cierre de esta sesión: commit, push a `origin/main`, deploy y verificación de SHA/alias.
+
 ## Correcciones de revisión + OTP — 2026-10-06
 - Funnel premium consolidado de 10 a 8 pantallas en `components/funnel/PremiumDiscover.tsx`: pantallas 1–6 conservadas, continuidad fusionada como pantalla 7, futuro/CTA como pantalla 8; ejemplo WhatsApp usa Juanita y screen 2 usa `paso a paso`.
 - `/api/auth/access/request` conserva la elegibilidad Hotmart, admite únicamente emails exactos de `NIA_ADMIN_EMAILS` como puente QA controlado, crea usuario/profile solo para ese allowlist cuando falta, usa contraseña interna aleatoria y verifica el resultado real de `signInWithOtp`.

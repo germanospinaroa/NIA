@@ -108,10 +108,10 @@ export function WhatsAppConnectionPanel({ value, onChange, onError, onSendTest, 
   useEffect(() => () => stopPolling(), []);
 
   if (value.status === 'connected') {
-    return <div className="mt-6 rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] p-5">
-      <p className="text-[12px] font-bold uppercase tracking-[.12em] text-[var(--accent)]">Conectado</p>
-      <p className="mt-3 text-[16px]">Este es el número en el que recibirás tus mensajes de NIA.</p>
-      {value.phone_number && <p className="mt-2 text-[14px] text-[var(--text-secondary)]">{value.phone_number}</p>}
+    return <div className="whatsapp-connection-panel-connected mt-6 rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] p-5">
+      <p className="whatsapp-connected-label text-[12px] font-bold uppercase tracking-[.12em] text-[var(--accent)]">Conectado</p>
+      <p className="whatsapp-connected-copy mt-3 text-[16px]">Este es el número en el que recibirás tus mensajes de NIA.</p>
+      {value.phone_number && <p className="whatsapp-connected-phone mt-2 text-[14px] text-[var(--text-secondary)]">{value.phone_number}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
         {showTest && onSendTest && <button type="button" disabled={testBusy} onClick={async () => { setTestBusy(true); try { await onSendTest(); } finally { setTestBusy(false); } }} className="min-h-12 rounded-[var(--radius-button)] bg-[var(--accent)] px-5 text-[14px] font-semibold text-[var(--bg)] disabled:opacity-50">{testBusy ? 'Enviando…' : 'Enviar mensaje de prueba'}</button>}
         {showDisconnect && <button type="button" onClick={async () => { if (window.confirm('¿Quieres desconectar este número de NIA?')) await onDisconnect(); }} className="min-h-12 rounded-[var(--radius-button)] border border-black/15 px-5 text-[14px] font-semibold">Cambiar WhatsApp</button>}
