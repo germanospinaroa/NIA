@@ -55,6 +55,7 @@ export function errorCode(error: unknown): string {
   if (message.includes('semantic_judge')) return 'semantic_judge_error';
   if (message.includes('audit')) return 'audit_error';
   if (message.includes('candidate_save') || message.includes('intervention_save')) return 'persistence_error';
+  if (message.includes('no_approved_intervention_after_repair')) return 'no_approved_intervention_after_repair';
   if (message.includes('no_approved_intervention')) return 'no_approved_intervention';
   return message.slice(0, 100) || 'unknown_error';
 }

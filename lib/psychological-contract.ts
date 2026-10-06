@@ -158,14 +158,27 @@ function contextTokens(value: string) {
 
 type MovementFamily = 'external_input_vs_decision' | 'decision_criteria' | 'uncertainty_clarification' | 'situational_preparation' | 'other';
 
-function hasMultipleMoves(value: string) {
+export function hasMultipleMoves(value: string) {
   const text = normalized(value);
-  const moveTerms = ['reencuadr', 'distinguir', 'diferenc', 'separar', 'prepar', 'pregunt', 'observar', 'reconocer', 'decidir', 'practicar', 'interrumpir', 'cambiar'];
-  const found = moveTerms.filter(term => text.includes(term));
-  return found.length > 1 || /\b(y|ademas|tambien)\b/.test(text) && found.length > 0;
+  const moveTerms = ['reencuadr', 'distinguir', 'diferenc', 'separar', 'prepar', 'pregunt', 'observar', 'reconocer', 'decidir', 'elegir', 'practicar', 'interrumpir', 'cambiar', 'notar'];
+  const hasMove = (segment: string) => moveTerms.some(term => segment.includes(term));
+  const coordinated = /\b(y|ademas|tambien)\b/g;
+  let match: RegExpExecArray | null;
+  while ((match = coordinated.exec(text))) {
+    const left = text.slice(0, match.index);
+    const right = text.slice(match.index + match[0].length);
+    if (hasMove(left) && hasMove(right)) return true;
+  }
+  const sequenced = /\b(?:despues|luego|posteriormente)\b/g;
+  while ((match = sequenced.exec(text))) {
+    const left = text.slice(0, match.index);
+    const right = text.slice(match.index + match[0].length);
+    if (hasMove(left) && hasMove(right)) return true;
+  }
+  return false;
 }
 
-function movementFamily(value: string | null | undefined, mechanismId: string) : MovementFamily | null {
+export function movementFamily(value: string | null | undefined, mechanismId: string) : MovementFamily | null {
   if (!value?.trim() || hasMultipleMoves(value)) return null;
   const text = normalized(value);
   if (mechanismId === 'external_validation' &&
@@ -206,7 +219,8 @@ function hasExternalSituationAnchor(candidateText: string, contractText: string)
   const multipleVoices = /varias|opiniones|mas opiniones|otra opinion|otras personas|los demas|que haria/.test(candidate);
   const sequenceAfterDecision = /despues de (tomar|decidir)|luego de (tomar|decidir)|despues de decidir/.test(candidate);
   const persistenceAfterCriterion = /aunque|aun asi|aun cuando|ya (tien|tom|decid|reconoc)[^.!?]{0,120}(opinion|consult|pregunt)|ya [^.!?]{0,100}(criterio|respuesta|decision)[^.!?]{0,160}(opinion|consult|pregunt)/.test(candidate);
-  return consultation && priorCriterion && (sequenceAfterDecision || (multipleVoices && persistenceAfterCriterion));
+  const conditionAnchor = /condicion|condiciones|opcion.*cumplir|referencia concreta|criterio propio/.test(candidate);
+  return consultation && (priorCriterion || conditionAnchor) && (sequenceAfterDecision || (multipleVoices && (persistenceAfterCriterion || conditionAnchor)));
 }
 
 export function evaluatePsychologicalValue(candidate: PsychologicalCandidateInput, contract: PsychologicalInterventionContract) {

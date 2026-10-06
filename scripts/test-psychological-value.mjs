@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { evaluatePsychologicalValue, formulatePsychologicalIntervention, psychologicalMechanisms } from '../lib/psychological-contract.ts';
+import { evaluatePsychologicalValue, formulatePsychologicalIntervention, hasMultipleMoves, movementFamily, psychologicalMechanisms } from '../lib/psychological-contract.ts';
 
 const concrete = formulatePsychologicalIntervention({
   currentContext: 'Cuando alguien cuestiona una decisión que ya tomaste',
@@ -219,5 +219,42 @@ assert.ok(evaluatePsychologicalValue(candidate({ text: 'Cuando alguien cuestiona
 const longitudinal = formulatePsychologicalIntervention({ currentContext: 'Esta semana lo anoté dos veces después de una conversación', desiredChange: 'Reconocer avances concretos' });
 assert.equal(longitudinal.sufficient, true);
 assert.ok(evaluatePsychologicalValue(candidate({ mechanismId: 'progress_monitoring' }), longitudinal).reasons.includes('psychological_value_one_move'));
+
+// Subordinate/contextual verbs do not create a second psychological move.
+const noticeContract = {
+  ...concrete,
+  psychological_move: 'observar cuándo empiezas a buscar otra opinión antes de decidir',
+};
+const subordinateMovements = [
+  'observar cuándo empiezas a buscar otra opinión antes de decidir',
+  'reconocer que ya tenías una respuesta antes de preguntar',
+  'distinguir qué información apareció después de consultar',
+  'definir qué dato tendría que aparecer para reconsiderar',
+];
+for (const psychologicalMove of subordinateMovements) {
+  assert.equal(hasMultipleMoves(psychologicalMove), false, `subordinate movement must remain one move: ${psychologicalMove}`);
+}
+
+// Coordinated/sequenced psychological actions remain protected by the gate.
+const compoundMovements = [
+  'observar el patrón y decidir sin consultar',
+  'reconocer tu primera respuesta y cambiar la decisión',
+  'distinguir la información y después elegir qué hacer',
+  'observar cuándo consultas, luego practicar una respuesta distinta',
+];
+for (const psychologicalMove of compoundMovements) {
+  assert.equal(hasMultipleMoves(psychologicalMove), true, `compound movement passed the structural detector: ${psychologicalMove}`);
+}
+
+assert.ok(movementFamily(noticeContract.psychological_move, 'external_validation'));
+
+const exactProductFailure = evaluatePsychologicalValue(candidate({
+  psychologicalMove: 'observar cuándo empiezas a buscar otra opinión antes de decidir',
+  text: 'Cuando ya tienes una decisión y empiezas a pedir varias opiniones, puedes observar que primero apareció una respuesta propia y después empezó la consulta.',
+  takeaway: 'Primero puede aparecer una respuesta propia y después la consulta; reconocer ese momento vuelve visible la secuencia.',
+  optionalAction: 'La próxima vez, nota qué respuesta propia apareció primero y en qué momento empiezas a pedir otra opinión.',
+}), noticeContract);
+assert.equal(exactProductFailure.checks.one_move, true);
+assert.ok(!exactProductFailure.reasons.includes('psychological_value_one_move'));
 
 console.log('psychological value tests: PASS (28 contract regressions)');

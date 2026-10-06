@@ -34,7 +34,7 @@ try {
   await recordExecutionStage(db, execution, 'planner', { status: 'completed', strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null });
   await recordExecutionStage(db, execution, 'psychological_contract', { status: 'completed', sufficient: true, mechanism_id: brief.psychologicalContract?.mechanism_id, psychological_move: brief.psychologicalContract?.psychological_move, expected_movement: brief.psychologicalContract?.expected_movement });
 
-  const result = await resolveIntervention(db, userId, 'intention', 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${execution.executionId}`, localDate });
+  const result = await resolveIntervention(db, userId, 'intention', 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${execution.executionId}`, localDate, writerVersion: 'v2' });
   assert.ok(result.interventionId, 'intervention must be persisted');
   await recordExecutionStage(db, execution, 'intervention', { status: 'completed', intervention_id: result.interventionId });
 

@@ -1,4 +1,7 @@
--- QA execution claim: idempotency and active-run isolation.
+-- Qualify every execution_runs reference to avoid collisions with RETURNS TABLE
+-- output names such as idempotency_key, status and request_id.
+-- Function replacement only: no data, RLS or table changes.
+
 create or replace function public.claim_qa_execution_run(
   p_user_id uuid,
   p_request_id uuid,
@@ -6,7 +9,7 @@ create or replace function public.claim_qa_execution_run(
   p_concurrency_key text,
   p_stale_before timestamptz
 )
-returns table(
+returns table (
   execution_id uuid,
   request_id uuid,
   idempotency_key text,
@@ -19,7 +22,7 @@ returns table(
 language plpgsql
 security definer
 set search_path = public
-as $function$
+as $$
 declare
   current_run public.execution_runs%rowtype;
   new_run public.execution_runs%rowtype;
@@ -96,4 +99,7 @@ begin
   return query select new_run.id, new_run.request_id, new_run.idempotency_key,
     new_run.status, new_run.started_at, true, true, was_stale;
 end;
-$function$;
+$$;
+
+revoke all on function public.claim_qa_execution_run(uuid, uuid, text, text, timestamptz) from public;
+grant execute on function public.claim_qa_execution_run(uuid, uuid, text, text, timestamptz) to service_role;

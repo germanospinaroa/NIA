@@ -89,12 +89,13 @@ function sanitizedGeneration(admin: ReturnType<typeof createAdminClient>, execut
     admin.from('generation_attempts').select('status,candidate_count,approved_candidate_count,rejection_count').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
     admin.from('execution_provider_calls').select('operation,status').eq('execution_run_id', executionId),
   ]).then(([attempts, calls]) => {
-    const attempt = attempts.data?.[0];
+    const rows = attempts.data ?? [];
     return {
       calls: calls.data?.filter(row => row.operation === 'generation' && row.status === 'success').length ?? 0,
-      candidates: attempt?.candidate_count ?? 0,
-      approved: attempt?.approved_candidate_count ?? 0,
-      rejected: attempt?.rejection_count ?? 0,
+      attempts: rows.length,
+      candidates: rows.reduce((sum, row) => sum + Number(row.candidate_count ?? 0), 0),
+      approved: rows.reduce((sum, row) => sum + Number(row.approved_candidate_count ?? 0), 0),
+      rejected: rows.reduce((sum, row) => sum + Number(row.rejection_count ?? 0), 0),
     };
   });
 }
@@ -175,9 +176,9 @@ export async function POST(request: Request) {
     let result: InterventionResult;
     const editorialStatus = 'approved' as const;
     try {
-      result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa' });
+      result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', writerVersion: 'v2' });
     } catch (error) {
-      if (error instanceof Error && error.message === 'no_approved_intervention') {
+      if (error instanceof Error && ['no_approved_intervention', 'no_approved_intervention_after_repair'].includes(error.message)) {
         const trace = await qaTrace(admin, run.context.executionId, userId);
         return NextResponse.json({ status: 'editorial_review_required', editorial_status: 'no_approved_intervention', execution_run_id: run.context.executionId, generation: { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: trace.candidate_summaries }, editorial: { strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null, intervention_type: brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: brief.editorialPlan?.recommended_depth ?? null }, intervention_id: null, delivery_id: null, evolution: { accepted: false, provider_message_id_present: false }, qa_trace: trace });
       }

@@ -17,7 +17,7 @@ assert.match(route, /keys\.some\(key => key !== 'user_id'\)/);
 assert.match(route, /startQaExecutionRun/);
 assert.match(route, /composeNiaMessage/);
 assert.match(route, /resolveIntervention\(admin, userId, 'intention', 'whatsapp'/);
-assert.match(route, /maxGenerationAttempts: 1/);
+assert.match(route, /maxGenerationAttempts: 2/);
 assert.match(route, /disableTechnicalGenerationRetry: true/);
 assert.match(route, /claimDelivery/);
 assert.match(route, /sendClaimedDelivery/);

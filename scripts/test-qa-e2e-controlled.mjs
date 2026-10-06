@@ -16,29 +16,15 @@ delete process.env.SUPABASE_SECRET_KEY;
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const tables = {
-  profiles: [{ id: userId, first_name: 'Ana', direction_key: '', desired_change_original: 'Confiar más en mi criterio', current_context_original: 'Cuando alguien cuestiona una decisión que ya tomaste', current_context_domain: 'decisiones', desired_change_language: [], learning_profile: {}, communication_preference: 'adaptive', desired_change_concepts: [], voice_style: null }],
-  interventions: [{
-    id: 'history-1',
-    user_id: userId,
-    created_at: '2026-10-03T12:00:00.000Z',
-    topic: 'criterio propio',
-    intervention_type: 'reflection',
-    text: 'Puedes escuchar una opinión sin entregar la decisión.',
-    editorial_idea: 'Distinguir información de entregar la decisión.',
-    concept: 'información y decisión',
-    angle: 'escuchar sin ceder',
-    editorial_signature: {
-      mechanismId: 'external_validation',
-      psychologicalMove: 'distinguir información de entregar la decisión',
-      takeaway: 'Escuchar información no equivale a entregar la decisión.',
-    },
-  }],
-  learning_signals: [],
-  context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
+  profiles: [{ id: userId, first_name: 'Ana', direction_key: '', desired_change_original: 'Confiar más en mi criterio', current_context_original: 'Cuando ya tienes una decisión y empiezas a pedir varias opiniones aunque en el fondo ya tengas una respuesta', current_context_domain: 'decisiones', desired_change_language: [], learning_profile: {}, communication_preference: 'adaptive', desired_change_concepts: [], voice_style: null }],
+  interventions: [], learning_signals: [], context_history: [], execution_runs: [], generation_attempts: [], execution_provider_calls: [], provider_call_costs: [], provider_pricing: [], event_log: [], intervention_candidates: [], interactions: [], whatsapp_daily_deliveries: [], admin_audit_log: [],
 };
 const counts = { openai: 0, evolution: 0 };
 let failNextGeneration = false;
 let rejectNextGeneration = false;
+let repairNextGeneration = false;
+let repairGenerationCalls = 0;
+let repairAlwaysFails = false;
 
 function rowId() { return randomUUID(); }
 function clone(value) { return value === undefined ? value : JSON.parse(JSON.stringify(value)); }
@@ -103,44 +89,11 @@ const db = { tables, from(table) { return new Query(this, table); }, async rpc(n
 function jsonResponse(value, status = 200) { return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } }); }
 const audit = { context_fit: true, specificity: true, generic_motivation: false, chatbot_language: false, coaching_language: false, therapy_language: false, robotic_or_abstract_language: false, first_read_comprehension: true, editorial_novelty: true, experience_novelty: true, 'cliché': false, semantic_repetition: false, concept_repetition: false, structure_repetition: false, single_idea: true, natural_voice: true, unnecessary_advice: false, approved: true, reasons: [] };
 const candidates = [0, 1, 2].map(index => ({
-  topic: 'criterio propio', intervention_type: index === 0 ? 'brief_insight' : 'reflection', depth: index === 0 ? 'brief' : 'medium',
-  editorial_take: index === 0 ? 'Haz visible qué tendría que cumplir una opción antes de dejar que una duda ajena cambie tu decisión.' : `Define un criterio propio antes de usar una opinión externa para revisar una decisión ${index}.`,
-  editorial_idea: index === 0 ? 'Definir condiciones propias permite evaluar una opinión sin entregar la decisión.' : `Una condición propia ayuda a decidir qué información merece cambiar la decisión ${index}.`,
-  experience_type: index === 0 ? 'perspective_shift' : 'reflection',
-  blocks: [{
-    type: index === 0 ? 'tool' : 'idea',
-    text: index === 0
-      ? 'Antes de consultar, completa: «La opción que elija tendría que cumplir estas dos condiciones: …». Después escucha la opinión y revisa si aporta algo que cambie esas condiciones.'
-      : `Puedes escuchar una opinión y seguir decidiendo por tu cuenta ${index}. Primero define qué tendría que cumplir la opción para que la elijas; luego usa lo que escuches para comprobar si apareció información que realmente cambie ese criterio.`,
-  }],
-  function: index === 0 ? 'reframe' : 'distinguish',
-  concept: `definir criterio antes de consultar ${index}`,
-  angle: `condiciones propias y opinión externa ${index}`,
-  structure: index === 0 ? 'distinguish_between' : 'context_does_not_mean',
-  editorial_type: index === 0 ? 'reframe' : 'distinction',
-  signal: 'alguien cuestiona una decisión',
-  evidence_direction: 'una opinión externa no obliga a cambiar un criterio propio',
-  movement: 'definir qué condiciones tendría que cumplir una opción para elegirla',
-  opening_closing: 'idea y aplicación',
-  mechanism_id: 'external_validation',
-  mechanism_confidence: 'medium',
-  intervention_purpose: 'Ayudar a definir qué condiciones tendría que cumplir una opción para que la elijas.',
-  psychological_move: 'definir qué condiciones tendría que cumplir una opción para que la elijas',
-  expected_movement: 'Podrás precisar qué condición tendría que cumplir una opción antes de decidir.',
-  takeaway: 'Un criterio propio permite evaluar información sin entregar la decisión.',
-  optional_action: 'Completa dos condiciones que para ti tendría que cumplir la opción que estás considerando.',
-  why_now: 'La situación confirma que una opinión aparece alrededor de una decisión.',
-  risk_flags: [],
-  insight_id: null,
-  functional_emotion: 'clarity',
-  directiveness: 'reflective',
-  closing_type: 'none',
-  action_id: null,
-  situation: 'Cuando alguien cuestiona una decisión que ya tomaste',
-  intention: 'Confiar más en mi criterio',
-  longitudinal_evidence_refs: null,
-  editorial_signature: { psychologicalContract: null },
+  topic: 'criterio propio', intervention_type: index === 0 ? 'reflection' : 'practical_guidance', depth: index === 0 ? 'medium' : 'brief', editorial_take: index === 0 ? 'La consulta repetida también tiene un momento que puedes reconocer: aparece después de que ya surgió una primera respuesta.' : `Puedes notar cuándo aparece la primera respuesta y cuándo empiezas a buscar varias opiniones ${index}.`, editorial_idea: index === 0 ? 'Observar el momento en que empiezas a consultar vuelve visible la secuencia entre tu primera respuesta y la opinión que buscas.' : `Reconocer la secuencia entre una respuesta propia y la consulta ayuda a ver el patrón ${index}.`, experience_type: index === 0 ? 'perspective_shift' : 'reflection', blocks: index === 0 ? [{ type: 'idea', text: 'Cuando ya aparece una primera respuesta, pedir varias opiniones empieza en un momento reconocible: ahí puedes observar la secuencia sin asumir que consultar está mal.' }, { type: 'tool', text: 'La próxima vez, nota qué respuesta propia apareció primero y en qué momento empiezas a pedir otra opinión.' }] : [{ type: 'idea', text: `Puedes observar cuándo aparece tu primera respuesta y cuándo empiezas a pedir varias opiniones ${index}.` }, { type: 'tool', text: 'Señala el momento en que pasas de tener una respuesta propia a buscar otra opinión.' }], function: 'distinguish', concept: 'observar la secuencia entre respuesta propia y consulta', angle: 'observar el momento en que empieza la consulta', structure: 'context_does_not_mean', editorial_type: 'distinction', signal: 'cuando ya tienes una decisión y empiezas a pedir varias opiniones', evidence_direction: 'reconocer la secuencia hace visible el momento de la consulta sin convertirlo en un defecto', movement: 'external_validation:notice_the_consulting_pattern', opening_closing: 'idea y observación', mechanism_id: 'external_validation', mechanism_confidence: 'medium', intervention_purpose: 'Ayudar a observar cuándo empiezas a buscar otra opinión antes de decidir.', psychological_move: 'observar cuándo empiezas a buscar otra opinión antes de decidir', expected_movement: 'Podrás observar cuándo empiezas a buscar otra opinión después de que ya apareció una primera respuesta.', takeaway: 'Primero puede aparecer una respuesta propia y después el impulso de pedir varias opiniones; reconocer ese momento vuelve visible la secuencia.', optional_action: 'La próxima vez, nota qué respuesta propia apareció primero y en qué momento empiezas a pedir otra opinión.', why_now: 'La situación confirmada muestra una primera respuesta seguida de varias consultas.', risk_flags: [], insight_id: null, functional_emotion: 'clarity', directiveness: 'reflective', closing_type: 'none', action_id: null, situation: 'Cuando ya tienes una decisión y empiezas a pedir varias opiniones aunque en el fondo ya tengas una respuesta', intention: 'Confiar más en mi criterio', longitudinal_evidence_refs: null, editorial_signature: { psychologicalContract: null },
 }));
+
+// The controlled success fixture must exercise the same concrete signal as the blueprint.
+candidates[0].blocks[0].text = 'Cuando ya tienes una decisión y empiezas a pedir varias opiniones, puedes observar que primero apareció una respuesta propia y después empezó la consulta.';
 
 globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
@@ -155,8 +108,10 @@ globalThis.fetch = async (input, init = {}) => {
         timeout.name = 'AbortError';
         throw timeout;
       }
-      const responseCandidates = rejectNextGeneration ? candidates.map(candidate => ({ ...candidate, text: 'Confía en ti y recuerda que eres capaz.', blocks: [{ type: 'idea', text: 'Confía en ti y recuerda que eres capaz.' }], takeaway: 'Una frase bonita para sentirte mejor.', optional_action: null, optionalAction: null })) : candidates;
+      const invalidCandidates = candidates.map(candidate => ({ ...candidate, intervention_type: 'practical_guidance', text: 'Confía en ti y recuerda que eres capaz.', blocks: [{ type: 'idea', text: 'Confía en ti y recuerda que eres capaz.' }], takeaway: 'Una frase bonita para sentirte mejor.', optional_action: null, optionalAction: null }));
+      const responseCandidates = rejectNextGeneration || repairAlwaysFails || (repairNextGeneration && repairGenerationCalls++ === 0) ? invalidCandidates : candidates;
       rejectNextGeneration = false;
+      if (repairNextGeneration && repairGenerationCalls > 1) repairNextGeneration = false;
       return jsonResponse({ id: 'controlled-generation', model: 'controlled-model', choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ candidates: responseCandidates }) } }], usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 } });
     }
     if (name === 'nia_intervention_audit') return jsonResponse({ id: 'controlled-audit', model: 'controlled-model', choices: [{ message: { content: JSON.stringify(audit) } }], usage: { prompt_tokens: 50, completion_tokens: 50, total_tokens: 100 } });
@@ -186,11 +141,19 @@ assert.equal(delivery.provider_message_id, 'controlled-provider-message');
 const finalRun = db.tables.execution_runs.find(row => row.id === execution.executionId);
 assert.equal(finalRun.status, 'approved');
 assert.ok(finalRun.intervention_id);
-assert.equal(db.tables.interventions.length, 2);
-const createdIntervention = db.tables.interventions.find(row => row.id !== 'history-1');
-assert.ok(createdIntervention?.editorial_signature?.psychologicalContract?.mechanism_id === 'external_validation');
-assert.equal(createdIntervention.editorial_signature.psychologicalMovementKey, 'external_validation:define_decision_criterion');
+assert.equal(db.tables.interventions.length, 1);
+assert.equal(db.tables.interventions.find(row => row.id === finalRun.intervention_id).editorial_signature.psychologicalContract.mechanism_id, 'external_validation');
+const plannedMovement = 'external_validation:notice_the_consulting_pattern';
+const selectedCandidate = db.tables.intervention_candidates.find(row => row.selected_candidate === true);
+const selectedIntervention = db.tables.interventions.find(row => row.id === finalRun.intervention_id);
+assert.equal(selectedCandidate?.editorial_signature?.psychologicalMovementKey, plannedMovement);
+assert.equal(selectedCandidate?.editorial_signature?.interventionBlueprint?.movement, plannedMovement);
+assert.equal(selectedIntervention?.editorial_signature?.psychologicalMovementKey, plannedMovement);
+assert.equal(selectedIntervention?.editorial_signature?.interventionBlueprint?.movement, plannedMovement);
+assert.match(selectedIntervention?.editorial_signature?.psychologicalContract?.psychological_move ?? '', /observar cuándo empiezas/);
 assert.equal(db.tables.intervention_candidates.length, 3);
+assert.equal(db.tables.intervention_candidates.filter(row => row.selected_candidate === true).length, 1, 'exactly one candidate must be marked selected');
+assert.equal(db.tables.intervention_candidates.find(row => row.selected_candidate === true).intervention_id, finalRun.intervention_id);
 assert.equal(counts.evolution, 1);
 assert.ok(counts.openai >= 4, `expected generation, embedding and audit provider calls, got ${counts.openai}`);
 
@@ -234,4 +197,37 @@ assert.equal(db.tables.intervention_candidates.filter(row => row.editorial_signa
 assert.equal(db.tables.interactions.filter(row => row.slot === `qa:${rejectionExecution.executionId}`).length, 0);
 assert.equal(db.tables.whatsapp_daily_deliveries.filter(row => row.slot === `qa:${rejectionExecution.executionId}`).length, 0);
 assert.equal(counts.evolution, 1, 'rejected editorial run must not call Evolution');
+
+// Execution D proves one bounded repair can use the first round's rejection
+// reasons, preserve the same movement, and continue when the repair passes.
+repairNextGeneration = true;
+const repairExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_repair', idempotencyKey: `qa-repair:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_repair:${userId}` });
+const repaired = await resolveIntervention(db, userId, 'intention', 'whatsapp', repairExecution.idempotencyKey, repairExecution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${repairExecution.executionId}`, localDate: '2026-10-04' });
+assert.ok(repaired.interventionId, 'repair should continue to intervention');
+const repairRun = db.tables.execution_runs.find(row => row.id === repairExecution.executionId);
+assert.equal(repairRun.status, 'approved');
+assert.equal(repairRun.candidate_count, 6);
+assert.equal(db.tables.generation_attempts.filter(row => row.execution_run_id === repairExecution.executionId).length, 2);
+const repairCandidates = db.tables.intervention_candidates.filter(row => row.editorial_signature?.executionRunId === repairExecution.executionId);
+assert.equal(repairCandidates.length, 6);
+assert.equal(repairCandidates.filter(row => row.selected_candidate === true).length, 1);
+assert.equal(repairCandidates.find(row => row.selected_candidate === true).intervention_id, repaired.interventionId);
+assert.ok(repairCandidates.slice(0, 3).every(row => row.selected_candidate === false));
+assert.equal(repairCandidates.find(row => row.selected_candidate === true).editorial_signature?.psychologicalMovementKey, repairCandidates[0].editorial_signature?.psychologicalMovementKey, 'repair must preserve the first round movement');
+
+// Execution E proves that a failed repair has an explicit terminal code and
+// never proceeds to intervention or delivery.
+repairAlwaysFails = true;
+const failedRepairExecution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_repair_failure', idempotencyKey: `qa-repair-failure:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_repair_failure:${userId}` });
+await assert.rejects(
+  resolveIntervention(db, userId, 'intention', 'whatsapp', failedRepairExecution.idempotencyKey, failedRepairExecution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${failedRepairExecution.executionId}`, localDate: '2026-10-04' }),
+  /no_approved_intervention_after_repair/,
+);
+const failedRepairRun = db.tables.execution_runs.find(row => row.id === failedRepairExecution.executionId);
+assert.equal(failedRepairRun.status, 'no_approved_intervention');
+assert.equal(failedRepairRun.failure_code, 'no_approved_intervention_after_repair');
+assert.equal(failedRepairRun.intervention_id ?? null, null);
+assert.equal(db.tables.intervention_candidates.filter(row => row.editorial_signature?.executionRunId === failedRepairExecution.executionId).length, 6);
+assert.equal(counts.evolution, 1, 'failed repair must not call Evolution');
+
 console.log(JSON.stringify({ status: 'PASS', execution_run: finalRun.id, planner: 'executed', candidates: db.tables.intervention_candidates.length, intervention: finalRun.intervention_id, composer: 'real', interaction: interaction.id, delivery: delivery.id, provider_message_id: delivery.provider_message_id, openai_boundary_calls: counts.openai, evolution_boundary_calls: counts.evolution }, null, 2));

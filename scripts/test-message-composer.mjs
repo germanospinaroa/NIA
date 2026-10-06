@@ -14,7 +14,10 @@ const content = 'Cuando alguien cuestiona una decisión tuya, prueba esta pausa 
 const first = composeNiaMessage({ content, firstName: 'Adriana', timezone: bogota, userKey: 'user-a', now: utc('2026-10-03T13:00:00.000Z') });
 assert.match(first, /Adriana|Buenos días/);
 assert.match(first, /Cuando alguien cuestiona/);
-assert.ok(first.split('\n\n').length === 3);
+assert.ok(first.split('\n\n').length === 2);
+assert.equal(first.includes('Nos leemos mañana'), false);
+const explicitClosing = composeNiaMessage({ content, firstName: 'Adriana', timezone: bogota, userKey: 'user-a', now: utc('2026-10-03T13:00:00.000Z'), closing: 'Revisa qué dato cambió.' });
+assert.match(explicitClosing, /Revisa qué dato cambió/);
 const closing = closingFor(content, utc('2026-10-03T13:00:00.000Z'), bogota, 'user-a');
 const nextClosing = closingFor(content, utc('2026-10-04T13:00:00.000Z'), bogota, 'user-a', [closing]);
 assert.notEqual(nextClosing, closing);

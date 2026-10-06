@@ -11,9 +11,14 @@ import { planEditorial } from '@/lib/server/editorial-planner';
 import type { EditorialSignature } from '@/lib/editorial-contract';
 import { formulatePsychologicalIntervention } from '@/lib/psychological-contract';
 import { derivePsychologicalProgression, movementKey } from '@/lib/psychological-progression';
+import { buildInterventionBlueprint } from '@/lib/intervention-blueprint';
+import { resolveWithWriterV2 } from '@/lib/server/writer-v2-intervention';
+import { getReceptionSnapshot } from '@/lib/server/reception-progression';
+import { planDailyIntervention, interventionSignature as dailyInterventionSignature, normalizedMessageHash, type InterventionDepth, type InterventionMode, type MovementExposure } from '@/lib/recurrent-daily';
+import { loadDeliveredBufferExposures } from '@/lib/server/approved-message-buffer';
 
 type DbClient = SupabaseClient;
-type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; execution_context?: 'production' | 'qa' | null; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; editorial_idea?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null; situation?: string | null; intention?: string | null; editorial_type?: string | null; insight_id?: string | null; functional_emotion?: string | null; directiveness?: string | null; closing_type?: string | null; action_id?: string | null; editorial_signature?: EditorialSignature | null; editorial_score?: Record<string, unknown> | null; gate_results?: Record<string, unknown> | null; same_day_repetition?: boolean | null; saturation_state?: string | null; regeneration_reason?: string | null; longitudinal_evidence_refs?: string[] | null; slot?: string | null; local_date?: string | null };
+type HistoryRow = { id: string; text: string; function: string; concept: string; angle: string; structure: string; context_key: string | null; desired_change_snapshot: string | null; current_context_snapshot: string | null; audit_status: string; audit_results: Record<string, unknown>; created_at: string; status?: string | null; delivered_at?: string | null; execution_context?: 'production' | 'qa' | null; topic?: string | null; intervention_type?: string | null; depth?: string | null; blocks?: unknown; editorial_strategy?: string | null; editorial_reason?: string | null; editorial_take?: string | null; editorial_idea?: string | null; experience_type?: string | null; territory_key?: string | null; exercise_present?: boolean | null; question_present?: boolean | null; feedback_requested?: boolean | null; situation?: string | null; intention?: string | null; editorial_type?: string | null; insight_id?: string | null; functional_emotion?: string | null; directiveness?: string | null; closing_type?: string | null; action_id?: string | null; editorial_signature?: EditorialSignature | null; editorial_score?: Record<string, unknown> | null; gate_results?: Record<string, unknown> | null; same_day_repetition?: boolean | null; saturation_state?: string | null; regeneration_reason?: string | null; longitudinal_evidence_refs?: string[] | null; slot?: string | null; local_date?: string | null };
 type SignalRow = LearningSignal & { user_id: string };
 
 export class CalibrationRequiredError extends Error {
@@ -25,7 +30,7 @@ function vectorLiteral(embedding: number[]) { return `[${embedding.join(',')}]`;
 
 function candidateFromRow(row: HistoryRow): InterventionCandidate {
   const signature = row.editorial_signature ?? {};
-  return { text: row.text, topic: row.topic ?? undefined, interventionType: row.intervention_type as InterventionCandidate['interventionType'], depth: row.depth as InterventionCandidate['depth'], blocks: Array.isArray(row.blocks) ? row.blocks as InterventionCandidate['blocks'] : undefined, editorialTake: row.editorial_take ?? undefined, editorialIdea: row.editorial_idea ?? undefined, experienceType: row.experience_type as InterventionCandidate['experienceType'], territoryKey: row.territory_key ?? undefined, exercisePresent: row.exercise_present ?? undefined, questionPresent: row.question_present ?? undefined, feedbackRequested: row.feedback_requested ?? undefined, function: row.function as InterventionCandidate['function'], concept: row.concept, conceptKey: canonicalConceptKey(row.concept), angle: row.angle, structure: row.structure as InterventionCandidate['structure'], editorialType: row.editorial_type as InterventionCandidate['editorialType'], situation: row.situation ?? undefined, intention: row.intention ?? undefined, insightId: row.insight_id ?? undefined, functionalEmotion: row.functional_emotion as InterventionCandidate['functionalEmotion'], directiveness: row.directiveness as InterventionCandidate['directiveness'], closingType: row.closing_type as InterventionCandidate['closingType'], actionId: row.action_id ?? undefined, longitudinalEvidenceRefs: row.longitudinal_evidence_refs ?? undefined, mechanismId: signature.mechanismId ?? undefined, mechanismConfidence: signature.mechanismConfidence as InterventionCandidate['mechanismConfidence'], interventionPurpose: signature.interventionPurpose ?? undefined, psychologicalMove: signature.psychologicalMove ?? undefined, expectedMovement: signature.expectedMovement ?? undefined, takeaway: signature.takeaway ?? undefined, optionalAction: signature.optionalAction ?? null, whyNow: signature.whyNow ?? undefined, riskFlags: signature.riskFlags ?? undefined, editorialScore: row.editorial_score as InterventionCandidate['editorialScore'], gateResults: row.gate_results as InterventionCandidate['gateResults'], saturationState: row.saturation_state as InterventionCandidate['saturationState'] };
+  return { text: row.text, topic: row.topic ?? undefined, interventionType: row.intervention_type as InterventionCandidate['interventionType'], depth: row.depth as InterventionCandidate['depth'], blocks: Array.isArray(row.blocks) ? row.blocks as InterventionCandidate['blocks'] : undefined, editorialTake: row.editorial_take ?? undefined, editorialIdea: row.editorial_idea ?? undefined, experienceType: row.experience_type as InterventionCandidate['experienceType'], territoryKey: row.territory_key ?? undefined, exercisePresent: row.exercise_present ?? undefined, questionPresent: row.question_present ?? undefined, feedbackRequested: row.feedback_requested ?? undefined, function: row.function as InterventionCandidate['function'], concept: row.concept, conceptKey: canonicalConceptKey(row.concept), angle: row.angle, structure: row.structure as InterventionCandidate['structure'], editorialType: row.editorial_type as InterventionCandidate['editorialType'], situation: row.situation ?? undefined, intention: row.intention ?? undefined, insightId: row.insight_id ?? undefined, functionalEmotion: row.functional_emotion as InterventionCandidate['functionalEmotion'], directiveness: row.directiveness as InterventionCandidate['directiveness'], closingType: row.closing_type as InterventionCandidate['closingType'], actionId: row.action_id ?? undefined, longitudinalEvidenceRefs: row.longitudinal_evidence_refs ?? undefined, mechanismId: signature.mechanismId ?? undefined, mechanismConfidence: signature.mechanismConfidence as InterventionCandidate['mechanismConfidence'], interventionPurpose: signature.interventionPurpose ?? undefined, psychologicalMove: signature.psychologicalMove ?? undefined, expectedMovement: signature.expectedMovement ?? undefined, takeaway: signature.takeaway ?? undefined, optionalAction: signature.optionalAction ?? null, whyNow: signature.whyNow ?? undefined, riskFlags: signature.riskFlags ?? undefined, interventionMode: signature.interventionMode ?? undefined, interventionSignature: signature.interventionSignature ?? undefined, interventionDepth: signature.depth ?? undefined, editorialScore: row.editorial_score as InterventionCandidate['editorialScore'], gateResults: row.gate_results as InterventionCandidate['gateResults'], saturationState: row.saturation_state as InterventionCandidate['saturationState'] };
 }
 
 function relevantFallback(history: HistoryRow[], contextKey: ContextKey, currentContext: string, feedbackGoal?: InterventionBrief['feedbackGoal']): HistoryRow | null {
@@ -73,7 +78,7 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   void contextKey;
   const [{ data: profile, error: profileError }, { data: history }, { data: signals }, { data: contexts }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('interventions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(30),
+    supabase.from('interventions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(500),
     supabase.from('learning_signals').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
     supabase.from('context_history').select('context_original,domain,status,created_at').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(20),
   ]);
@@ -110,6 +115,7 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
     successfulPatterns: [],
     rejectedPatterns: [],
     learningSignals: [],
+    confirmedEvidence: [activeContext, ...(contexts ?? []).map(row => row.context_original).filter(Boolean)],
     preferredLanguage: profile.learning_profile?.preferredLanguage ?? [],
     forbiddenLanguage: profile.learning_profile?.forbiddenLanguage ?? [],
     voiceStyle: profile.voice_style,
@@ -125,13 +131,9 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   const basePsychologicalContract = formulatePsychologicalIntervention({ currentContext: activeContext, desiredChange, relevantSituations: appliedBrief.relevantSituations, recurringPatterns: appliedBrief.recurringPatterns, learningSignals: effectiveSignals });
   const progressionHistory = activeRows.map(row => {
     const signature = row.editorial_signature ?? {};
-    return { id: row.id, topic: row.topic, mechanismId: signature.mechanismId, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: row.editorial_idea ?? signature.editorialIdea, concept: row.concept, angle: row.angle, createdAt: row.created_at };
+    return { id: row.id, topic: row.topic, mechanismId: signature.mechanismId, psychologicalMovementKey: signature.psychologicalMovementKey, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: row.editorial_idea ?? signature.editorialIdea, concept: row.concept, angle: row.angle, text: row.text, createdAt: row.created_at };
   });
-  const psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: basePsychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory });
-  // The progression decides the functional phase. The psychological contract
-  // must describe that same phase before the LLM is called; otherwise the
-  // candidate can be generated for phase N while the persisted contract still
-  // describes phase N-1.
+  const psychologicalProgression = derivePsychologicalProgression({ goal: desiredChange, pattern: activeContext, mechanismId: basePsychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory, confirmedEvidence: appliedBrief.confirmedEvidence });
   appliedBrief.psychologicalProgression = psychologicalProgression;
   appliedBrief.psychologicalContract = formulatePsychologicalIntervention({
     currentContext: activeContext,
@@ -141,7 +143,33 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
     learningSignals: effectiveSignals,
     preferredMovement: psychologicalProgression.next_recommended_movement,
   });
+  const historicalMovementExposures: MovementExposure[] = activeRows
+    .filter(row => row.audit_status === 'approved' && (row.status === 'delivered' || Boolean(row.delivered_at)))
+    .map(row => {
+      const signature = row.editorial_signature ?? {};
+      const canonicalMovement = typeof signature.psychologicalMovementKey === 'string' ? signature.psychologicalMovementKey : movementKey({ mechanismId: signature.mechanismId, movement: signature.psychologicalMove, takeaway: signature.takeaway, editorialIdea: signature.editorialIdea, concept: row.concept, angle: row.angle });
+      const mode: InterventionMode = signature.interventionMode === 'introduce' || signature.interventionMode === 'deepen' || signature.interventionMode === 'apply' || signature.interventionMode === 'contrast' || signature.interventionMode === 'anticipate' || signature.interventionMode === 'reinforce' || signature.interventionMode === 'integrate' || signature.interventionMode === 'transfer' || signature.interventionMode === 'evidence' || signature.interventionMode === 'reflect_or_observe' ? signature.interventionMode : 'introduce';
+      const depth: InterventionDepth = signature.depth === 'foundational' || signature.depth === 'developed' || signature.depth === 'advanced' ? signature.depth : 'foundational';
+      const contextUsed = [row.current_context_snapshot, row.situation].filter((value): value is string => Boolean(value));
+      const planLike = { canonicalMovement: canonicalMovement ?? `${signature.mechanismId ?? 'unknown'}:unknown`, interventionMode: mode, angle: signature.angle ?? row.angle, depth, contextUsed };
+      return { canonicalMovement: planLike.canonicalMovement, deliveredAt: row.delivered_at ?? row.created_at, takeaway: signature.takeaway ?? row.editorial_take ?? row.editorial_idea ?? '', interventionMode: mode, angle: planLike.angle, depth, contextUsed, message: row.text, normalizedMessageHash: normalizedMessageHash(row.text), interventionSignature: typeof signature.interventionSignature === 'string' ? signature.interventionSignature : dailyInterventionSignature(planLike) };
+    });
+  const deliveredBufferExposures = await loadDeliveredBufferExposures(supabase, userId);
+  const seenExposureSignatures = new Set<string>();
+  const seenExposureHashes = new Set<string>();
+  const movementExposures: MovementExposure[] = [];
+  for (const exposure of [...historicalMovementExposures, ...deliveredBufferExposures]) {
+    if (seenExposureSignatures.has(exposure.interventionSignature) || seenExposureHashes.has(exposure.normalizedMessageHash)) continue;
+    seenExposureSignatures.add(exposure.interventionSignature);
+    seenExposureHashes.add(exposure.normalizedMessageHash);
+    movementExposures.push(exposure);
+  }
+  appliedBrief.movementExposures = movementExposures;
+  const dailyPlan = planDailyIntervention({ goal: desiredChange, context: activeContext, confirmedEvidence: appliedBrief.confirmedEvidence, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory, exposures: movementExposures, recentTakeaways: activeRows.slice(0, 10).map(row => row.editorial_take).filter((value): value is string => Boolean(value)) });
+  appliedBrief.dailyPlan = dailyPlan.selected;
   appliedBrief.editorialPlan = planEditorial({ desiredChange, currentContext: activeContext, communicationPreference: appliedBrief.communicationPreference, memory: editorialMemory, relevantTopics, feedbackGoal: appliedBrief.feedbackGoal, rejectedPatterns: appliedBrief.rejectedPatterns, psychologicalProgression: appliedBrief.psychologicalProgression });
+  appliedBrief.interventionBlueprint = buildInterventionBlueprint(appliedBrief);
+  appliedBrief.sema = appliedBrief.interventionBlueprint?.sema ?? null;
   const calibration = calibrationProfile;
   const recalibratedRecently = calibration?.status === 'resolved' && (calibration.reason === 'context_changed' || calibration.reason === 'desired_change_changed') && typeof calibration.resolved_at === 'string' && Date.now() - new Date(calibration.resolved_at).getTime() < 24 * 60 * 60 * 1000;
   if (recalibratedRecently) appliedBrief.generationConstraints = [...new Set([...(appliedBrief.generationConstraints ?? []), 'Este contexto u objetivo acaba de ser confirmado. Prioriza el dato nuevo y evita repetir el concepto, ángulo o estructura de intervenciones anteriores.'])];
@@ -154,12 +182,13 @@ async function persistCalibrationState(supabase: DbClient, userId: string, profi
   if (error) throw new Error('calibration_state_save_failed');
 }
 
-function retryBrief(brief: InterventionBrief, attempt: number) {
+function retryBrief(brief: InterventionBrief, attempt: number, rejectionReasons: string[] = []) {
   if (attempt === 0) return brief;
   const constraints = [...(brief.generationConstraints ?? []), 'No cambies el desired_change ni inventes una dirección nueva.'];
   if (attempt >= 1) constraints.push('Ancla cada candidato a una situación concreta confirmada por la usuaria y usa detalles disponibles.');
   if (attempt >= 1 && brief.generationConstraints?.some(value => value.includes('acaba de ser confirmado'))) constraints.push('No repitas el concepto, ángulo ni estructura de las intervenciones anteriores; busca una formulación realmente distinta dentro del nuevo contexto.');
   if (attempt >= 2) constraints.push('Prioriza un comportamiento observable expresado por la usuaria; si no existe, no lo inventes.');
+  if (rejectionReasons.length) constraints.push(`Repara únicamente estos problemas detectados en la ronda anterior, sin cambiar el movimiento psicológico ni el blueprint: ${[...new Set(rejectionReasons)].slice(0, 12).join(' | ')}`);
   return { ...brief, generationConstraints: [...new Set(constraints)] };
 }
 
@@ -198,32 +227,34 @@ export function alignCandidateToPsychologicalContract(candidate: InterventionCan
   };
 }
 
-function psychologicalSignature(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract'], progression?: InterventionBrief['psychologicalProgression']) {
-  const sourceMechanism = contract?.mechanism_id ?? candidate.mechanismId ?? null;
-  const sourceMovement = contract?.psychological_move ?? candidate.psychologicalMove ?? candidate.movement ?? null;
+export function psychologicalSignature(candidate: InterventionCandidate, contract?: InterventionBrief['psychologicalContract'], progression?: InterventionBrief['psychologicalProgression']) {
+  const canonicalTarget = progression?.next_recommended_movement ?? candidate.interventionBlueprint?.movement ?? candidate.movement ?? candidate.psychologicalMove;
   return {
     psychologicalContract: contract ?? null,
-    mechanismId: sourceMechanism,
-    mechanismConfidence: contract?.mechanism_confidence ?? candidate.mechanismConfidence ?? null,
-    interventionPurpose: contract?.intervention_purpose ?? candidate.interventionPurpose ?? null,
-    psychologicalMove: sourceMovement,
-    expectedMovement: contract?.expected_movement ?? candidate.expectedMovement ?? null,
-    takeaway: candidate.takeaway ?? contract?.takeaway ?? null,
-    optionalAction: candidate.optionalAction ?? contract?.optional_action ?? null,
-    whyNow: contract?.why_now ?? candidate.whyNow ?? null,
-    riskFlags: contract?.risk_flags ?? candidate.riskFlags ?? [],
-    psychologicalMovementKey: movementKey({ mechanismId: sourceMechanism, movement: sourceMovement }),
+    mechanismId: candidate.mechanismId ?? null,
+    mechanismConfidence: candidate.mechanismConfidence ?? null,
+    interventionPurpose: candidate.interventionPurpose ?? null,
+    psychologicalMove: candidate.psychologicalMove ?? null,
+    expectedMovement: candidate.expectedMovement ?? null,
+    takeaway: candidate.takeaway ?? null,
+    optionalAction: candidate.optionalAction ?? null,
+    whyNow: candidate.whyNow ?? null,
+    riskFlags: candidate.riskFlags ?? [],
+    psychologicalMovementKey: movementKey({ mechanismId: candidate.mechanismId, psychologicalMovementKey: canonicalTarget, movement: canonicalTarget, takeaway: candidate.takeaway, editorialIdea: candidate.editorialIdea, concept: candidate.concept, angle: candidate.angle }),
     psychologicalProgression: progression ?? null,
+    interventionBlueprint: candidate.interventionBlueprint ?? null,
+    sema: candidate.sema ?? null,
+    blueprintAudit: candidate.blueprintAudit ?? null,
   };
 }
 
-async function persistRejectedCandidates(supabase: DbClient, userId: string, candidates: InterventionCandidate[], interventionId: string | null, executionContext: 'production' | 'qa' = 'production', contract?: InterventionBrief['psychologicalContract'], executionRunId?: string | null, progression?: InterventionBrief['psychologicalProgression']) {
-  const rows = candidates.map(candidate => ({ intervention_id: interventionId, user_id: userId, execution_context: executionContext, candidate_text: candidate.text, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, topic: candidate.topic ?? null, intervention_type: candidate.interventionType ?? null, depth: candidate.depth ?? null, blocks: candidate.blocks ?? null, editorial_take: candidate.editorialTake ?? null, editorial_idea: candidate.editorialIdea ?? null, experience_type: candidate.experienceType ?? null, territory_key: candidate.territoryKey ?? null, exercise_present: candidate.exercisePresent ?? candidate.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: candidate.questionPresent ?? candidate.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: candidate.feedbackRequested ?? candidate.experienceType === 'feedback_request', situation: candidate.situation ?? null, intention: candidate.intention ?? null, editorial_type: candidate.editorialType ?? null, insight_id: candidate.insightId ?? null, functional_emotion: candidate.functionalEmotion ?? null, directiveness: candidate.directiveness ?? null, closing_type: candidate.closingType ?? null, action_id: candidate.actionId ?? null, editorial_signature: { executionRunId: executionRunId ?? null, topic: candidate.topic, situation: candidate.situation, intention: candidate.intention, interventionType: candidate.editorialType, insightId: candidate.insightId, editorialTake: candidate.editorialTake, angle: candidate.angle, experienceType: candidate.experienceType, functionalEmotion: candidate.functionalEmotion, directiveness: candidate.directiveness, closingType: candidate.closingType, actionId: candidate.actionId, territoryKey: candidate.territoryKey, structure: candidate.structure, depth: candidate.depth, ...psychologicalSignature(candidate, contract, progression) }, editorial_score: candidate.editorialScore ?? null, gate_results: candidate.gateResults ?? null, same_day_repetition: candidate.sameDayRepetition ?? null, saturation_state: candidate.saturationState ?? null, regeneration_reason: candidate.regenerationReason ?? null, longitudinal_evidence_refs: candidate.longitudinalEvidenceRefs ?? null, selected_candidate: candidate.audit?.approved ?? false, audit_results: candidate.audit ?? { status: 'rejected', approved: false, reasons: ['generation_failed'] }, rejection_reason: candidate.audit?.approved ? null : (candidate.audit?.reasons ?? ['generation_failed']).join(',') }));
+async function persistRejectedCandidates(supabase: DbClient, userId: string, candidates: InterventionCandidate[], interventionId: string | null, executionContext: 'production' | 'qa' = 'production', contract?: InterventionBrief['psychologicalContract'], executionRunId?: string | null, progression?: InterventionBrief['psychologicalProgression'], selectedCandidate?: InterventionCandidate | null) {
+  const rows = candidates.map(candidate => ({ intervention_id: interventionId, user_id: userId, execution_context: executionContext, candidate_text: candidate.text, function: candidate.function, concept: candidate.concept, angle: candidate.angle, structure: candidate.structure, topic: candidate.topic ?? null, intervention_type: candidate.interventionType ?? null, depth: candidate.depth ?? null, blocks: candidate.blocks ?? null, editorial_take: candidate.editorialTake ?? null, editorial_idea: candidate.editorialIdea ?? null, experience_type: candidate.experienceType ?? null, territory_key: candidate.territoryKey ?? null, exercise_present: candidate.exercisePresent ?? candidate.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: candidate.questionPresent ?? candidate.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: candidate.feedbackRequested ?? candidate.experienceType === 'feedback_request', situation: candidate.situation ?? null, intention: candidate.intention ?? null, editorial_type: candidate.editorialType ?? null, insight_id: candidate.insightId ?? null, functional_emotion: candidate.functionalEmotion ?? null, directiveness: candidate.directiveness ?? null, closing_type: candidate.closingType ?? null, action_id: candidate.actionId ?? null, editorial_signature: { executionRunId: executionRunId ?? null, topic: candidate.topic, situation: candidate.situation, intention: candidate.intention, interventionType: candidate.editorialType, insightId: candidate.insightId, editorialTake: candidate.editorialTake, angle: candidate.angle, experienceType: candidate.experienceType, functionalEmotion: candidate.functionalEmotion, directiveness: candidate.directiveness, closingType: candidate.closingType, actionId: candidate.actionId, territoryKey: candidate.territoryKey, structure: candidate.structure, depth: candidate.depth, ...psychologicalSignature(candidate, contract, progression) }, editorial_score: candidate.editorialScore ?? null, gate_results: candidate.gateResults ?? null, same_day_repetition: candidate.sameDayRepetition ?? null, saturation_state: candidate.saturationState ?? null, regeneration_reason: candidate.regenerationReason ?? null, longitudinal_evidence_refs: candidate.longitudinalEvidenceRefs ?? null, selected_candidate: candidate === selectedCandidate, audit_results: candidate.audit ?? { status: 'rejected', approved: false, reasons: ['generation_failed'] }, rejection_reason: candidate.audit?.approved ? null : (candidate.audit?.reasons ?? ['generation_failed']).join(',') }));
   const { error } = await supabase.from('intervention_candidates').insert(rows);
   if (error) throw new Error('candidate_save_failed');
 }
 
-export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean; slot?: string | null; localDate?: string | null; executionContext?: 'production' | 'qa'; allowRelevantFallback?: boolean }): Promise<InterventionResult> {
+export async function resolveIntervention(supabase: DbClient, userId: string, contextKey: ContextKey, channel: 'web' | 'whatsapp' = 'web', idempotencyKey?: string, execution?: ExecutionContext, options?: { maxGenerationAttempts?: number; disableTechnicalGenerationRetry?: boolean; slot?: string | null; localDate?: string | null; executionContext?: 'production' | 'qa'; allowRelevantFallback?: boolean; writerVersion?: 'legacy' | 'v2' }): Promise<InterventionResult> {
   if (execution) {
     await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'intervention_requested', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { contextKey, channel, idempotencyKey: idempotencyKey ?? null } }));
     await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'generating' }));
@@ -246,6 +277,10 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     throw new CalibrationRequiredError(calibration);
   }
   if (!brief.psychologicalContract?.sufficient) throw new Error('insufficient_intervention_basis');
+  if (options?.writerVersion === 'v2') {
+    const reception = await getReceptionSnapshot(supabase, userId, channel, new Date(), typeof profile.timezone === 'string' ? profile.timezone : null);
+    return resolveWithWriterV2({ supabase, userId, contextKey, channel, idempotencyKey, execution, executionContext: options.executionContext, slot: options.slot, localDate: options.localDate, brief, reception });
+  }
   if (!llmConfigured()) {
     if (execution?.executionContext === 'qa') {
       const error = new Error('llm_not_configured');
@@ -263,7 +298,8 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
   const configuredMaxAttempts = brief.feedbackGoal === 'specific_context' || brief.generationConstraints?.some(value => value.includes('acaba de ser confirmado')) ? interventionConfig.maxGenerationRounds : 1;
   const maxAttempts = options?.maxGenerationAttempts ?? configuredMaxAttempts;
   for (let attempt = 0; attempt < maxAttempts && !selected; attempt += 1) {
-    const attemptBrief = retryBrief(brief, attempt);
+    const previousRejectionReasons = attempt > 0 ? candidates.flatMap(candidate => candidate.audit?.reasons ?? []) : [];
+    const attemptBrief = retryBrief(brief, attempt, previousRejectionReasons);
     const generationAttempt = execution ? await startGenerationAttempt(supabase, execution, { attemptNumber: attempt + 1, attemptType: attempt === 0 ? 'generation' : 'quality_retry', provider: 'openai', model: llmModel() }) : null;
     if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'generation_started', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, attemptType: attempt === 0 ? 'generation' : 'quality_retry' } }));
     let generated: InterventionCandidate[];
@@ -272,7 +308,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       const generationStarted = Date.now();
       const generation = await generateCandidatesWithLLMWithMeta(attemptBrief, { maxTechnicalAttempts: options?.disableTechnicalGenerationRetry ? 1 : undefined });
       generationUsage = { inputTokens: generation.usage.prompt_tokens, outputTokens: generation.usage.completion_tokens, totalTokens: generation.usage.total_tokens };
-      generated = generation.candidates.map(candidate => ({ ...candidate, conceptKey: canonicalConceptKey(candidate.concept) }));
+      generated = generation.candidates.map(candidate => ({ ...alignCandidateToPsychologicalContract(candidate, attemptBrief.psychologicalContract), conceptKey: canonicalConceptKey(candidate.concept) }));
       if (execution) {
         await observe(supabase, () => recordExecutionStage(supabase, execution, 'generation', { duration_ms: Date.now() - generationStarted, candidate_count: generation.candidates.length, technical_retries: generation.technicalRetries, technical_failures: generation.technicalFailures, attempt: attempt + 1 }));
         await recordSuccessfulRetryFailures(supabase, execution, generation.technicalFailures, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'generation' });
@@ -298,8 +334,7 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     const auditStarted = Date.now();
     for (const candidate of generated) {
       if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_generated', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { attempt: attempt + 1, candidateIndex: attemptCandidates.length } }));
-      const normalizedCandidate = alignCandidateToPsychologicalContract(candidate, attemptBrief.psychologicalContract);
-    const deterministic = auditCandidate(normalizedCandidate, {
+      const deterministic = auditCandidate(candidate, {
         ...attemptBrief,
         recentEditorialIdeas: [
           ...(attemptBrief.recentEditorialIdeas ?? []),
@@ -307,14 +342,14 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
         ],
       });
       if (!deterministic.approved) {
-        normalizedCandidate.audit = deterministic;
-        attemptCandidates.push(normalizedCandidate);
+        candidate.audit = deterministic;
+        attemptCandidates.push(candidate);
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'deterministic', reasons: deterministic.reasons } }));
         continue;
       }
       let embedding: number[];
       try {
-        const embeddingResult = await createEmbeddingWithMeta(normalizedCandidate.text);
+        const embeddingResult = await createEmbeddingWithMeta(candidate.text);
         embedding = embeddingResult.embedding;
         await recordProviderSnapshots(supabase, execution, [embeddingResult.usage ?? { completion_tokens: 0, cached_input_tokens: 0, cache_write_tokens: 0 }], { generationAttemptId: generationAttempt?.id, provider: 'openai', model: embeddingModel(), operation: 'embedding', latencyMs: embeddingResult.latencyMs, status: 'success' });
       } catch (error) {
@@ -337,37 +372,37 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
       let semanticJudge;
       try {
         const semanticJudgeStarted = Date.now();
-        const semanticExecution = await judgeSemanticRelationshipsWithMeta(normalizedCandidate, attemptBrief, activeMatches as Parameters<typeof judgeSemanticRelationshipsWithMeta>[2]);
+        const semanticExecution = await judgeSemanticRelationshipsWithMeta(candidate, attemptBrief, activeMatches as Parameters<typeof judgeSemanticRelationshipsWithMeta>[2]);
         semanticJudge = semanticExecution.result;
         await recordSuccessfulRetryFailures(supabase, execution, semanticExecution.technicalFailures, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge' });
         await recordProviderSnapshots(supabase, execution, semanticExecution.callUsages, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge', latencyMs: semanticExecution.latencyMs || Date.now() - semanticJudgeStarted, status: 'success' });
       } catch (error) {
         await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'semantic_judge' });
         recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'semantic_judge' });
-        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'semantic_judge_unavailable'], hard_failures: [...deterministic.hard_failures, 'semantic_judge_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, semantic_judge_ran: false }, similarInterventions: [], similarity: 0, semanticStatus: 'fail', deterministic };
-        attemptCandidates.push(normalizedCandidate);
+        candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'semantic_judge_unavailable'], hard_failures: [...deterministic.hard_failures, 'semantic_judge_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, semantic_judge_ran: false }, similarInterventions: [], similarity: 0, semanticStatus: 'fail', deterministic };
+        attemptCandidates.push(candidate);
         continue;
       }
-      const semantic = auditSemanticCandidate(normalizedCandidate, activeMatches as Parameters<typeof auditSemanticCandidate>[1], semanticJudge);
+      const semantic = auditSemanticCandidate(candidate, activeMatches as Parameters<typeof auditSemanticCandidate>[1], semanticJudge);
       if (!semantic.approved) {
-        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, ...semantic.reasons], hard_failures: [...deterministic.hard_failures, ...semantic.hard_failures], warnings: [...deterministic.warnings, ...semantic.warnings], checks: { ...deterministic.checks, ...semantic.checks }, similarInterventions: semantic.similarInterventions, similarity: semantic.similarity, semanticStatus: semantic.semanticStatus, similarityBand: semantic.similarityBand, semanticJudge: semantic.semanticJudge, deterministic, semantic };
-        attemptCandidates.push(normalizedCandidate);
+        candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, ...semantic.reasons], hard_failures: [...deterministic.hard_failures, ...semantic.hard_failures], warnings: [...deterministic.warnings, ...semantic.warnings], checks: { ...deterministic.checks, ...semantic.checks }, similarInterventions: semantic.similarInterventions, similarity: semantic.similarity, semanticStatus: semantic.semanticStatus, similarityBand: semantic.similarityBand, semanticJudge: semantic.semanticJudge, deterministic, semantic };
+        attemptCandidates.push(candidate);
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'semantic', reasons: semantic.reasons, similarity: semantic.similarity } }));
         continue;
       }
       try {
-        const llmAudit = await auditCandidateWithLLMWithMeta(normalizedCandidate, attemptBrief, activeMatches as Parameters<typeof auditCandidateWithLLMWithMeta>[2]);
+        const llmAudit = await auditCandidateWithLLMWithMeta(candidate, attemptBrief, activeMatches as Parameters<typeof auditCandidateWithLLMWithMeta>[2]);
         await recordSuccessfulRetryFailures(supabase, execution, llmAudit.technicalFailures, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit' });
         await recordProviderSnapshots(supabase, execution, llmAudit.callUsages, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit', latencyMs: llmAudit.latencyMs, status: 'success' });
-        enrichAudit(normalizedCandidate, deterministic, semantic, llmAudit.audit);
+        enrichAudit(candidate, deterministic, semantic, llmAudit.audit);
         if (!llmAudit.audit.approved && execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'llm', reasons: llmAudit.audit.reasons } }));
       } catch (error) {
         await recordFailedProviderAttempts(supabase, execution, error, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: llmModel(), operation: 'llm_audit' });
         recordInterventionGenerationFailure(error, { userId, contextKey, stage: 'llm_audit' });
-        normalizedCandidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable'], hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
+        candidate.audit = { ...deterministic, status: 'rejected', approved: false, reasons: [...deterministic.reasons, 'llm_audit_unavailable'], hard_failures: [...deterministic.hard_failures, 'llm_audit_unavailable'], warnings: deterministic.warnings, checks: { ...deterministic.checks, llm_approved: false }, similarInterventions: [], similarity: 0, deterministic };
         if (execution) await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { layer: 'llm', reasons: ['llm_audit_unavailable'] } }));
       }
-      attemptCandidates.push(normalizedCandidate);
+      attemptCandidates.push(candidate);
     }
     if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'completed', candidateCount: generated.length, approvedCandidateCount: attemptCandidates.filter(candidate => candidate.audit?.approved).length, rejectionCount: attemptCandidates.filter(candidate => !candidate.audit?.approved).length, usage: generationUsage });
     if (execution) await observe(supabase, () => recordExecutionStage(supabase, execution, 'auditing', { duration_ms: Date.now() - auditStarted, attempt: attempt + 1, candidate_count: attemptCandidates.length, approved_count: attemptCandidates.filter(candidate => candidate.audit?.approved).length, rejected_count: attemptCandidates.filter(candidate => !candidate.audit?.approved).length }));
@@ -377,10 +412,11 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
   if (!selected) {
     await persistRejectedCandidates(supabase, userId, candidates, null, options?.executionContext ?? 'production', brief.psychologicalContract, execution?.executionId ?? null, brief.psychologicalProgression);
     if (execution) {
-      await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'no_approved_intervention', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { candidateCount: candidates.length, retries: Math.max(0, maxAttempts - 1), rejectionReasons: candidates.flatMap(candidate => candidate.audit?.reasons ?? []), candidateRejections: candidates.map((candidate, index) => ({ index, approved: candidate.audit?.approved === true, rejectionReason: candidate.audit?.reasons ?? ['generation_failed'] })) } }));
-      await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'no_approved_intervention', failure: new Error('no_approved_intervention'), candidateCount: candidates.length, retryCount: Math.max(0, maxAttempts - 1) }));
+      const failureCode = maxAttempts > 1 ? 'no_approved_intervention_after_repair' : 'no_approved_intervention';
+      await observe(supabase, () => recordEvent(supabase, { userId, eventType: 'no_approved_intervention', entityType: 'execution_run', entityId: execution.executionId, executionRunId: execution.executionId, metadata: { candidateCount: candidates.length, retries: Math.max(0, maxAttempts - 1), failureCode, rejectionReasons: candidates.flatMap(candidate => candidate.audit?.reasons ?? []), candidateRejections: candidates.map((candidate, index) => ({ index, approved: candidate.audit?.approved === true, rejectionReason: candidate.audit?.reasons ?? ['generation_failed'] })) } }));
+      await observe(supabase, () => updateExecutionRun(supabase, execution, { status: 'no_approved_intervention', failure: new Error(failureCode), candidateCount: candidates.length, retryCount: Math.max(0, maxAttempts - 1) }));
     }
-    throw new Error('no_approved_intervention');
+    throw new Error(maxAttempts > 1 ? 'no_approved_intervention_after_repair' : 'no_approved_intervention');
   }
   const persistenceStarted = Date.now();
   let selectedEmbedding: number[];
@@ -394,12 +430,12 @@ export async function resolveIntervention(supabase: DbClient, userId: string, co
     throw new Error('semantic_audit_unavailable');
   }
   const editorialSignature = { executionRunId: execution?.executionId ?? null, topic: selected.topic, situation: selected.situation ?? brief.currentContext, intention: selected.intention ?? brief.desiredChange, interventionType: selected.editorialType, insightId: selected.insightId, editorialTake: selected.editorialTake, angle: selected.angle, experienceType: selected.experienceType, functionalEmotion: selected.functionalEmotion, directiveness: selected.directiveness, closingType: selected.closingType, actionId: selected.actionId, territoryKey: selected.territoryKey ?? selected.topic, structure: selected.structure, depth: selected.depth, ...psychologicalSignature(selected, brief.psychologicalContract, brief.psychologicalProgression) };
-  const { data: intervention, error: interventionError } = await supabase.from('interventions').insert({ user_id: userId, execution_context: options?.executionContext ?? execution?.executionContext ?? 'production', text: selected.text, function: selected.function, concept: selected.concept, angle: selected.angle, structure: selected.structure, topic: selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, intervention_type: selected.interventionType ?? brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: selected.depth ?? brief.editorialPlan?.recommended_depth ?? null, blocks: selected.blocks ?? null, editorial_take: selected.editorialTake ?? null, editorial_idea: selected.editorialIdea ?? null, experience_type: selected.experienceType ?? brief.editorialPlan?.recommended_experience_type ?? null, territory_key: selected.territoryKey ?? selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, exercise_present: selected.exercisePresent ?? selected.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: selected.questionPresent ?? selected.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: selected.feedbackRequested ?? selected.experienceType === 'feedback_request', situation: selected.situation ?? brief.currentContext, intention: selected.intention ?? brief.desiredChange, editorial_type: selected.editorialType ?? null, insight_id: selected.insightId ?? null, functional_emotion: selected.functionalEmotion ?? null, directiveness: selected.directiveness ?? null, closing_type: selected.closingType ?? null, action_id: selected.actionId ?? null, editorial_signature: editorialSignature, editorial_score: selected.editorialScore ?? null, gate_results: selected.gateResults ?? null, same_day_repetition: selected.sameDayRepetition ?? false, saturation_state: selected.saturationState ?? null, regeneration_reason: selected.regenerationReason ?? null, longitudinal_evidence_refs: selected.longitudinalEvidenceRefs ?? null, slot: options?.slot ?? null, local_date: options?.localDate ?? null, editorial_strategy: brief.editorialPlan?.strategy ?? 'continue_topic', editorial_reason: brief.editorialPlan?.topic_reason ?? null, context_key: contextKey, desired_change_snapshot: brief.desiredChange, current_context_snapshot: brief.currentContext, audit_status: 'approved', audit_results: selected.audit, channel, status: 'created', idempotency_key: idempotencyKey ?? null, embedding: vectorLiteral(selectedEmbedding) }).select('*').single();
+  const { data: intervention, error: interventionError } = await supabase.from('interventions').insert({ user_id: userId, execution_context: options?.executionContext ?? execution?.executionContext ?? 'production', text: selected.text, function: selected.function, concept: selected.concept, angle: selected.angle, structure: selected.structure, topic: selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, intervention_type: selected.interventionType ?? brief.editorialPlan?.preferred_or_recommended_intervention_type ?? null, depth: selected.depth ?? brief.editorialPlan?.recommended_depth ?? null, blocks: selected.blocks ?? null, editorial_take: selected.editorialTake ?? null, editorial_idea: selected.editorialIdea ?? null, experience_type: selected.experienceType ?? brief.editorialPlan?.recommended_experience_type ?? null, territory_key: selected.territoryKey ?? selected.topic ?? brief.editorialPlan?.recommended_topic ?? null, exercise_present: selected.exercisePresent ?? selected.blocks?.some(block => block.type === 'step' || block.type === 'tool') ?? false, question_present: selected.questionPresent ?? selected.blocks?.some(block => block.type === 'question') ?? false, feedback_requested: selected.feedbackRequested ?? selected.experienceType === 'feedback_request', situation: selected.situation ?? brief.currentContext, intention: selected.intention ?? brief.desiredChange, editorial_type: selected.editorialType ?? null, insight_id: selected.insightId ?? null, functional_emotion: selected.functionalEmotion ?? null, directiveness: selected.directiveness ?? null, closing_type: selected.closingType ?? null, action_id: selected.actionId ?? null, editorial_signature: editorialSignature, editorial_score: selected.editorialScore ?? null, gate_results: selected.gateResults ?? null, same_day_repetition: selected.sameDayRepetition ?? false, saturation_state: selected.saturationState ?? null, regeneration_reason: selected.regenerationReason ?? null, longitudinal_evidence_refs: selected.longitudinalEvidenceRefs ?? null, slot: options?.slot ?? null, local_date: options?.localDate ?? null, editorial_strategy: brief.editorialPlan?.strategy ?? 'continue_topic', editorial_reason: brief.editorialPlan?.topic_reason ?? null, context_key: contextKey, desired_change_snapshot: brief.desiredChange, current_context_snapshot: brief.currentContext, normalized_message_hash: normalizedMessageHash(selected.text), audit_status: 'approved', audit_results: selected.audit, channel, status: 'created', idempotency_key: idempotencyKey ?? null, embedding: vectorLiteral(selectedEmbedding) }).select('*').single();
   if (interventionError || !intervention) {
     if (idempotencyKey) { const { data: winner } = await supabase.from('interventions').select('*').eq('user_id', userId).eq('idempotency_key', idempotencyKey).maybeSingle(); if (winner) { const existing = candidateFromRow(winner as HistoryRow); return { intervention: existing, interventionId: winner.id, feedback: feedbackFor(existing), candidates: [] }; } }
     throw new Error('intervention_save_failed');
   }
-  await persistRejectedCandidates(supabase, userId, candidates, intervention.id, options?.executionContext ?? execution?.executionContext ?? 'production', brief.psychologicalContract, execution?.executionId ?? null, brief.psychologicalProgression);
+  await persistRejectedCandidates(supabase, userId, candidates, intervention.id, options?.executionContext ?? execution?.executionContext ?? 'production', brief.psychologicalContract, execution?.executionId ?? null, brief.psychologicalProgression, selected);
   await supabase.from('interventions').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', intervention.id).eq('user_id', userId);
   if (execution) {
     await observe(supabase, () => recordExecutionStage(supabase, execution, 'selection_persistence', { duration_ms: Date.now() - persistenceStarted, selected: true, intervention_id: intervention.id }));

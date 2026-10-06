@@ -42,6 +42,8 @@ export type EditorialSignature = {
   riskFlags?: string[] | null;
   psychologicalMovementKey?: string | null;
   psychologicalProgression?: Record<string, unknown> | null;
+  interventionMode?: string | null;
+  interventionSignature?: string | null;
 };
 
 export type EditorialGates = {
@@ -51,6 +53,8 @@ export type EditorialGates = {
   one_move: boolean;
   memory_integrity: boolean;
   psychological_progression?: boolean;
+  sema?: boolean;
+  intervention_fidelity?: boolean;
 };
 
 export type EditorialScore = {

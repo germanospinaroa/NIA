@@ -7,6 +7,7 @@ import { localDate } from '@/lib/server/whatsapp-schedule';
 import { recordEvent, recordExecutionStage, startIdempotentExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
 import type { ContextKey, FeedbackType } from '@/lib/mvp';
 import type { EvolutionInboundMessage } from '@/lib/server/whatsapp';
+import { ensureWelcome } from '@/lib/server/reception-welcome';
 
 type DbClient = SupabaseClient;
 type InboundRow = { id: string; user_id: string | null; provider: string; provider_message_id: string | null; status: string; execution_run_id: string | null; response_provider_message_id: string | null };
@@ -67,6 +68,17 @@ async function recordFeedback(admin: DbClient, inbound: InboundRow, userId: stri
 export async function processInboundMessage(admin: DbClient, message: EvolutionInboundMessage, inbound: InboundRow, userId: string) {
   const feedback = feedbackFromInbound(message.text);
   if (feedback) { await recordFeedback(admin, inbound, userId, feedback); return { kind: 'feedback' as const }; }
+  const { data: welcomeProfile } = await admin.from('profiles').select('first_name,timezone').eq('id', userId).maybeSingle();
+  const welcome = await ensureWelcome(admin, { userId, channel: 'whatsapp', firstName: welcomeProfile?.first_name ?? null, timezone: welcomeProfile?.timezone ?? null, waId: message.from });
+  if (!welcome.delivered) {
+    await updateInbound(admin, inbound.id, { user_id: userId, status: 'failed', processed_at: new Date().toISOString(), error_code: 'welcome_delivery_failed' });
+    return { kind: 'failed' as const, error: 'welcome_delivery_failed' };
+  }
+  if (welcome.created) {
+    await updateInbound(admin, inbound.id, { user_id: userId, status: 'completed', processed_at: new Date().toISOString() });
+    await recordEvent(admin, { userId, eventType: 'welcome_delivered', entityType: 'whatsapp_inbound', entityId: inbound.id, metadata: { providerMessageId: message.providerMessageId } });
+    return { kind: 'welcome' as const };
+  }
   const idempotencyKey = `whatsapp:evolution:${message.providerMessageId}`;
   const concurrencyKey = `whatsapp_inbound:${userId}:${message.providerMessageId}`;
   const claimed = await startIdempotentExecutionRun(admin, { userId, channel: 'whatsapp', triggerSource: 'whatsapp_inbound', idempotencyKey, requestId: randomUUID(), executionContext: 'production', concurrencyKey });
@@ -77,7 +89,7 @@ export async function processInboundMessage(admin: DbClient, message: EvolutionI
   await recordEvent(admin, { userId, eventType: 'inbound_processing_started', entityType: 'whatsapp_inbound', entityId: inbound.id, executionRunId: execution.executionId, metadata: { providerMessageId: message.providerMessageId } });
   try {
     const contextKey = contextKeyFromInbound(message.text);
-    const result = await resolveIntervention(admin, userId, contextKey, 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'production', allowRelevantFallback: false });
+    const result = await resolveIntervention(admin, userId, contextKey, 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'production', allowRelevantFallback: false, writerVersion: 'v2' });
     await recordExecutionStage(admin, execution, 'intervention', { status: 'PASS', intervention_id: result.interventionId });
     const { data: profile } = await admin.from('profiles').select('first_name,timezone,direction_key').eq('id', userId).single();
     if (!profile) throw new Error('profile_unavailable');
@@ -104,7 +116,7 @@ export async function processInboundMessage(admin: DbClient, message: EvolutionI
     return { kind: 'completed' as const, executionId: execution.executionId, interventionId: result.interventionId, interactionId: interaction.id, deliveryId: claim.id, providerMessageId: delivery.providerMessageId ?? null };
   } catch (error) {
     const messageText = error instanceof Error ? error.message : String(error);
-    const noApproved = messageText === 'no_approved_intervention';
+    const noApproved = ['no_approved_intervention', 'no_approved_intervention_after_repair'].includes(messageText);
     await updateInbound(admin, inbound.id, { status: noApproved ? 'no_approved_intervention' : 'failed', processed_at: new Date().toISOString(), error_code: noApproved ? 'no_approved_intervention' : messageText.slice(0, 100) });
     await recordEvent(admin, { userId, eventType: 'inbound_processing_failed', entityType: 'whatsapp_inbound', entityId: inbound.id, executionRunId: execution.executionId, metadata: { errorCode: noApproved ? 'no_approved_intervention' : messageText.slice(0, 100) } });
     await updateExecutionRun(admin, execution, { status: noApproved ? 'no_approved_intervention' : 'failed', failure: error });

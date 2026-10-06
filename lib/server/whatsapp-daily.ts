@@ -74,10 +74,16 @@ export async function runDailyWhatsApp(admin: DbClient, now = new Date(), option
     const connection = byUser.get(profile.id);
     const slots = dueSlots(profile, now);
     if (!connection?.wa_id || !slots.length) continue;
-    for (const due of slots) {
+    // A psychological subscription message is one intervention per local day;
+    // configured legacy second slots must not create a second daily delivery.
+    for (const due of slots.slice(0, 1)) {
       let daily;
       try { daily = await getOrCreateDailyInteraction(admin, profile.id, 'whatsapp', now, due.slot); } catch (error) {
         results.push({ userId: profile.id, slot: due.slot, status: 'skipped', reason: error instanceof Error ? error.message : 'generation_failed' });
+        continue;
+      }
+      if (daily.kind === 'welcome') {
+        results.push({ userId: profile.id, slot: 'welcome', status: 'sent_or_pending' });
         continue;
       }
       const claim = await claimDelivery(admin, { userId: profile.id, interactionId: String(daily.interaction.id), localDate: due.localDate, slot: due.slot });
