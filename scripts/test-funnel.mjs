@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const files = [
-  'app/descubre/page.tsx', 'app/descubre/evidencia/page.tsx', 'app/descubre/presenta/page.tsx',
+  'app/descubre/page.tsx', 'components/funnel/PremiumDiscover.tsx', 'app/descubre/evidencia/page.tsx', 'app/descubre/presenta/page.tsx',
   'app/descubre/nombre/page.tsx', 'app/descubre/agradecimiento/page.tsx', 'app/descubre/vivir/page.tsx',
   'app/descubre/funciona/page.tsx', 'app/descubre/futuro/page.tsx', 'app/descubre/planes/page.tsx',
   'components/funnel/WhatsAppDemo.tsx', 'app/acceso/page.tsx', 'app/auth/callback/route.ts', 'app/onboarding/page.tsx',
@@ -10,23 +10,21 @@ const files = [
 for (const file of files) assert.ok(fs.existsSync(file), file + ' exists');
 const source = files.map(file => fs.readFileSync(file, 'utf8')).join('\n');
 const events = [
-  'recognition_1_viewed',
-  'recognition_1_completed', 'recognition_2_completed', 'recognition_3_completed', 'evidence_viewed', 'nia_introduced',
+  'discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed',
   'name_completed', 'demo_viewed', 'demo_whatsapp_viewed', 'how_it_works_viewed', 'future_experience_viewed',
   'plans_viewed', 'plan_selected', 'access_started', 'access_code_sent', 'access_code_verified', 'onboarding_started',
 ];
 for (const event of events) assert.match(source, new RegExp(event), event + ' is tracked');
-assert.match(source, /recognition_\$\{step \+ 1\}_continue/);
-assert.match(source, /recognition_\$\{step \+ 2\}_viewed/);
+assert.match(source, /useState\(0\)/);
+assert.match(source, /router\.push\('\/descubre\/planes'\)/);
 for (const copy of [
-  '¿Te ha pasado que estabas segura de una decisión y, después de escuchar a alguien, empezaste a dudar?',
-  '¿Y luego te quedas pensando: «¿Será que de verdad estaba equivocada?»',
-  '¿Y alguna vez terminas cambiando de idea, cediendo o haciendo algo distinto a lo que tú querías?',
-  'HAY ALGO IMPORTANTE DETRÁS DE ESTO', 'No estás inventando lo que te pasa.',
-  'Cuando alguien te aconseja sin escucharte', 'Querer algo no siempre basta',
-  'Hola. Soy NIA.', 'Quiero conocerte un poco antes de seguir.', 'Gracias,',
-  'Ahora sí', 'directamente por WhatsApp', 'Así funciona NIA.', '¿Y qué quiero que empiece a pasar contigo?',
-  'Si esto es lo que quieres empezar a trabajar, NIA puede hacerlo contigo.', 'Empezar →',
+  '¿Cuántas veces más vas a saber lo que quieres…', 'y terminar haciendo otra cosa?',
+  '¿Y si eso se pudiera entrenar?', 'No. No te pasa solo a ti.',
+  'Esa fue exactamente la pregunta que nos hicimos.', 'Esto es NIA.',
+  'Imagina que mañana tienes una conversación que llevas días evitando.',
+  'Buenos días, Laura.', 'Tal vez la conversación siga siendo incómoda.',
+  'Y eso fue solo un día.', 'Porque cambiar no ocurre por entender algo una vez.',
+  'Imagina dentro de unos meses…', 'Quiero vivir NIA',
 ]) assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), copy + ' copy');
 assert.match(source, /US\$6\.99/);
 assert.match(source, /US\$39\.99/);

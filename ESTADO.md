@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Premium mobile funnel `/descubre` — 2026-10-06
+- Se reemplazó únicamente la entrada pública `/descubre` por una secuencia editorial de 10 estados dentro de un solo flujo: marfil/carbón/copper, Fraunces + Instrument Sans, fotografía editorial existente y transiciones suaves con `prefers-reduced-motion`.
+- El copy del brief quedó congelado en `components/funnel/PremiumDiscover.tsx`; el CTA final mantiene el flujo real existente hacia `/descubre/planes`. La landing original `/` y el motor psicológico no se tocaron.
+- Se mantuvieron las rutas narrativas antiguas por compatibilidad. Se actualizaron las regresiones de funnel para la secuencia premium y se documentó QA visual en `docs/revisiones/premium-discover-375.png` y `docs/revisiones/premium-discover-veredicto.md`, más capturas en `output/playwright/` para 390, 375, 430 y 1440.
+- Tests de funnel/auth/onboarding/Hotmart/WhatsApp, typecheck y build PASS; lint PASS con cuatro warnings heredados. No hubo llamadas reales a email, OpenAI, Hotmart, WhatsApp, Evolution ni Supabase.
+
 ## Welcome scheduler en Supabase Cron — 2026-10-06
 - Vercel Hobby no admite cron cada minuto; se eliminó `vercel.json` y el worker `/api/cron/welcome` usa exclusivamente `WELCOME_CRON_SECRET`.
 - La migración `20261006134000_welcome_dispatch_cron.sql` crea/verifica pg_cron y pg_net, lee `nia_welcome_cron_secret` desde `vault.decrypted_secrets`, reemplaza de forma idempotente `nia-welcome-dispatch` y llama únicamente al worker de bienvenida.

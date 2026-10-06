@@ -1,20 +1,17 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const page = fs.readFileSync('app/descubre/page.tsx', 'utf8');
+const premium = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
 const funnel = fs.readFileSync('lib/funnel.ts', 'utf8');
 
-// Direct mounts always start at question 1 and never restore persisted progress.
-assert.match(page, /useState\(0\)/);
-assert.doesNotMatch(page, /readFunnelState/);
-assert.doesNotMatch(page, /state\.recognitionStep/);
-assert.match(page, /trackFunnel\('recognition_1_viewed'\)/);
-
-// The click sequence remains 1 -> 2 -> 3 -> evidence.
-assert.match(page, /if \(step === 2\)/);
-assert.match(page, /router\.push\('\/descubre\/evidencia'\)/);
-assert.match(page, /recognitionStep: \(step \+ 2\)/);
-assert.match(page, /recognition_\$\{step \+ 2\}_viewed/);
+// Direct mounts always start at the first premium screen and never restore persisted progress.
+assert.match(premium, /useState\(0\)/);
+assert.doesNotMatch(premium, /readFunnelState/);
+assert.match(premium, /const screens: Screen\[\] = \[/);
+assert.match(premium, /screens\.length - 1/);
+assert.match(premium, /router\.push\('\/descubre\/planes'\)/);
+assert.match(premium, /premium_funnel_started/);
+assert.match(premium, /premium_funnel_completed/);
 
 // Persisted funnel data is merged, not cleared globally.
 assert.match(funnel, /sessionStorage\.setItem\(KEY, next\)/);
