@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Review pass 2 — evidencia, locale y WhatsApp — 2026-10-06
+- Evidencia del funnel reducida a una composición editorial mobile-first con cifras reales (115, 40.000+, 14.321, AER 2024); reveal usa `Te presentamos a NIA.`. Activación muestra `Mínimo 8 caracteres.` sin añadir reglas de complejidad.
+- Onboarding detecta país/zona horaria del navegador cuando existe, permite edición explícita, persiste `country_code` ISO-2 y conserva timezone IANA con offset DST calculado. `/api/profile` valida el código.
+- WhatsApp solicita número nacional con país/código editable, valida con `libphonenumber-js`, normaliza E.164, guarda `expected_phone` en el token y rechaza inbound de otro número sin consumir el token. El número entrante verificado sigue siendo la fuente persistida.
+- Migración requerida: `supabase/migrations/20261006150000_onboarding_locale_whatsapp_expectation.sql`. No aplicada: connector Supabase sin autenticación, CLI ausente y sin token/credencial DB. Por seguridad no se desplegó la app que depende de esas columnas.
+- Tests solicitados, typecheck, lint y build PASS; lint conserva cuatro warnings heredados. QA visual local en 375/390/430 y 1440, fixture temporal retirado. Sin emails, WhatsApps, OpenAI ni Hotmart.
+
 ## Separación de acceso QA y admin — 2026-10-06
 - `/api/auth/access/request` acepta elegibilidad Hotmart, `isAdminEmail()` o el nuevo `isQaEmail()`; solo los autorizados pueden crear usuario/profile server-side y el OTP conserva `shouldCreateUser: false`.
 - `requireAdmin()` y todas las rutas/páginas administrativas siguen usando únicamente `isAdminEmail()`; QA no hereda privilegios de admin.

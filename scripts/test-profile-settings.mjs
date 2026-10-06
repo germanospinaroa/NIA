@@ -8,11 +8,12 @@ assert.match(route, /\.from\('profiles'\)\.update\(values\)\.eq\('id', user\.id\
 assert.doesNotMatch(route, /\.from\('profiles'\)\.upsert\(/);
 assert.match(route, /\[profile PATCH\] update failed/);
 
-const payload = JSON.stringify({ message_frequency: 1, message_time_1: '08:00', message_time_2: null, timezone: 'America/Bogota' });
+const payload = JSON.stringify({ message_frequency: 1, message_time_1: '08:00', message_time_2: null, timezone: 'America/Bogota', country_code: 'CO' });
 assert.match(payload, /message_frequency/);
 assert.match(payload, /message_time_1/);
 assert.match(payload, /message_time_2/);
 assert.match(payload, /timezone/);
+assert.match(payload, /country_code/);
 assert.doesNotMatch(page, /2 veces al día|Segunda hora/);
 assert.match(page, /message_frequency: 1/);
 assert.match(page, /message_time_2: null/);

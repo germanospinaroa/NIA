@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { after, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { extractLinkCode, hashLinkCode, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
+import { extractLinkCode, hashLinkCode, normalizeInboundPhone, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
 import { persistInboundMessage, processInboundMessage, processUnresolvedInbound } from '@/lib/server/whatsapp-inbound';
 
 export async function GET(request: Request) {
@@ -64,23 +64,30 @@ export async function POST(request: Request) {
   }
   if (!from || !code) return NextResponse.json({ received: true });
   const admin = createAdminClient();
-  const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at').eq('token_hash', hashLinkCode(code)).maybeSingle();
+  const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at,expected_phone').eq('token_hash', hashLinkCode(code)).maybeSingle();
   if (tokenError || !token || token.status !== 'pending' || new Date(token.expires_at).getTime() < Date.now()) return NextResponse.json({ received: true });
+  const normalizedFrom = normalizeInboundPhone(from);
+  if (token.expected_phone && normalizedFrom !== token.expected_phone) {
+    await admin.from('event_log').insert({ user_id: token.user_id, event_type: 'whatsapp_link_phone_mismatch', entity_type: 'whatsapp_link_token', entity_id: token.id, metadata: { wa_id_suffix: normalizedFrom?.slice(-4) || null, expected_phone_suffix: token.expected_phone.slice(-4) } });
+    console.info('whatsapp_link_phone_mismatch', { userId: token.user_id, tokenId: token.id, waIdSuffix: normalizedFrom?.slice(-4) || null, expectedPhoneSuffix: token.expected_phone.slice(-4) });
+    return NextResponse.json({ received: true, connected: false, mismatch: true });
+  }
+  const verifiedFrom = normalizedFrom || from;
   const provider = whatsappProvider();
-  const { data: existing } = await admin.from('whatsapp_connections').select('user_id').eq('provider', provider).eq('wa_id', from).eq('status', 'connected').maybeSingle();
+  const { data: existing } = await admin.from('whatsapp_connections').select('user_id').eq('provider', provider).in('wa_id', Array.from(new Set([from, verifiedFrom]))).eq('status', 'connected').maybeSingle();
   if (existing && existing.user_id !== token.user_id) { await admin.from('whatsapp_link_tokens').update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: 'already_connected' }).eq('id', token.id); return NextResponse.json({ received: true }); }
   const now = new Date().toISOString();
-  const { data: connection, error: connectionError } = await admin.from('whatsapp_connections').upsert({ user_id: token.user_id, provider, wa_id: from, phone_number: from, status: 'connected', connected_at: now, last_message_at: now, updated_at: now }, { onConflict: 'user_id,provider' }).select('id').single();
+  const { data: connection, error: connectionError } = await admin.from('whatsapp_connections').upsert({ user_id: token.user_id, provider, wa_id: verifiedFrom, phone_number: verifiedFrom, status: 'connected', connected_at: now, last_message_at: now, updated_at: now }, { onConflict: 'user_id,provider' }).select('id').single();
   if (connectionError) return NextResponse.json({ error: 'connection_save_failed' }, { status: 500 });
   const { data: consumed, error: consumeError } = await admin.from('whatsapp_link_tokens').update({ status: 'used', used_at: now }).eq('id', token.id).eq('status', 'pending').select('id').maybeSingle();
   if (consumeError) return NextResponse.json({ error: 'link_consume_failed' }, { status: 500 });
   if (!consumed) return NextResponse.json({ received: true, duplicate: true });
   const { data: profile } = await admin.from('profiles').select('first_name').eq('id', token.user_id).maybeSingle();
-  await admin.from('profiles').update({ whatsapp_enabled: true, whatsapp_phone: from }).eq('id', token.user_id);
+  await admin.from('profiles').update({ whatsapp_enabled: true, whatsapp_phone: verifiedFrom }).eq('id', token.user_id);
   const name = profile?.first_name?.trim();
   const greeting = name ? `Hola, ${name}.` : 'Hola.';
-  console.info('whatsapp_link_outbound_started', { userId: token.user_id, connectionId: connection.id, waIdSuffix: from.slice(-4) });
-  const delivery = await sendWhatsAppText(from, `${greeting}\n\nListo. Ya reconocí este número y quedó conectado con tu cuenta de NIA.\n\nAhora podrás recibir aquí tus mensajes.`);
+  console.info('whatsapp_link_outbound_started', { userId: token.user_id, connectionId: connection.id, waIdSuffix: verifiedFrom.slice(-4) });
+  const delivery = await sendWhatsAppText(verifiedFrom, `${greeting}\n\nListo. Ya reconocí este número y quedó conectado con tu cuenta de NIA.\n\nAhora podrás recibir aquí tus mensajes.`);
   if (!delivery.ok) {
     console.error('whatsapp_link_confirmation_failed', { userId: token.user_id, connectionId: connection.id, waIdSuffix: from.slice(-4), reason: delivery.reason, status: 'status' in delivery ? delivery.status : undefined });
     return NextResponse.json({ received: true, connected: true, confirmation_sent: false });

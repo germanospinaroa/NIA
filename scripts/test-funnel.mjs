@@ -20,7 +20,7 @@ assert.match(source, /router\.push\('\/descubre\/planes'\)/);
 for (const copy of [
   '¿Cuántas veces más vas a saber lo que quieres…', 'y terminar haciendo otra cosa?',
   '¿Y si eso se pudiera entrenar?', 'No. No te pasa solo a ti.',
-  'Esa fue exactamente la pregunta que nos hicimos.', 'Esto es NIA.',
+  'Esa fue exactamente la pregunta que nos hicimos.', 'Te presentamos a NIA.',
   'Imagina que mañana tienes una conversación que llevas días evitando.',
   'Buenos días, Juanita.', 'Tal vez la conversación siga siendo incómoda.',
   'Pero tú ya no llegas igual.', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.',
@@ -31,6 +31,9 @@ assert.equal((source.match(/cta: 'Quiero seguir'/g) ?? []).length, 1);
 const premiumSource = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
 assert.doesNotMatch(premiumSource, /Buenos días, Laura\.|poco a poco|Y eso fue solo un día\./);
 assert.equal((premiumSource.match(/Porque cambiar no ocurre por entender algo una vez\./g) ?? []).length, 1);
+for (const fact of ['115', '40.000', '14.321', 'American Economic Review · 2024']) assert.match(premiumSource, new RegExp(fact.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+assert.doesNotMatch(premiumSource, /Esto es NIA\./);
+assert.match(premiumSource, /premium-evidence-layout/);
 assert.match(source, /US\$6\.99/);
 assert.match(source, /US\$39\.99/);
 assert.match(fs.readFileSync('lib/funnel.ts', 'utf8'), /checkoutMode.*bypass/);

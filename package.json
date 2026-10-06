@@ -43,6 +43,7 @@
     "test:auth-access": "node scripts/test-auth-access.mjs",
     "test:qa-access": "node --experimental-strip-types scripts/test-qa-access.mjs",
     "test:profile-settings": "node scripts/test-profile-settings.mjs",
+    "test:onboarding-locale": "node --experimental-strip-types scripts/test-onboarding-locale.mjs",
     "test:admin-qa-daily-intervention": "node scripts/test-admin-qa-daily-intervention.mjs",
     "test:execution-run-idempotency": "node scripts/test-execution-run-idempotency.mjs",
     "test:admin-qa-control": "node scripts/test-admin-qa-control.mjs",
@@ -79,6 +80,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "libphonenumber-js": "^1.13.14",
     "lucide-react": "^1.48.0",
     "motion": "^13.4.6",
     "next": "16.3.7",

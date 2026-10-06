@@ -70,6 +70,11 @@ export function maskPhone(phone: string | null | undefined) {
   return `+${digits.slice(0, 2)} ${'•'.repeat(Math.max(0, digits.length - 5))}${digits.slice(-3)}`;
 }
 
+export function normalizeInboundPhone(value: string | null | undefined) {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits ? `+${digits}` : null;
+}
+
 export function whatsappNumber() {
   return process.env.WHATSAPP_BUSINESS_NUMBER?.replace(/\D/g, '') || null;
 }

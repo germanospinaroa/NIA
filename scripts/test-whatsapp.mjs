@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createLinkCode, extractLinkCode, hashLinkCode, maskPhone, whatsappDeepLink } from '../lib/server/whatsapp.ts';
+import { createLinkCode, extractLinkCode, hashLinkCode, maskPhone, normalizeInboundPhone, whatsappDeepLink } from '../lib/server/whatsapp.ts';
+import { normalizeNationalPhone } from '../lib/phone.ts';
 
 const first = createLinkCode();
 const second = createLinkCode();
@@ -11,6 +12,10 @@ assert.equal(hashLinkCode(first), hashLinkCode(first.toLowerCase()));
 assert.equal(extractLinkCode(`Hola NIA. Código: ${first}`), first);
 assert.equal(extractLinkCode('Hola sin código'), null);
 assert.equal(maskPhone('573001231234'), '+57 •••••••234');
+assert.equal(normalizeNationalPhone('3228204878', 'CO'), '+573228204878');
+assert.equal(normalizeNationalPhone('555', 'CO'), null);
+assert.equal(normalizeNationalPhone('2025550125', 'US'), '+12025550125');
+assert.equal(normalizeInboundPhone('573228204878'), '+573228204878');
 const previous = process.env.WHATSAPP_BUSINESS_NUMBER;
 process.env.WHATSAPP_BUSINESS_NUMBER = '573001231234';
 assert.match(whatsappDeepLink(first), /^https:\/\/wa\.me\/573001231234\?text=/);
@@ -18,7 +23,10 @@ const linkRoute = fs.readFileSync(new URL('../app/api/whatsapp/link/route.ts', i
 const webhookRoute = fs.readFileSync(new URL('../app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8');
 assert.match(linkRoute, /createAdminClient/);
 assert.match(linkRoute, /code, deep_link/);
+assert.match(linkRoute, /expected_phone/);
 assert.match(webhookRoute, /sendWhatsAppText/);
+assert.match(webhookRoute, /whatsapp_link_phone_mismatch/);
+assert.match(webhookRoute, /expected_phone/);
 const previousProvider = process.env.WHATSAPP_PROVIDER;
 const previousUrl = process.env.EVOLUTION_API_URL;
 const previousKey = process.env.EVOLUTION_API_KEY;
