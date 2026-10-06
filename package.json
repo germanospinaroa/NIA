@@ -16,6 +16,7 @@
     "test:intervention-detail": "node --experimental-strip-types scripts/test-intervention-detail.mjs",
     "test:cost-ledger": "node --experimental-strip-types scripts/test-cost-ledger.mjs",
     "test:funnel": "node scripts/test-funnel.mjs",
+    "test:discover-recognition": "node scripts/test-discover-recognition.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
     "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",

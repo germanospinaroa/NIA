@@ -1,17 +1,15 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
-import { readFunnelState, saveFunnelState, trackFunnel, type FunnelState } from '@/lib/funnel';
+import { saveFunnelState, trackFunnel, type FunnelState } from '@/lib/funnel';
 
 const recognition = [
   ['¿Te ha pasado que estabas segura de una decisión y, después de escuchar a alguien, empezaste a dudar?', 'Sí, me ha pasado →'],
   ['¿Y luego te quedas pensando: «¿Será que de verdad estaba equivocada?»', 'Sí, también →'],
   ['¿Y alguna vez terminas cambiando de idea, cediendo o haciendo algo distinto a lo que tú querías?', 'Sí, me pasa →'],
 ] as const;
-const viewedEvents = ['recognition_1_viewed', 'recognition_2_viewed', 'recognition_3_viewed'] as const;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return <main className="funnel-shell"><header className="funnel-header"><a href="/descubre" className="nia-mark"><span />NIA</a></header>{children}</main>;
@@ -25,11 +23,9 @@ export default function DiscoverPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   useEffect(() => {
-    const state = readFunnelState();
-    if (state.recognitionStep) setStep(Math.min(state.recognitionStep, 3) - 1);
     trackFunnel('discover_started');
     trackFunnel('recognition_started');
-    trackFunnel(viewedEvents[(state.recognitionStep || 1) - 1]);
+    trackFunnel('recognition_1_viewed');
   }, []);
   function next() {
     const event = ('recognition_' + (step + 1) + '_completed') as 'recognition_1_completed' | 'recognition_2_completed' | 'recognition_3_completed';
