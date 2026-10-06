@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Separación de acceso QA y admin — 2026-10-06
+- `/api/auth/access/request` acepta elegibilidad Hotmart, `isAdminEmail()` o el nuevo `isQaEmail()`; solo los autorizados pueden crear usuario/profile server-side y el OTP conserva `shouldCreateUser: false`.
+- `requireAdmin()` y todas las rutas/páginas administrativas siguen usando únicamente `isAdminEmail()`; QA no hereda privilegios de admin.
+- Matching QA: trim, lowercase y coincidencia exacta. `NIA_QA_EMAILS` no existe aún en local ni en Vercel Production porque no se proporcionó una dirección segura para configurarla; no se inventó ningún valor.
+- Tests enfocados y typecheck/lint en progreso; pendiente build, commit, push/deploy y reporte de acción de entorno requerida.
+
 ## Finalización onboarding + contraste WhatsApp — 2026-10-06
 - El alcance premium ahora conserva el fondo oscuro de continuidad en onboarding y corrige, solo dentro de `.nia-continuity-frame`, superficie, borde, textos, teléfono y acento del panel WhatsApp. El estado de carga usa `Estamos terminando tu configuración…` con contraste legible; el fixture de QA temporal fue retirado.
 - `/api/onboarding/complete` normaliza antes del buffer `message_frequency=1` y `message_time_2=null`, consulta la verdad de entrega (`interactions.daily_message` y `whatsapp_daily_deliveries.status=sent`) para la fecha candidata y desplaza al día local siguiente si ya está ocupada. Welcome y completion siguen idempotentes.

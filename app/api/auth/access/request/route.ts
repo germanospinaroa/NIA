@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/admin-allowlist';
+import { isQaEmail } from '@/lib/qa-allowlist';
 import { randomBytes } from 'node:crypto';
 
 export async function POST(request: Request) {
@@ -12,10 +13,12 @@ export async function POST(request: Request) {
   const { data, error } = await admin.from('hotmart_entitlements').select('user_id,status').ilike('buyer_email', email).order('created_at', { ascending: false }).limit(10);
   if (error && error.code !== '42P01') return NextResponse.json({ error: 'access_unavailable' }, { status: 503 });
   const eligible = (data ?? []).some(row => Boolean(row.user_id) && !['canceled', 'cancelled', 'refunded', 'expired'].includes(String(row.status).toLowerCase()));
-  const qaAuthorized = isAdminEmail(email);
-  if (!eligible && !qaAuthorized) return NextResponse.json({ ok: true });
+  const adminAuthorized = isAdminEmail(email);
+  const qaAuthorized = isQaEmail(email);
+  const accessAuthorized = adminAuthorized || qaAuthorized;
+  if (!eligible && !accessAuthorized) return NextResponse.json({ ok: true });
 
-  if (qaAuthorized) {
+  if (accessAuthorized) {
     let userId: string | null = null;
     let createdQaUser = false;
     for (let page = 1; page <= 20 && !userId; page += 1) {

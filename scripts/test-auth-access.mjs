@@ -5,14 +5,16 @@ const route = fs.readFileSync('app/api/auth/access/request/route.ts', 'utf8');
 const access = fs.readFileSync('app/acceso/page.tsx', 'utf8');
 const recovery = fs.readFileSync('app/forgot-password/page.tsx', 'utf8');
 
-assert.match(route, /isAdminEmail\(email\)/, 'QA access uses the existing admin allowlist');
+assert.match(route, /isAdminEmail\(email\)/, 'admin access remains eligible for the owner flow');
+assert.match(route, /isQaEmail\(email\)/, 'QA access uses the separate QA allowlist');
+assert.match(route, /const accessAuthorized = adminAuthorized \|\| qaAuthorized/);
 assert.match(route, /signInWithOtp\(\{ email, options: \{ shouldCreateUser: false \} \}\)/, 'OTP never creates arbitrary users');
 assert.match(route, /randomBytes\(32\)\.toString\('hex'\)/, 'QA user password is cryptographically random');
 assert.match(route, /email_confirm: true/);
 assert.match(route, /must_set_password: true/);
 assert.match(route, /account_status: 'pending_activation'/);
 assert.match(route, /profiles.*upsert/s);
-assert.match(route, /if \(!eligible && !qaAuthorized\) return NextResponse\.json\(\{ ok: true \}\)/);
+assert.match(route, /if \(!eligible && !accessAuthorized\) return NextResponse\.json\(\{ ok: true \}\)/);
 assert.match(route, /otp\.error/);
 assert.match(route, /otp_delivery_failed/);
 assert.match(route, /console\.error\('\[auth\] otp delivery failed'/);

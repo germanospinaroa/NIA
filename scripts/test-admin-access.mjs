@@ -7,6 +7,7 @@ assert.equal(isAdminEmail('admin@example.com', 'admin@example.com'), true);
 assert.equal(isAdminEmail(' Admin@Example.com ', 'admin@example.com,other@example.com'), true);
 assert.equal(isAdminEmail('person@example.com', 'admin@example.com'), false);
 assert.equal(isAdminEmail(null, 'admin@example.com'), false);
+assert.equal(isAdminEmail('qa@example.com', 'admin@example.com'), false);
 
 assert.equal(getSafeNextPath('/admin'), '/admin');
 assert.equal(getSafeNextPath('/admin/users/123'), '/admin/users/123');
