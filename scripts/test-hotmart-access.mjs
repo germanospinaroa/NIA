@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { hotmartEventId, purchaseData, validHotmartToken } from '../lib/server/hotmart.ts';
 
 const payload = {
@@ -16,4 +17,8 @@ assert.deepEqual(purchaseData(payload), { email: 'adriana@example.com', firstNam
 assert.equal(validHotmartToken('secret', 'secret'), true);
 assert.equal(validHotmartToken('secret', 'different'), false);
 assert.equal(validHotmartToken(null, 'secret'), false);
+const hotmartSource = fs.readFileSync('lib/server/hotmart.ts', 'utf8');
+assert.match(hotmartSource, /createUser/);
+assert.match(hotmartSource, /randomBytes/);
+assert.doesNotMatch(hotmartSource, /inviteUserByEmail|emailRedirectTo/);
 console.log('hotmart access tests: PASS');

@@ -20,3 +20,12 @@ export function dueSlots(profile: ScheduleProfile, now = new Date()) {
     return currentMinutes >= scheduledMinutes && currentMinutes < scheduledMinutes + 15;
   }).map(({ slot }) => ({ slot, localDate: clock.date }));
 }
+
+export function firstPsychologicalLocalDate(timezone: string | null | undefined, selectedTime: string | null | undefined, now = new Date(), preparationMinutes = 15) {
+  const clock = localClock(timezone, now);
+  const [hour, minute] = String(selectedTime || '').split(':').map(Number);
+  const selectedMinutes = hour * 60 + minute;
+  const currentMinutes = clock.hour * 60 + clock.minute;
+  if (Number.isInteger(hour) && Number.isInteger(minute) && selectedMinutes >= currentMinutes + preparationMinutes) return clock.date;
+  return localDate(timezone, new Date(now.getTime() + 86_400_000));
+}

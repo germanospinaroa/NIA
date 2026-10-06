@@ -1,25 +1,24 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { firstPsychologicalLocalDate } from '../lib/server/whatsapp-schedule.ts';
 
 const source = fs.readFileSync('app/onboarding/page.tsx', 'utf8');
 const funnel = fs.readFileSync('lib/funnel.ts', 'utf8');
 assert.match(source, /message_time_1: time/);
 assert.match(source, /timezone/);
 assert.match(source, /\/api\/profile/);
-assert.match(source, /\/api\/buffer\/prepare/);
+assert.match(source, /\/api\/onboarding\/complete/);
 assert.match(source, /\/api\/calibration/);
 assert.match(source, /calibration_required/);
-assert.match(source, /onboardingStage: nextStage/);
-assert.match(source, /¿En qué momento del día te gustaría recibir tu mensaje de NIA\?/);
-assert.match(source, /Por la noche/);
-assert.doesNotMatch(source, /primer momento/);
+assert.match(source, /onboardingStage/);
+assert.match(source, /¿A qué hora quieres recibir tu mensaje de NIA\?/);
+assert.doesNotMatch(source, /PARA EMPEZAR|Por la noche|2 veces al día|Segunda hora/);
 assert.match(funnel, /'calibration'/);
-for (const [value, label, time] of [
-  ['morning', 'Por la mañana', '08:00'],
-  ['midday', 'Al mediodía', '12:30'],
-  ['afternoon', 'Por la tarde', '17:30'],
-  ['night', 'Por la noche', '21:00'],
-]) {
-  assert.match(source, new RegExp(`'${value}', '${label}', '${time}'`));
-}
+assert.match(source, /useState\('08:00'\)/);
+assert.match(source, /message_frequency: 1/);
+assert.match(source, /message_time_2: null/);
+assert.equal(firstPsychologicalLocalDate('America/Bogota', '08:00', new Date('2026-10-06T12:00:00Z')), '2026-10-06');
+assert.equal(firstPsychologicalLocalDate('America/Bogota', '08:00', new Date('2026-10-06T12:50:00Z')), '2026-10-07');
+assert.equal(firstPsychologicalLocalDate('America/Bogota', '17:00', new Date('2026-10-06T19:00:00Z')), '2026-10-06');
+assert.equal(firstPsychologicalLocalDate('America/Bogota', '08:00', new Date('2026-10-06T14:00:00Z')), '2026-10-07');
 console.log('onboarding timing tests: PASS');

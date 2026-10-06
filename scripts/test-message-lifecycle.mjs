@@ -5,7 +5,7 @@ import { calculateReceptionStage } from '../lib/server/reception-progression.ts'
 const daily = fs.readFileSync('lib/server/daily-message.ts', 'utf8');
 const whatsapp = fs.readFileSync('lib/server/whatsapp-daily.ts', 'utf8');
 const onboarding = fs.readFileSync('app/onboarding/page.tsx', 'utf8');
-const prepare = fs.readFileSync('app/api/buffer/prepare/route.ts', 'utf8');
+const onboardingComplete = fs.readFileSync('app/api/onboarding/complete/route.ts', 'utf8');
 const reception = fs.readFileSync('lib/server/reception-progression.ts', 'utf8');
 
 assert.doesNotMatch(daily, /ensureWelcome/);
@@ -18,9 +18,9 @@ assert.doesNotMatch(whatsapp, /daily\.kind === ['"]welcome/);
 
 assert.doesNotMatch(onboarding, /fetch\(['"]\/api\/daily/);
 assert.doesNotMatch(onboarding, /first_intervention/);
-assert.match(onboarding, /fetch\(['"]\/api\/buffer\/prepare/);
-assert.match(prepare, /refillApprovedBuffer/);
-assert.match(prepare, /createClient/);
+assert.match(onboarding, /fetch\(['"]\/api\/onboarding\/complete/);
+assert.match(onboardingComplete, /refillApprovedBuffer/);
+assert.match(onboardingComplete, /scheduleWelcomeDelivery/);
 assert.match(reception, /reception starts at tuning/);
 assert.equal(calculateReceptionStage({ welcomeDelivered: false, psychologicalInterventionsDelivered: 0 }), 'tuning');
 assert.equal(calculateReceptionStage({ welcomeDelivered: true, psychologicalInterventionsDelivered: 0 }), 'tuning');

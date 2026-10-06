@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Experiencia inicial activation → onboarding → WhatsApp — 2026-10-06
+- La activación ya no crea welcome ni usa enlaces mágicos: Hotmart crea el usuario con contraseña interna aleatoria no expuesta; `/acceso` verifica elegibilidad y solicita código OTP de 6 dígitos; `/activate` establece contraseña y envía a `/onboarding`; login normal usa email + contraseña.
+- Onboarding reúne configuración, una sola hora (`08:00` por defecto, `America/Bogota`), conexión WhatsApp y finalización. Persiste `message_frequency=1` y `message_time_2=null`. El primer buffer usa la misma ruta recurrente y el margen de 15 minutos decide hoy vs mañana.
+- El welcome determinista se crea y programa únicamente al completar onboarding con WhatsApp conectado. `whatsapp_welcome_deliveries` es un outbox separado, idempotente, con claim/lock, reintentos y cron dedicado `/api/cron/welcome`; no entra en la historia psicológica ni en `whatsapp_daily_deliveries`.
+- Añadidos regresiones `test:initial-experience` y `test:welcome-delivery`; suite de auth/onboarding/delivery/recurrente, typecheck y build PASS; lint PASS con warnings heredados. No se hicieron llamadas reales a email, OpenAI, WhatsApp, Evolution ni Supabase durante las pruebas.
+
 ## Welcome de activación — 2026-10-06
 - `ensureActivationWelcome()` es ahora el único dueño del welcome: crea o devuelve una sola interacción `nia_welcome`, sin canal, WhatsApp, Evolution ni delivery externo.
 - `/api/activation/complete` activa la cuenta, asegura el welcome idempotente y devuelve su contenido; `/activate` lo muestra antes de continuar a `/app`.

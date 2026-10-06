@@ -1,27 +1,23 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client';
-import { useEffect, useState } from 'react';
+
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { FunnelFrame } from '@/components/funnel/FunnelFrame';
-import { readFunnelState, saveFunnelState, trackFunnel, type FunnelTiming } from '@/lib/funnel';
+import { WhatsAppConnectionPanel, type WhatsAppConnectionState } from '@/components/app/WhatsAppConnectionPanel';
+import { readFunnelState, saveFunnelState, trackFunnel, type CommunicationPreference } from '@/lib/funnel';
 import { readMvpState, saveMvpState, trackMvp, type DirectionKey } from '@/lib/mvp';
 
-const timingOptions: Array<[FunnelTiming, string, string]> = [
-  ['morning', 'Por la mañana', '08:00'],
-  ['midday', 'Al mediodía', '12:30'],
-  ['afternoon', 'Por la tarde', '17:30'],
-  ['night', 'Por la noche', '21:00'],
-];
+type Stage = 'name' | 'intro' | 'direction' | 'context' | 'communication' | 'timing' | 'calibration' | 'whatsapp' | 'ready';
+type CalibrationOption = { id: string; label: string; context_value: string };
+type CalibrationPrompt = { question: string; options: CalibrationOption[] };
+
 const contextOptions = [
   ['decision', 'Cuando tengo que tomar una decisión.'],
   ['opinion', 'Cuando alguien cuestiona lo que decidí.'],
   ['conversation', 'Cuando tengo que expresar lo que pienso.'],
 ] as const;
-type CommunicationPreference = 'idea' | 'practical' | 'structured' | 'adaptive';
-type Stage = 'name' | 'intro' | 'direction' | 'context' | 'communication' | 'timing' | 'calibration' | 'ready';
-type CalibrationOption = { id: string; label: string; context_value: string };
-type CalibrationPrompt = { question: string; options: CalibrationOption[] };
 
 function directionKeyForContext(value: string | undefined): DirectionKey {
   if (value === 'conversation') return 'say_what_i_mean';
@@ -47,166 +43,105 @@ export default function OnboardingPage() {
   const [customContext, setCustomContext] = useState('');
   const [editingDirection, setEditingDirection] = useState(false);
   const [calibration, setCalibration] = useState<CalibrationPrompt | null>(null);
+  const [time, setTime] = useState('08:00');
+  const [timezone, setTimezone] = useState('America/Bogota');
+  const [whatsapp, setWhatsapp] = useState<WhatsAppConnectionState>({ status: 'not_connected' });
   const [loading, setLoading] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
   const [error, setError] = useState('');
+
+  async function loadCalibration() {
+    const response = await fetch('/api/calibration', { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok && payload.status === 'calibration_required') setCalibration(payload.calibration);
+    else setStage('whatsapp');
+  }
 
   useEffect(() => {
     const state = readFunnelState();
     const persistedName = state.firstName?.trim() || '';
     const persistedDirection = state.directionText?.trim() || '';
     const persistedContext = contextFromState(state);
-    setName(persistedName);
-    setDirection(persistedDirection);
-    setContext(persistedContext);
+    setName(persistedName); setDirection(persistedDirection); setContext(persistedContext);
     if (state.communicationPreference) setCommunicationPreference(state.communicationPreference);
-    const restoredStage = state.onboardingStage;
-    const nextStage: Stage = !persistedName ? 'name' : !persistedDirection ? 'intro' : restoredStage === 'ready' ? 'ready' : restoredStage === 'calibration' ? 'calibration' : restoredStage === 'timing' && persistedContext ? 'timing' : restoredStage === 'timing' ? 'context' : restoredStage === 'communication' ? 'communication' : 'intro';
-    setStage(nextStage);
-    saveFunnelState({ onboardingStage: nextStage });
+    fetch('/api/profile', { cache: 'no-store' }).then(async response => {
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) { router.push('/acceso'); return; }
+      const profile = result.profile ?? {};
+      const profileName = profile.first_name?.trim() || persistedName;
+      const profileDirection = profile.direction_text?.trim() || profile.desired_change_original?.trim() || persistedDirection;
+      const profileContext = profile.current_context_original?.trim() || persistedContext;
+      setName(profileName); setDirection(profileDirection); setContext(profileContext); setTime(profile.message_time_1 || '08:00'); setTimezone(profile.timezone || 'America/Bogota');
+      if (profile.communication_preference) setCommunicationPreference(profile.communication_preference);
+      if (profile.onboarding_completed) { router.push('/app'); return; }
+      const connectionResponse = await fetch('/api/whatsapp/connection', { cache: 'no-store' });
+      const connectionResult = await connectionResponse.json().catch(() => ({}));
+      setWhatsapp((connectionResult.connection ?? connectionResult) as WhatsAppConnectionState);
+      const nextStage: Stage = !profileName ? 'name' : !profileDirection ? 'direction' : !profileContext ? 'context' : !profile.message_time_1 ? 'timing' : connectionResult.connection?.status === 'connected' ? 'whatsapp' : (state.onboardingStage === 'calibration' ? 'calibration' : 'whatsapp');
+      setStage(nextStage); saveFunnelState({ onboardingStage: nextStage, firstName: profileName, directionText: profileDirection, onboardingContext: profileContext });
+      if (nextStage === 'calibration') void loadCalibration();
+    }).catch(() => setError('No pudimos cargar tu configuración. Vuelve a intentarlo.'));
     trackFunnel('onboarding_started');
-    if (nextStage === 'calibration') {
-      fetch('/api/calibration').then(async response => {
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) { router.push('/acceso?error=auth_failed'); return; }
-        if (!response.ok) throw new Error('CALIBRATION_ERROR');
-        if (payload.status === 'calibration_required' && payload.calibration) setCalibration(payload.calibration);
-        else setStage('timing');
-      }).catch(() => setError('No pudimos cargar esta parte. Inténtalo de nuevo.'));
-    }
   }, [router]);
 
-  function go(next: Stage) {
-    setStage(next);
-    saveFunnelState({ onboardingStage: next });
-  }
-
-  function submitName() {
-    const value = name.trim();
-    if (!value) return;
-    saveFunnelState({ firstName: value });
-    trackFunnel('name_completed');
-    go('intro');
-  }
-
-  function begin() { trackFunnel('onboarding_intro_viewed'); go('direction'); }
-
-  function submitDirection(value = direction) {
-    const nextDirection = value.trim();
-    if (!nextDirection) return;
-    setDirection(nextDirection);
-    saveFunnelState({ directionText: nextDirection });
-    trackFunnel('intention_submitted');
-    go('context');
-  }
-
-  function submitContext(value: string) {
-    if (value === 'other') { setContext('other'); return; }
-    const nextContext = value.trim();
-    if (!nextContext) return;
-    setContext(nextContext);
-    saveFunnelState({ onboardingContext: nextContext });
-    trackFunnel('context_selected', { context: nextContext });
-    go('communication');
-  }
-
-  function submitCustomContext() {
-    const value = customContext.trim();
-    if (!value) return;
-    setContext(value);
-    saveFunnelState({ onboardingContext: value });
-    trackFunnel('context_selected', { context: 'other' });
-    go('communication');
-  }
-
+  function go(next: Stage) { setStage(next); saveFunnelState({ onboardingStage: next }); }
+  function submitName() { const value = name.trim(); if (!value) return; saveFunnelState({ firstName: value }); trackFunnel('name_completed'); go('intro'); }
+  function submitDirection(value = direction) { const next = value.trim(); if (!next) return; setDirection(next); saveFunnelState({ directionText: next }); trackFunnel('intention_submitted'); go('context'); }
+  function submitContext(value: string) { if (value === 'other') { setContext('other'); return; } const next = value.trim(); if (!next) return; setContext(next); saveFunnelState({ onboardingContext: next }); trackFunnel('context_selected'); go('communication'); }
+  function submitCustomContext() { const value = customContext.trim(); if (!value) return; setContext(value); saveFunnelState({ onboardingContext: value }); go('communication'); }
   function submitCommunication(value: CommunicationPreference) { setCommunicationPreference(value); saveFunnelState({ communicationPreference: value }); go('timing'); }
 
-  async function prepareFirstBuffer() {
-    const response = await fetch('/api/buffer/prepare', { method: 'POST' });
-    if (!response.ok) throw new Error('BUFFER_PREPARE_ERROR');
-  }
-
-  async function submitTiming(value: FunnelTiming) {
-    const state = readFunnelState();
-    const firstName = name.trim() || state.firstName?.trim() || '';
-    const desiredChange = direction.trim() || state.directionText?.trim() || '';
-    const currentContext = context.trim() || contextFromState(state);
+  async function submitTiming() {
+    const firstName = name.trim(); const desiredChange = direction.trim(); const currentContext = context.trim();
     if (!firstName || !desiredChange || !currentContext || currentContext === 'other') { setError('Antes de continuar, completa lo que quieres trabajar y dónde te pasa.'); return; }
-    trackFunnel('timing_selected', { timing: value });
-    setLoading(true);
-    setError('');
-    const time = timingOptions.find(item => item[0] === value)?.[2];
-    if (!time) { setError('No pudimos reconocer ese horario. Inténtalo de nuevo.'); setLoading(false); return; }
+    setLoading(true); setError('');
     const now = new Date().toISOString();
-    const profilePayload = {
-      first_name: firstName,
-      direction_key: directionKeyForContext(state.discoverContext),
-      direction_text: desiredChange,
-      voice_style: 'grounded',
-      communication_preference: communicationPreference,
-      message_frequency: 1,
-      message_time_1: time,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      desired_change_original: desiredChange,
-      desired_change_summary: desiredChange.slice(0, 180),
-      current_context_original: currentContext,
-      current_context_summary: currentContext.slice(0, 180),
-      current_context_started_at: now,
-      current_context_last_confirmed_at: now,
-      current_context_status: 'active',
-    };
+    const profilePayload = { first_name: firstName, direction_key: directionKeyForContext(readFunnelState().discoverContext), direction_text: desiredChange, voice_style: 'grounded', communication_preference: communicationPreference, message_frequency: 1, message_time_1: time || '08:00', message_time_2: null, timezone: timezone || 'America/Bogota', desired_change_original: desiredChange, desired_change_summary: desiredChange.slice(0, 180), current_context_original: currentContext, current_context_summary: currentContext.slice(0, 180), current_context_started_at: now, current_context_last_confirmed_at: now, current_context_status: 'active' };
     try {
-      const profileResponse = await fetch('/api/profile', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(profilePayload) });
-      const profileResult = await profileResponse.json().catch(() => ({}));
-      if (profileResponse.status === 401) { router.push('/acceso?error=auth_failed'); return; }
-      if (!profileResponse.ok) { console.error('[onboarding] PROFILE_SAVE_ERROR', { status: profileResponse.status, error: profileResult.error }); throw new Error('PROFILE_SAVE_ERROR'); }
-      saveFunnelState({ timing: value, firstName, directionText: desiredChange, onboardingContext: currentContext });
-      const mvp = readMvpState();
-      saveMvpState({ ...mvp, firstName, directionKey: profilePayload.direction_key, directionText: desiredChange, desiredChangeOriginal: desiredChange, currentContextOriginal: currentContext, messageTime1: time, timezone: profilePayload.timezone, onboardingComplete: true });
-    } catch (cause) {
-      console.error('[onboarding] PROFILE_SAVE_ERROR', cause);
-      setError('No pudimos guardar tu información. Inténtalo de nuevo.');
-      setLoading(false);
-      return;
-    }
-    try {
-      await prepareFirstBuffer();
-    } catch (cause) {
-      console.error('[onboarding] BUFFER_PREPARE_ERROR', cause);
-      setError('Tu configuración se guardó, pero todavía no pudimos preparar tu primer mensaje. Inténtalo de nuevo.');
-      setLoading(false);
-      return;
-    }
-    trackFunnel('onboarding_completed');
-    trackMvp('onboarding_completed');
-    go('ready');
-    setLoading(false);
+      const response = await fetch('/api/profile', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(profilePayload) });
+      if (!response.ok) throw new Error('PROFILE_SAVE_ERROR');
+      saveFunnelState({ firstName, directionText: desiredChange, onboardingContext: currentContext, onboardingStage: 'whatsapp' });
+      saveMvpState({ ...readMvpState(), firstName, directionKey: profilePayload.direction_key, directionText: desiredChange, desiredChangeOriginal: desiredChange, currentContextOriginal: currentContext, messageTime1: profilePayload.message_time_1, timezone: profilePayload.timezone });
+      const calibrationResponse = await fetch('/api/calibration', { cache: 'no-store' });
+      const calibrationResult = await calibrationResponse.json().catch(() => ({}));
+      if (calibrationResult.status === 'calibration_required') { setCalibration(calibrationResult.calibration); go('calibration'); } else go('whatsapp');
+    } catch { setError('No pudimos guardar tu configuración. Inténtalo de nuevo.'); }
+    finally { setLoading(false); }
   }
 
   async function submitCalibration(option: CalibrationOption) {
     setLoading(true); setError('');
     try {
       const response = await fetch('/api/calibration', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ selected_option: option.id }) });
-      const result = await response.json().catch(() => ({}));
-      if (response.status === 401) { router.push('/acceso?error=auth_failed'); return; }
-      if (!response.ok) throw new Error(result.error || 'CALIBRATION_ERROR');
-      await prepareFirstBuffer();
-      trackFunnel('onboarding_completed');
-      trackMvp('onboarding_completed');
-      go('ready');
-    } catch (cause) { console.error('[onboarding] CALIBRATION_ERROR', cause); setError('No pudimos guardar esta respuesta. Inténtalo de nuevo.'); }
+      if (!response.ok) throw new Error('CALIBRATION_ERROR');
+      go('whatsapp');
+    } catch { setError('No pudimos guardar esta respuesta. Inténtalo de nuevo.'); }
     finally { setLoading(false); }
   }
 
-  function completeOnboarding() { go('ready'); }
+  const finalizeOnboarding = useCallback(async () => {
+    if (finalizing || whatsapp.status !== 'connected') return;
+    setFinalizing(true); setLoading(true); setError('');
+    try {
+      const response = await fetch('/api/onboarding/complete', { method: 'POST' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'ONBOARDING_COMPLETE_ERROR');
+      trackFunnel('onboarding_completed'); trackMvp('onboarding_completed'); saveFunnelState({ onboardingStage: 'ready' }); go('ready');
+    } catch (cause) { console.error('[onboarding] completion failed', cause); setError('WhatsApp ya está conectado, pero todavía estamos preparando tu primer mensaje. Inténtalo de nuevo.'); }
+    finally { setFinalizing(false); setLoading(false); }
+  }, [finalizing, whatsapp.status]);
+
+  useEffect(() => { if (stage === 'whatsapp' && whatsapp.status === 'connected') void finalizeOnboarding(); }, [stage, whatsapp.status, finalizeOnboarding]);
 
   return <FunnelFrame><section className="funnel-screen onboarding-story-screen"><div className="funnel-content narrow onboarding-stage" key={stage}>
     {stage === 'name' && <><h1>¿Cómo quieres que te llame?</h1><input autoFocus className="funnel-input" value={name} onChange={event => setName(event.target.value)} placeholder="Tu nombre" maxLength={80} /><button className="funnel-button" disabled={!name.trim()} onClick={submitName}>Continuar <ArrowRight size={17} /></button></>}
-    {stage === 'intro' && <><h1>Hola, {name}.</h1><p className="funnel-copy">Ya estás dentro.</p><p className="funnel-copy">Ahora sí quiero que NIA empiece a trabajar contigo.</p><p className="funnel-copy">No voy a llenarte de preguntas. Primero vamos a dejar claro qué quieres trabajar y después vamos a empezar contigo desde ahí.</p><button className="funnel-button" onClick={begin}>Empecemos <ArrowRight size={17} /></button></>}
-    {stage === 'direction' && <>{direction && !editingDirection ? <><h1>Por lo que me contaste, creo que hay algo que quieres trabajar:</h1><div className="nia-response-card"><p>{direction}</p></div><p className="funnel-copy">¿Sí va por ahí?</p><div className="option-list"><button className="option-button" onClick={() => submitDirection()}>Sí, eso es <ArrowRight size={16} /></button><button className="option-button" onClick={() => setEditingDirection(true)}>Quiero decirlo de otra manera <ArrowRight size={16} /></button></div></> : <><h1>¿Qué quieres trabajar?</h1><p className="funnel-copy">Escríbelo con tus palabras.</p><textarea autoFocus className="funnel-input textarea" value={direction} onChange={event => setDirection(event.target.value)} placeholder="Quiero..." maxLength={180} /><button className="funnel-button" disabled={!direction.trim()} onClick={() => submitDirection()}>Guardar lo que quiero trabajar <ArrowRight size={17} /></button></>}</>}
-    {stage === 'context' && <><h1>Perfecto.</h1><p className="funnel-copy">Ahora quiero ubicar un poquito mejor dónde te pasa.</p><p className="funnel-copy">¿Dónde notas más esa duda?</p><div className="option-list">{contextOptions.map(([value, label]) => <button key={value} className="option-button" onClick={() => submitContext(value)}>{label}<ArrowRight size={16} /></button>)}<button className="option-button" onClick={() => submitContext('other')}>En otra situación <ArrowRight size={16} /></button></div>{context === 'other' && <><input autoFocus className="funnel-input" value={customContext} onChange={event => setCustomContext(event.target.value)} placeholder="Cuéntame brevemente dónde te pasa" maxLength={180} /><button className="funnel-button" disabled={!customContext.trim()} onClick={submitCustomContext}>Guardar esta situación <ArrowRight size={17} /></button></>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'intro' && <><h1>Hola, {name}.</h1><p className="funnel-copy">Ya estás dentro.</p><p className="funnel-copy">Vamos a dejar claro qué quieres trabajar y en qué situaciones te pasa.</p><button className="funnel-button" onClick={() => go('direction')}>Empecemos <ArrowRight size={17} /></button></>}
+    {stage === 'direction' && <>{direction && !editingDirection ? <><h1>Por lo que me contaste, creo que hay algo que quieres trabajar:</h1><div className="nia-response-card"><p>{direction}</p></div><p className="funnel-copy">¿Sí va por ahí?</p><div className="option-list"><button className="option-button" onClick={() => submitDirection()}>Sí, eso es <ArrowRight size={16} /></button><button className="option-button" onClick={() => setEditingDirection(true)}>Quiero decirlo de otra manera <ArrowRight size={16} /></button></div></> : <><h1>¿Qué quieres trabajar?</h1><p className="funnel-copy">Escríbelo con tus palabras.</p><textarea autoFocus className="funnel-input textarea" value={direction} onChange={event => setDirection(event.target.value)} placeholder="Quiero…" maxLength={180} /><button className="funnel-button" disabled={!direction.trim()} onClick={() => submitDirection()}>Guardar lo que quiero trabajar <ArrowRight size={17} /></button></>}</>}
+    {stage === 'context' && <><h1>¿En qué situación te pasa más?</h1><div className="option-list">{contextOptions.map(([value, label]) => <button key={value} className="option-button" onClick={() => submitContext(value)}>{label}<ArrowRight size={16} /></button>)}<button className="option-button" onClick={() => submitContext('other')}>En otra situación <ArrowRight size={16} /></button></div>{context === 'other' && <><input autoFocus className="funnel-input" value={customContext} onChange={event => setCustomContext(event.target.value)} placeholder="Cuéntame brevemente dónde te pasa" maxLength={180} /><button className="funnel-button" disabled={!customContext.trim()} onClick={submitCustomContext}>Guardar esta situación <ArrowRight size={17} /></button></>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
     {stage === 'communication' && <><h1>¿Cómo te gusta que NIA te ayude?</h1><p className="funnel-copy">Es una preferencia. NIA también cuidará que sus mensajes no se vuelvan repetitivos.</p><div className="option-list">{([['idea','Una idea clara','Una idea que me haga pensar, sin darle tantas vueltas.'],['practical','Algo práctico','Algo que pueda llevar a mi vida.'],['structured','Paso a paso cuando haga falta','Cuando el tema lo requiera, prefiero que me muestre cómo hacerlo.'],['adaptive','Prefiero que varíe','Quiero que NIA decida según el momento.']] as const).map(([value,label,detail]) => <button key={value} className="option-button" onClick={() => submitCommunication(value)}><span><strong className="block">{label}</strong><small className="mt-1 block opacity-70">{detail}</small></span><ArrowRight size={16} /></button>)}</div></>}
-    {stage === 'timing' && <><p className="funnel-eyebrow">PARA EMPEZAR</p><h1>¿En qué momento del día te gustaría recibir tu mensaje de NIA?</h1><p className="funnel-copy">Elige el momento del día en el que te resultaría más fácil leerlo y tomarte unos minutos para ti.</p><div className="option-list">{timingOptions.map(([value, label]) => <button key={value} className="option-button" disabled={loading} onClick={() => submitTiming(value)}>{label}<ArrowRight size={16} /></button>)}</div>{loading && <p className="funnel-note">Guardando tu elección…</p>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
-    {stage === 'calibration' && calibration && <><p className="funnel-eyebrow">PARA SEGUIR</p><h1>{calibration.question}</h1><div className="option-list">{calibration.options.map(option => <button key={option.id} className="option-button" disabled={loading} onClick={() => submitCalibration(option)}>{option.label}<ArrowRight size={16} /></button>)}</div>{loading && <p className="funnel-note">Guardando tu elección…</p>}{error && <p className="funnel-error" role="alert">{error}</p>}</>}
-    {stage === 'ready' && <><h1>Tu configuración está guardada.</h1><p className="funnel-copy">NIA preparará tu primer mensaje para el horario que elegiste. Conecta WhatsApp en Tú para recibirlo donde ya estás.</p><button className="funnel-button" onClick={() => { completeOnboarding(); router.push('/app/tu'); }}>Configurar WhatsApp <ArrowRight size={17} /></button></>}
+    {stage === 'timing' && <><h1>¿A qué hora quieres recibir tu mensaje de NIA?</h1><p className="funnel-copy">Tu hora local. Puedes cambiarla más adelante.</p><label htmlFor="onboarding-time" className="mt-8 block text-[13px] font-semibold text-[var(--text-secondary)]">Hora de tu mensaje<input id="onboarding-time" type="time" value={time} onChange={event => setTime(event.target.value)} className="mt-3 h-14 w-full rounded-[var(--radius-card)] border border-black/10 bg-[var(--surface)] px-4 text-[24px]" /></label><button className="funnel-button" disabled={loading || !time} onClick={() => void submitTiming()}>{loading ? 'Guardando…' : 'Continuar'} <ArrowRight size={17} /></button>{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'calibration' && calibration && <><h1>{calibration.question}</h1><div className="option-list">{calibration.options.map(option => <button key={option.id} className="option-button" disabled={loading} onClick={() => void submitCalibration(option)}>{option.label}<ArrowRight size={16} /></button>)}</div>{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'whatsapp' && <><h1>Conecta tu WhatsApp</h1><p className="funnel-copy">Aquí llegará tu mensaje diario de NIA. La configuración termina cuando reconozcamos tu número.</p><WhatsAppConnectionPanel value={whatsapp} onChange={setWhatsapp} onError={setError} onDisconnect={async () => {}} showTest={false} showDisconnect={false} /><p className="mt-5 text-[13px] text-[var(--text-secondary)]">{loading ? 'Estamos preparando tu primer mensaje…' : 'No podrás terminar la configuración hasta conectar WhatsApp.'}</p>{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'ready' && <><h1>Ya está. NIA quedó lista.</h1><p className="funnel-copy">WhatsApp está conectado. NIA te escribirá allí y tu primer mensaje psicológico llegará a la hora que elegiste.</p><button className="funnel-button" onClick={() => router.push('/app')}>Entrar a NIA <ArrowRight size={17} /></button></>}
   </div></section></FunnelFrame>;
 }

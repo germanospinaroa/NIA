@@ -42,11 +42,12 @@ const welcome = fs.readFileSync(new URL('../lib/server/reception-welcome.ts', im
 const reception = fs.readFileSync(new URL('../lib/server/reception-progression.ts', import.meta.url), 'utf8');
 const home = fs.readFileSync(new URL('../app/app/page.tsx', import.meta.url), 'utf8');
 
-assert.match(activation, /ensureActivationWelcome/);
-assert.match(activation, /welcome/);
-assert.match(activatePage, /payload\.welcome/);
-assert.match(activatePage, /setWelcome/);
-assert.match(activatePage, /router\.push\('\/app'\)/);
+assert.doesNotMatch(activation, /ensureActivationWelcome/);
+assert.doesNotMatch(activation, /welcome/);
+assert.doesNotMatch(activatePage, /setWelcome|payload\.welcome/);
+assert.match(activatePage, /router\.push\('\/onboarding'\)/);
+assert.match(fs.readFileSync(new URL('../app/api/onboarding/complete/route.ts', import.meta.url), 'utf8'), /ensureActivationWelcome/);
+assert.match(fs.readFileSync(new URL('../lib/server/welcome-delivery.ts', import.meta.url), 'utf8'), /scheduleWelcomeDelivery/);
 assert.doesNotMatch(welcome, /whatsapp_connections|claimDelivery|sendClaimedDelivery|whatsapp_daily_deliveries|Evolution/);
 assert.doesNotMatch(interactions, /ensureWelcome|ensureActivationWelcome/);
 assert.doesNotMatch(inbound, /ensureWelcome|ensureActivationWelcome|welcome_delivery_failed/);

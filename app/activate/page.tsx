@@ -12,34 +12,20 @@ export default function ActivatePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState<boolean | null>(null);
-  const [welcome, setWelcome] = useState<string | null>(null);
 
-  useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => setReady(Boolean(data.user)));
-  }, []);
+  useEffect(() => { createClient().auth.getUser().then(async ({ data }) => { if (!data.user) { setReady(false); return; } const response = await fetch('/api/profile', { cache: 'no-store' }); const result = await response.json().catch(() => ({})); if (result.profile?.must_set_password === false) { router.push(result.profile?.onboarding_completed ? '/app' : '/onboarding'); return; } setReady(true); }); }, [router]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    setError('');
-    if (password.length < 8) return setError('Usa una contraseña de al menos 8 caracteres.');
-    if (password !== confirmation) return setError('Las contraseñas no coinciden.');
-    setBusy(true);
+    if (password.length < 8) { setError('Usa una contraseña de al menos 8 caracteres.'); return; }
+    if (password !== confirmation) { setError('Las contraseñas no coinciden.'); return; }
+    setBusy(true); setError('');
     const { error: updateError } = await createClient().auth.updateUser({ password });
-    if (updateError) {
-      setError('No pudimos crear tu contraseña. Solicita un enlace de activación nuevo.');
-      setBusy(false);
-      return;
-    }
+    if (updateError) { setError('No pudimos crear tu contraseña. Solicita un código nuevo.'); setBusy(false); return; }
     const response = await fetch('/api/activation/complete', { method: 'POST' });
-    const payload = await response.json().catch(() => null) as { welcome?: { interaction?: { content?: string | null } } } | null;
-    if (!response.ok || !payload?.welcome?.interaction?.content) {
-      setError('La contraseña se creó, pero no pudimos terminar la activación. Inténtalo de nuevo.');
-      setBusy(false);
-      return;
-    }
-    setWelcome(payload.welcome.interaction.content);
-    setBusy(false);
+    if (!response.ok) { setError('La contraseña se creó, pero no pudimos terminar la activación. Inténtalo de nuevo.'); setBusy(false); return; }
+    router.push('/onboarding');
   }
 
-  return <main className="min-h-dvh bg-[var(--bg)] px-5 py-8 [font-family:var(--font-body)] sm:px-8"><div className="mx-auto max-w-[560px]"><Link href="/" className="flex items-center gap-2 text-[15px] font-semibold"><span className="size-2 rounded-full bg-[var(--accent)]" />NIA</Link><section className="pt-24"><h1 className="text-[clamp(40px,7vw,74px)] font-semibold leading-[.94] tracking-[-.06em] [font-family:var(--font-display)]">{welcome ? 'Ya estás dentro.' : 'Crea tu contraseña.'}</h1>{welcome ? <><p className="mt-10 whitespace-pre-line text-[20px] leading-[1.55] [font-family:var(--font-display)]">{welcome}</p><button type="button" onClick={() => router.push('/app')} className="mt-10 min-h-[54px] w-full rounded-[var(--radius-button)] bg-[var(--accent)] text-[15px] font-semibold text-[var(--bg)]">Continuar</button></> : <><p className="mt-8 text-[18px] leading-[1.6] text-[var(--text-secondary)]">Tu cuenta ya está lista. Solo falta que elijas una contraseña para entrar a NIA.</p>{ready === false && <p role="alert" className="mt-6 border-l-2 border-red-700 pl-4 text-[14px] text-red-800">Este enlace ya no es válido. Solicita un enlace de activación nuevo.</p>}{ready && <form onSubmit={submit} className="mt-10 space-y-5"><label className="block text-[12px] font-bold uppercase tracking-[.15em] text-[var(--text-tertiary)]" htmlFor="activation-password">Nueva contraseña</label><input id="activation-password" required minLength={8} type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} className="h-14 w-full border-b-2 border-black/20 bg-transparent text-[20px] outline-none focus:border-[var(--accent)]" /><label className="block text-[12px] font-bold uppercase tracking-[.15em] text-[var(--text-tertiary)]" htmlFor="activation-confirmation">Confirmar contraseña</label><input id="activation-confirmation" required minLength={8} type="password" autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} className="h-14 w-full border-b-2 border-black/20 bg-transparent text-[20px] outline-none focus:border-[var(--accent)]" />{error && <p role="alert" className="text-[14px] text-red-700">{error}</p>}<button disabled={busy} className="min-h-[54px] w-full rounded-[var(--radius-button)] bg-[var(--accent)] text-[15px] font-semibold text-[var(--bg)] disabled:opacity-50">{busy ? 'Activando…' : 'Continuar'}</button></form>}</>}</section></div></main>;
+  return <main className="min-h-dvh bg-[var(--bg)] px-5 py-8 [font-family:var(--font-body)] sm:px-8"><div className="mx-auto max-w-[560px]"><Link href="/" className="flex items-center gap-2 text-[15px] font-semibold"><span className="size-2 rounded-full bg-[var(--accent)]" />NIA</Link><section className="pt-24"><h1 className="text-[clamp(40px,7vw,74px)] font-semibold leading-[.94] tracking-[-.06em] [font-family:var(--font-display)]">Crea tu contraseña.</h1><p className="mt-8 text-[18px] leading-[1.6] text-[var(--text-secondary)]">Tu cuenta ya está lista. Solo falta que elijas una contraseña para entrar a NIA.</p>{ready === false && <p role="alert" className="mt-6 border-l-2 border-red-700 pl-4 text-[14px] text-red-800">Este acceso ya no es válido. Vuelve a solicitar un código.</p>}{ready && <form onSubmit={submit} className="mt-10 space-y-5"><label className="block text-[12px] font-bold uppercase tracking-[.15em] text-[var(--text-tertiary)]" htmlFor="activation-password">Nueva contraseña</label><input id="activation-password" required minLength={8} type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} className="h-14 w-full border-b-2 border-black/20 bg-transparent text-[20px] outline-none focus:border-[var(--accent)]" /><label className="block text-[12px] font-bold uppercase tracking-[.15em] text-[var(--text-tertiary)]" htmlFor="activation-confirmation">Confirmar contraseña</label><input id="activation-confirmation" required minLength={8} type="password" autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} className="h-14 w-full border-b-2 border-black/20 bg-transparent text-[20px] outline-none focus:border-[var(--accent)]" />{error && <p role="alert" className="text-[14px] text-red-700">{error}</p>}<button disabled={busy} className="min-h-[54px] w-full rounded-[var(--radius-button)] bg-[var(--accent)] text-[15px] font-semibold text-[var(--bg)] disabled:opacity-50">{busy ? 'Activando…' : 'Continuar'}</button></form>}</section></div></main>;
 }

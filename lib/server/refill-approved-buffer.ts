@@ -152,7 +152,7 @@ export async function refillEligibleProductionUsers(admin: SupabaseClient, optio
   };
 }
 
-export async function refillApprovedBuffer(admin: SupabaseClient, userId: string, options: { now?: Date; minBufferDays?: number; targetBufferDays?: number; maxCostUsd?: number; onUsage?: (record: RefillResult['usageRecords'][number]) => void | Promise<void> } = {}): Promise<RefillResult> {
+export async function refillApprovedBuffer(admin: SupabaseClient, userId: string, options: { now?: Date; minBufferDays?: number; targetBufferDays?: number; maxCostUsd?: number; firstIntendedLocalDate?: string; onUsage?: (record: RefillResult['usageRecords'][number]) => void | Promise<void> } = {}): Promise<RefillResult> {
   const now = options.now ?? new Date();
   const minBufferDays = options.minBufferDays ?? Number(process.env.MIN_BUFFER_DAYS || MIN_APPROVED_BUFFER_DAYS);
   const targetBufferDays = options.targetBufferDays ?? Number(process.env.TARGET_BUFFER_DAYS || TARGET_BUFFER_DAYS);
@@ -185,12 +185,13 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const usageRecords: RefillResult['usageRecords'] = [];
   const recordUsage = async (record: RefillResult['usageRecords'][number]) => { usageRecords.push(record); await options.onUsage?.(record); };
   const historicalMessages = brief.recentInterventions ?? [];
-  for (let offset = 1; existingRows.length + created.length < targetBufferDays; offset += 1) {
+  const firstOffset = options.firstIntendedLocalDate ? null : 1;
+  for (let offset = firstOffset ?? 0; existingRows.length + created.length < targetBufferDays && (!options.firstIntendedLocalDate || offset === 0); offset += 1) {
     // Reserve a conservative allowance for one Writer + one Judge before
     // starting an item. A repair is allowed only if the remaining budget can
     // pay for the second pair as well.
     if (usage.estimatedCostUsd + 0.005 > maxCostUsd) break;
-    const intendedLocalDate = futureDate(typeof profile.timezone === 'string' ? profile.timezone : null, now, offset);
+    const intendedLocalDate = offset === 0 && options.firstIntendedLocalDate ? options.firstIntendedLocalDate : futureDate(typeof profile.timezone === 'string' ? profile.timezone : null, now, offset);
     if (existingRows.some(row => row.intendedLocalDate === intendedLocalDate) || created.some(row => row.intendedLocalDate === intendedLocalDate)) continue;
     const prospectiveLearning: ProspectiveLearning[] = [...existingRows, ...created].map(item => ({ bufferItemId: item.id ?? `planned:${item.intendedLocalDate}`, intendedLocalDate: item.intendedLocalDate, canonicalMovement: item.plan.canonicalMovement, takeaway: item.plan.expectedTakeaway ?? item.plan.reason, message: item.message, interventionSignature: item.interventionSignature, newContribution: item.plan.newContribution, expectedTakeaway: item.plan.expectedTakeaway }));
     const planned = planDailyIntervention({ goal: brief.desiredChange, context: brief.currentContext, confirmedEvidence: brief.confirmedEvidence, mechanismId: brief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: deliveredExposures.map(exposure => ({ mechanismId: brief.psychologicalContract?.mechanism_id, psychologicalMovementKey: exposure.canonicalMovement, movement: exposure.canonicalMovement, takeaway: exposure.takeaway, text: exposure.message })), exposures: deliveredExposures, plannedSignatures: [...plannedSignatures], prospectiveLearning, intendedLocalDate, projectedReceptionStage: projectedReceptionStage(deliveredExposures.length, prospectiveLearning.length) }).selected;

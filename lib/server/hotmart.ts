@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Json = Record<string, unknown>;
@@ -51,6 +51,7 @@ export function purchaseData(payload: Json) {
 }
 
 async function ensureUser(admin: SupabaseClient, input: ReturnType<typeof purchaseData>, origin: string) {
+  void origin;
   type UserRecord = { id: string; user_metadata: Record<string, unknown> | null };
   let user: UserRecord | null = null;
   for (let page = 1; page <= 20 && !user; page += 1) {
@@ -60,9 +61,9 @@ async function ensureUser(admin: SupabaseClient, input: ReturnType<typeof purcha
     if (listed.data.users.length < 1000) break;
   }
   if (!user) {
-    const invited = await admin.auth.admin.inviteUserByEmail(input.email, { redirectTo: `${origin}/auth/callback?next=/activate`, data: { first_name: input.firstName, must_set_password: true, account_status: 'pending_activation' } });
-    if (invited.error || !invited.data.user) throw new Error('hotmart_user_create_failed');
-    user = invited.data.user;
+    const created = await admin.auth.admin.createUser({ email: input.email, password: randomBytes(32).toString('hex'), email_confirm: true, user_metadata: { first_name: input.firstName, must_set_password: true, account_status: 'pending_activation' } });
+    if (created.error || !created.data.user) throw new Error('hotmart_user_create_failed');
+    user = created.data.user;
   } else {
     const updated = await admin.auth.admin.updateUserById(user.id, { user_metadata: { ...(user.user_metadata ?? {}), first_name: input.firstName ?? user.user_metadata?.first_name, must_set_password: true, account_status: 'pending_activation' } });
     if (updated.error) throw new Error('hotmart_user_update_failed');
