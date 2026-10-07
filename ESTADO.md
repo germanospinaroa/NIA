@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Estados públicos de post-compra — 2026-10-07
+- `/gracias` conserva una sola ruta y reconoce únicamente `status=pending` y `status=analysis`; cualquier otro estado vuelve al aprobado. Pending/analysis muestran solo `Volver a NIA` hacia `/`; el aprobado conserva `Activar mi acceso` hacia `/acceso`.
+- El parámetro es exclusivamente presentacional: no llama APIs, no crea usuarios, no modifica Supabase y no concede acceso. El webhook Hotmart y la validación posterior en `/acceso` siguen siendo la fuente de verdad.
+- Test de estados, typecheck, lint y build PASS; lint conserva cinco warnings heredados. QA de navegador local en las cuatro URLs a 375×812 PASS.
+
 ## Integración Hotmart real — 2026-10-07
 - `/descubre/planes` y el paywall legacy usan mensual como selección inicial para sesiones nuevas, conservan una selección explícita previa y redirigen en la misma pestaña al checkout canónico: mensual `r7w7emsp` a US$4.99/mes con referencia US$6.99, anual `3z4a0vad` a US$49.99/año. Se eliminó el evento `checkout_bypass_started` en favor de `checkout_started` sin PII.
 - Se añadió `/gracias` como página pública de post-compra que lleva a `/acceso`; no confía en parámetros de URL. El webhook existente `/api/webhooks/hotmart` se reutilizó y endureció para payload V2 anidado, allowlist de ofertas, comparación timing-safe, idempotencia, estados de trial/active/pending, cancelación con `access_until`, reembolso/contracargo y eventos negativos sin crear usuarios. Los grants tardíos no resucitan entitlements reembolsados/chargeback.

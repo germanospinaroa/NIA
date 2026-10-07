@@ -44,6 +44,7 @@
     "test:buffer-delivered-exposure-loop": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-buffer-delivered-exposure-loop.mjs",
     "test:material-novelty": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-material-novelty.mjs",
     "test:hotmart-access": "node --experimental-strip-types scripts/test-hotmart-access.mjs",
+    "test:hotmart-thank-you": "node scripts/test-hotmart-thank-you.mjs",
     "test:auth-access": "node scripts/test-auth-access.mjs",
     "test:qa-access": "node --experimental-strip-types scripts/test-qa-access.mjs",
     "test:profile-settings": "node scripts/test-profile-settings.mjs",
