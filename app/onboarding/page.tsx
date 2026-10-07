@@ -73,7 +73,7 @@ function ChoiceCards({ options, selected, max, onToggle, loading }: { options: r
   return <div className="onboarding-choice-list" role="group">
     {options.map(option => {
       const isSelected = selected.includes(option.key);
-      const atLimit = selected.length >= max && !isSelected;
+      const atLimit = max > 1 && selected.length >= max && !isSelected;
       return <button key={option.key} type="button" className={`onboarding-choice ${isSelected ? 'is-selected' : ''} ${atLimit ? 'is-limit-disabled' : ''}`} aria-pressed={isSelected} disabled={loading || atLimit} onClick={() => onToggle(option.key)}>
         <span>{option.label}</span>{isSelected && <Check size={19} aria-hidden="true" />}
       </button>;

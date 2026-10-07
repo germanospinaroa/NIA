@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Corrección single-select onboarding — 2026-10-07
+- `ChoiceCards` ya no deshabilita opciones no seleccionadas cuando `max === 1`; tocar otra respuesta reemplaza inmediatamente la anterior.
+- Los límites de contexto (4) y personalización (2), la exclusividad de `discover_with_me` y el resto del modelo guiado permanecen intactos.
+- Regresión añadida para reemplazo single-select y límites multi-select; typecheck, lint y build PASS. QA visual local en 375/390/430; sin cambios de copy, persistence ni backend.
+
 ## Onboarding guiado por opciones — 2026-10-06
 - `/onboarding` conserva las seis etapas, pero desired change, context y personalization usan selección guiada; solo `Otro` revela un campo corto de hasta 300 caracteres.
 - La identidad reutiliza únicamente un `preferredName` confirmado y válido. `NIA` se rechaza en funnel, perfil y API; no se usa como nombre, fallback ni placeholder.
