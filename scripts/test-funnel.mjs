@@ -22,9 +22,9 @@ for (const copy of [
   '¿Y si eso se pudiera entrenar?', 'No. No te pasa solo a ti.',
   'Esa fue exactamente la pregunta que nos hicimos.', 'Te presentamos a NIA.',
   'Imagina que mañana tienes una conversación que llevas días evitando.',
-  'Antes de seguir, quiero conocerte.', '¿Cómo quieres que te llame?', 'Tu nombre o como te gusta que te llamen', 'Muéstrame cómo se sentiría', 'Tal vez la conversación siga siendo incómoda.',
-  'Pero tú ya no llegas igual.', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.',
-  'Imagina dentro de unos meses…', 'Quiero vivir NIA',
+  'Antes de seguir, quiero conocerte.', '¿Cómo quieres que te llame?', 'Tu nombre o como te gusta que te llamen', 'Muéstrame cómo se sentiría', 'La conversación puede seguir siendo incómoda.',
+  'Pero tú ya no llegas igual.', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.', 'NIA te escribió a ti.',
+  'Y ahora imagina esto…', 'Quiero vivir NIA',
 ]) assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), copy + ' copy');
 assert.equal((source.match(/const screens: Screen\[\] = \[/)?.length ?? 0), 1);
 assert.equal((source.match(/cta: 'Quiero seguir'/g) ?? []).length, 1);
@@ -32,6 +32,9 @@ const premiumSource = fs.readFileSync('components/funnel/PremiumDiscover.tsx', '
 assert.match(premiumSource, /preferredName/);
 assert.doesNotMatch(premiumSource, /Buenos días, Juanita\./);
 assert.doesNotMatch(premiumSource, /Buenos días, Laura\.|poco a poco|Y eso fue solo un día\./);
+assert.match(premiumSource, /addressName/);
+assert.match(premiumSource, /NIA te escribió a ti\./);
+assert.doesNotMatch(premiumSource, /Te llegó un WhatsApp\./);
 assert.equal((premiumSource.match(/Porque cambiar no ocurre por entender algo una vez\./g) ?? []).length, 1);
 for (const fact of ['+40.000 participantes', '14.321', 'American Economic Review · 2024']) assert.match(premiumSource, new RegExp(fact.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 assert.doesNotMatch(premiumSource, /Esto es NIA\./);

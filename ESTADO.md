@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Personalización post-nombre del funnel — 2026-10-06
+- El tramo público posterior a `preferredName` ahora usa dirección personal: título del ejemplo vivido, saludo WhatsApp, continuidad y cierre futuro incorporan el nombre solo en los cuatro puntos definidos; sin fallback a `firstName`.
+- La pantalla de nombre usa la transición cálida solicitada. `addressName()` limpia espacios repetidos y conserva acentos/guiones; el evento `discover_preferred_name_entered` no recibe el valor del nombre.
+- Copy, regresiones, typecheck y build PASS; lint sin errores con warnings heredados. QA visual local en 375/390/430/1440 con nombres normales, acentuados, con guion y largos. Sin cambios a onboarding, auth, WhatsApp, delivery ni motor psicológico.
+
 ## WhatsApp UX simplificada — 2026-10-06
 - `WhatsAppConnectionPanel` conserva la validación E.164, token pendiente, `expected_phone`, deep link prellenado, polling y verificación inbound; la UI posterior a confirmar el número ahora muestra únicamente `Confirma tu WhatsApp` + `Confirmar WhatsApp`, y después espera automáticamente.
 - Código de verificación y número de negocio ya no se renderizan en NIA; se mantienen solo para crear el enlace seguro. Se retiró `Ya envié el mensaje` y el límite de polling que obligaba a otra acción.

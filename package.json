@@ -16,6 +16,7 @@
     "test:intervention-detail": "node --experimental-strip-types scripts/test-intervention-detail.mjs",
     "test:cost-ledger": "node --experimental-strip-types scripts/test-cost-ledger.mjs",
     "test:funnel": "node scripts/test-funnel.mjs",
+    "test:funnel-personalization": "node --experimental-strip-types scripts/test-funnel-personalization.mjs",
     "test:discover-recognition": "node scripts/test-discover-recognition.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "test:onboarding-finalization": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-onboarding-finalization.mjs",
