@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Integración Hotmart real — 2026-10-07
+- `/descubre/planes` y el paywall legacy usan mensual como selección inicial para sesiones nuevas, conservan una selección explícita previa y redirigen en la misma pestaña al checkout canónico: mensual `r7w7emsp` a US$4.99/mes con referencia US$6.99, anual `3z4a0vad` a US$49.99/año. Se eliminó el evento `checkout_bypass_started` en favor de `checkout_started` sin PII.
+- Se añadió `/gracias` como página pública de post-compra que lleva a `/acceso`; no confía en parámetros de URL. El webhook existente `/api/webhooks/hotmart` se reutilizó y endureció para payload V2 anidado, allowlist de ofertas, comparación timing-safe, idempotencia, estados de trial/active/pending, cancelación con `access_until`, reembolso/contracargo y eventos negativos sin crear usuarios. Los grants tardíos no resucitan entitlements reembolsados/chargeback.
+- Se reutilizan `hotmart_entitlements`, `hotmart_webhook_events` y `subscriptions`; migración adicional: NOT REQUIRED. `HOTMART_HOTTOK` está MISSING en producción: el webhook falla cerrado hasta configurarlo. Falta acción manual en Hotmart: secret de Vercel, registro webhook V2 y thank-you URL `/gracias`; la semántica exacta de trial requiere verificación con webhook real.
+- Verificación local: fixtures V2, auth/access, pricing, funnel, finalización/welcome, onboarding auth/guided, typecheck y build PASS; lint PASS con cinco warnings heredados. No hubo compra, reembolso, chargeback, emails ni WhatsApps reales.
+
 ## Funnel aprobado como raíz pública — 2026-10-07
 - `/` ahora renderiza directamente `PremiumDiscover`, la experiencia premium aprobada que antes vivía en `/descubre`.
 - El landing anterior se conserva como `components/landing/ArchivedLanding.tsx`, fuera del árbol `app/`, por lo que no queda publicado como ruta.

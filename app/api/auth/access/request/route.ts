@@ -12,7 +12,21 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data, error } = await admin.from('hotmart_entitlements').select('user_id,status').ilike('buyer_email', email).order('created_at', { ascending: false }).limit(10);
   if (error && error.code !== '42P01') return NextResponse.json({ error: 'access_unavailable' }, { status: 503 });
-  const eligible = (data ?? []).some(row => Boolean(row.user_id) && !['canceled', 'cancelled', 'refunded', 'expired'].includes(String(row.status).toLowerCase()));
+  const entitlementRows = data ?? [];
+  const userIds = entitlementRows.map(row => row.user_id).filter((value): value is string => typeof value === 'string');
+  const subscriptions = userIds.length ? await admin.from('subscriptions').select('user_id,status,access_until').in('user_id', userIds).order('created_at', { ascending: false }) : null;
+  if (subscriptions?.error && subscriptions.error.code !== '42P01') return NextResponse.json({ error: 'access_unavailable' }, { status: 503 });
+  const subscriptionByUser = new Map<string, { status: string; access_until: string | null }>();
+  for (const row of subscriptions?.data ?? []) if (typeof row.user_id === 'string' && !subscriptionByUser.has(row.user_id)) subscriptionByUser.set(row.user_id, { status: String(row.status ?? '').toLowerCase(), access_until: typeof row.access_until === 'string' ? row.access_until : null });
+  const now = Date.now();
+  const eligible = entitlementRows.some(row => {
+    if (typeof row.user_id !== 'string') return false;
+    const entitlementStatus = String(row.status ?? '').toLowerCase();
+    if (['pending_activation', 'trialing', 'active'].includes(entitlementStatus)) return true;
+    const subscription = subscriptionByUser.get(row.user_id);
+    const accessUntil = subscription?.access_until;
+    return ['canceled', 'cancelled'].includes(entitlementStatus) && typeof accessUntil === 'string' && Date.parse(accessUntil) > now;
+  });
   const adminAuthorized = isAdminEmail(email);
   const qaAuthorized = isQaEmail(email);
   const accessAuthorized = adminAuthorized || qaAuthorized;

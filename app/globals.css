@@ -492,6 +492,9 @@ main:has(#funnel-email) .funnel-error, main:has(#access-code) .funnel-error { pa
 .nia-continuity-frame .plans-screen .plan-badge { display: inline-flex; margin-top: 16px; padding: 5px 9px; border: 1px solid rgb(216 162 120 / .44); border-radius: 999px; color: #e0ad84; font-size: 11px; font-weight: 750; letter-spacing: .04em; }
 .nia-continuity-frame .plans-screen .plan-price { margin-top: 18px; font-size: 36px; }
 .nia-continuity-frame .plans-screen .plan-price small { font-size: 14px; }
+.nia-continuity-frame .plans-screen .plan-price del { display: block; margin-bottom: 5px; color: var(--continuity-muted); font-family: var(--font-body); font-size: .42em; letter-spacing: 0; line-height: 1; }
+.nia-continuity-frame .plans-screen .plan-price strong { display: inline-flex; align-items: baseline; gap: 5px; font-weight: inherit; white-space: nowrap; }
+.nia-continuity-frame .plans-screen .plan-price strong small { margin-left: 0; }
 .nia-continuity-frame .plans-screen .plan-detail { margin-top: 10px; color: var(--continuity-muted); font-size: 13px; line-height: 1.4; }
 .nia-continuity-frame .plans-screen .billing-note { margin: 20px 0 0; color: var(--continuity-muted); font-size: 13px; line-height: 1.45; }
 .nia-continuity-frame .plans-screen .billing-note strong { color: var(--continuity-ink); font-family: var(--font-display); font-size: 18px; }
