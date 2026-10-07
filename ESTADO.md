@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Funnel finishing pass — 2026-10-06
+- Las transiciones del funnel premium y las pantallas legacy `/descubre` resetean `window`, document y contenedor activo a `top: 0` con `behavior: auto`; `/descubre/planes` también lo hace al montar.
+- `preferredName` ahora solo se carga con `preferredNameConfirmed === true`; el campo inicia vacío, usa placeholder HTML `Juanita` y al enviar guarda el marcador explícito. No se añade PII a analytics.
+- El cierre final usa `Esos momentos van a volver.` y hace dominante `Porque la duda puede volver.` / `Lo que puede cambiar es quién decide cuando aparezca.`. Planes abre con `tengo una buena noticia` y la experiencia de 7 días como payoff; precios, trial, eventos y checkout intactos.
+- Tests de funnel, personalización, pricing, scroll/reset, discover, typecheck y build PASS; lint conserva cinco warnings heredados. QA visual local capturada en 375/390/430/1440; no hubo emails, WhatsApps, Hotmart, OpenAI ni cambios de backend.
+
 ## Pricing personalizado post-funnel — 2026-10-06
 - `/descubre/planes` reutiliza `addressName()` y `preferredName` del estado del funnel para abrir con una sola dirección personal; sin PII en analytics.
 - La decisión de plan ahora lidera con los 7 días gratis, conserva US$39.99/año y US$6.99/mes, mantiene anual seleccionado, añade la etiqueta segura `Mejor opción` y usa el CTA `Empezar mis 7 días con NIA →`.

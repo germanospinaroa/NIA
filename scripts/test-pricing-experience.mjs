@@ -5,11 +5,13 @@ const source = fs.readFileSync('app/descubre/planes/page.tsx', 'utf8');
 const helper = fs.readFileSync('lib/funnel-personalization.ts', 'utf8');
 
 assert.match(source, /readFunnelState\(\)/);
-assert.match(source, /addressName\(state\.preferredName\)/);
-assert.match(source, /setPreferredName\(addressName\(state\.preferredName\)\)/);
+assert.match(source, /state\.preferredNameConfirmed === true \? addressName\(state\.preferredName\) : ''/);
 assert.match(source, /preferredName \? /);
+assert.match(source, /tengo una buena noticia/);
+assert.match(source, /Ya no tienes que imaginar cómo se sentiría\./);
+assert.match(source, /tus propios temas, tus propios momentos y mensajes pensados para ti/);
 assert.match(source, /Tus primeros 7 días son gratis\./);
-assert.match(source, /Después eliges cómo quieres continuar\./);
+assert.match(source, /Después, tú decides si quieres continuar\./);
 assert.match(source, /La opción para quedarte con NIA/);
 assert.match(source, /Más flexibilidad/);
 assert.match(source, /US\$39\.99/);

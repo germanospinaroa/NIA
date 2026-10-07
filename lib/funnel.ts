@@ -21,6 +21,7 @@ export type FunnelState = {
   email?: string;
   firstName?: string;
   preferredName?: string;
+  preferredNameConfirmed?: boolean;
   directionText?: string;
   onboardingContext?: string;
   firstInterventionContent?: string;

@@ -18,6 +18,7 @@
     "test:funnel": "node scripts/test-funnel.mjs",
     "test:funnel-personalization": "node --experimental-strip-types scripts/test-funnel-personalization.mjs",
     "test:pricing-experience": "node scripts/test-pricing-experience.mjs",
+    "test:funnel-finish": "node scripts/test-funnel-finish.mjs",
     "test:discover-recognition": "node scripts/test-discover-recognition.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "test:onboarding-finalization": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-onboarding-finalization.mjs",
