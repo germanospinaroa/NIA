@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Conflicto WhatsApp limitado al intento — 2026-10-07
+- `GET /api/whatsapp/connection` ahora devuelve únicamente el estado canónico de la cuenta cuando no recibe `attempt_id`; tokens rechazados, usados o expirados ya no producen una tarjeta de conflicto persistente.
+- Los conflictos, estados pendientes y éxitos se evalúan solo contra el token solicitado explícitamente. Filas de conexión `disconnected` se normalizan a `not_connected` para el cliente.
+- Regresiones WhatsApp, inbound, perfil, typecheck, lint y build PASS; no se requiere migración ni se modificó el esquema.
+
 ## Gestión separada de WhatsApp — 2026-10-07
 - `WhatsAppConnectionPanel` distingue `Cambiar número` de `Desconectar WhatsApp`. El reemplazo abre un token `purpose=replace`, conserva el número actual mientras está pendiente y solo lo sustituye después de verificar el nuevo número mediante el webhook inbound. La desconexión sigue siendo una acción independiente y cancela intentos de reemplazo pendientes del usuario.
 - `/api/whatsapp/connection` mantiene el estado canónico conectado aunque exista un token rechazado y devuelve estado seguro por `attempt_id` (`pending`, `conflict`, `succeeded`) para que el polling no confunda el número viejo con un reemplazo exitoso. La protección por usuario, `expected_phone`, E.164 y conflicto de número ajeno se conserva.
