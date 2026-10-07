@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Final funnel copy pass — 2026-10-06
+- Copy aprobado aplicado literalmente en las 10 pantallas activas: screen 4 corrige `y qué podría ayudarte`; screen 8 usa `Y sí, la conversación puede seguir siendo incómoda.` con nombres inline; screen 9 usa vocativo con dos puntos y `desde donde responder`; pricing usa `Ahora tengo una muy buena noticia para ti, {Nombre}.`.
+- Se conservan `preferredNameConfirmed`, `addressName`, placeholder `Juanita` únicamente en el input, privacidad de analytics, resets de scroll, precios, trial, selección y checkout.
+- Regresiones exactas de copy/personalización/pricing, typecheck y build PASS; lint conserva cinco warnings heredados. QA visual final en 375/390/430/1440; sin cambios funcionales fuera del funnel/pricing.
+
 ## Pricing copy rebuild — 2026-10-06
 - `/descubre/planes` abre con el `preferredName` confirmado y el payoff exacto: `Todo lo que acabas de imaginar puede empezar a ser tuyo.`; el nombre no se envía a analytics.
 - La explicación recuerda el WhatsApp/proceso personal, destaca `Tus primeros 7 días son gratis.`, usa el riesgo reversible `Hoy no pagas nada.` y CTA `Quiero empezar mis 7 días con NIA →`.

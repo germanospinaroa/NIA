@@ -22,9 +22,9 @@ for (const copy of [
   '¿Y si eso se pudiera entrenar?', 'No. No te pasa solo a ti.',
   'Esa fue exactamente la pregunta que nos hicimos.', 'Te presentamos a NIA.',
   'Imagina que mañana tienes una conversación que llevas días evitando.',
-  'Antes de mostrártelo, quiero conocerte.', '¿Cómo quieres que te llame?', 'Juanita', 'Ahora sí, muéstrame cómo se sentiría', 'La conversación puede seguir siendo incómoda.',
+  'Antes de mostrártelo, quiero conocerte.', '¿Cómo quieres que te llame?', 'Juanita', 'Ahora sí, muéstrame cómo se sentiría', 'Y sí, la conversación puede seguir siendo incómoda.',
   'Pero tú ya no llegas igual.', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.', 'NIA te escribió a ti.',
-  'Esos momentos van a volver.', 'Porque la duda puede volver.', 'Lo que puede cambiar es quién decide cuando aparezca.', 'tu propio criterio.', 'Quiero vivir NIA',
+  'Esos momentos van a volver.', 'Porque la duda puede volver.', 'Lo que puede cambiar es quién decide cuando aparezca.', 'tu propio criterio.', 'Pero tenemos que ser muy sinceros contigo:', 'Quiero vivir NIA',
 ]) assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), copy + ' copy');
 assert.equal((source.match(/const screens: Screen\[\] = \[/)?.length ?? 0), 1);
 assert.equal((source.match(/cta: 'Quiero seguir'/g) ?? []).length, 1);
