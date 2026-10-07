@@ -1,8 +1,21 @@
 export type ProfileName = { preferred_name?: string | null; first_name?: string | null };
 
+export function normalizeProfileName(value: unknown) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+}
+
+export function isInvalidPreferredName(value: unknown) {
+  return normalizeProfileName(value).toLocaleLowerCase() === 'nia';
+}
+
+export function safePreferredName(value: unknown) {
+  const normalized = normalizeProfileName(value);
+  return normalized && !isInvalidPreferredName(normalized) ? normalized : '';
+}
+
 export function preferredAddressName(profile: ProfileName | null | undefined) {
-  const preferred = typeof profile?.preferred_name === 'string' ? profile.preferred_name.trim() : '';
+  const preferred = safePreferredName(profile?.preferred_name);
   if (preferred) return preferred;
-  const first = typeof profile?.first_name === 'string' ? profile.first_name.trim() : '';
+  const first = safePreferredName(profile?.first_name);
   return first || null;
 }

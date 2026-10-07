@@ -10,7 +10,7 @@ assert.match(source, /\/api\/profile/);
 assert.doesNotMatch(source, /\/api\/onboarding\/complete/);
 assert.doesNotMatch(source, /\/api\/calibration/);
 assert.match(source, /onboardingStage/);
-assert.match(source, /¿A qué hora quieres recibir tu mensaje de NIA\?/);
+assert.match(source, /¿A qué hora quieres recibir tu mensaje\?/);
 assert.doesNotMatch(source, /PARA EMPEZAR|Por la noche|2 veces al día|Segunda hora/);
 assert.match(source, /personalization/);
 assert.match(source, /useState\('08:00'\)/);

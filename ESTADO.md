@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Onboarding guiado por opciones — 2026-10-06
+- `/onboarding` conserva las seis etapas, pero desired change, context y personalization usan selección guiada; solo `Otro` revela un campo corto de hasta 300 caracteres.
+- La identidad reutiliza únicamente un `preferredName` confirmado y válido. `NIA` se rechaza en funnel, perfil y API; no se usa como nombre, fallback ni placeholder.
+- Las respuestas estructuradas se guardan dentro de `learning_profile.onboarding` preservando contenido previo; los campos legacy que consume el motor siguen sincronizados con textos deterministas.
+- No se requiere migración: `learning_profile` ya existe como JSONB. Timing, WhatsApp, terminal completion y el motor psicológico no fueron modificados; cada etapa reinicia el scroll de ventana al cambiar.
+- Verificación local: opciones, persistencia, seguridad de nombre, regresiones de onboarding, typecheck, lint y build ejecutados; no se enviaron mensajes reales.
+
 ## Scroll natural del funnel premium — 2026-10-06
 - Se eliminó el scroll anidado del funnel: `.premium-funnel` conserva únicamente clipping horizontal (`overflow-x: clip`) y `.premium-screen` participa en el flujo natural del documento con `min-height: 100dvh`, sin overflow vertical propio.
 - Se retiraron los parches `overflow-y: auto` de las pantallas premium y de pricing. El CTA inferior sigue fijo y el padding inferior existente mantiene el último contenido visible por encima de él.

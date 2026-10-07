@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { intentionLabel, invalidIntention, isValidIntention, validCustomIntention } from '@/lib/intention';
+import { isInvalidPreferredName } from '@/lib/profile-name';
 
 const allowed = new Set([
   'first_name', 'last_name', 'preferred_name', 'direction_key', 'direction_text', 'voice_style', 'communication_preference', 'message_frequency', 'message_time_1', 'message_time_2', 'timezone', 'country_code',
@@ -29,7 +30,10 @@ export async function PATCH(request: Request) {
   for (const key of ['first_name', 'last_name', 'preferred_name']) {
     if (!(key in values)) continue;
     if (values[key] !== null && typeof values[key] !== 'string') return NextResponse.json({ error: 'invalid_identity_field' }, { status: 422 });
-    if (typeof values[key] === 'string') values[key] = values[key].trim().replace(/\s+/g, ' ');
+    if (typeof values[key] === 'string') {
+      values[key] = values[key].trim().replace(/\s+/g, ' ');
+      if (isInvalidPreferredName(values[key])) return NextResponse.json({ error: 'invalid_identity_field' }, { status: 422 });
+    }
   }
 
   if ('country_code' in values && (typeof values.country_code !== 'string' || !/^[A-Z]{2}$/.test(values.country_code))) {
@@ -47,9 +51,10 @@ export async function PATCH(request: Request) {
     } else if (!isValidIntention(key, text)) {
       return NextResponse.json({ error: 'invalid_intention' }, { status: 422 });
     } else if (key !== 'custom') {
-      values.direction_text = intentionLabel(key);
-      values.desired_change_original = intentionLabel(key);
-      values.desired_change_summary = intentionLabel(key);
+      const displayText = validCustomIntention(text) ? text : intentionLabel(key);
+      values.direction_text = displayText;
+      values.desired_change_original = displayText;
+      values.desired_change_summary = displayText;
     } else if (!validCustomIntention(text)) {
       return NextResponse.json({ error: 'invalid_custom_intention' }, { status: 422 });
     }
