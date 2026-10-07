@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Pricing copy rebuild — 2026-10-06
+- `/descubre/planes` abre con el `preferredName` confirmado y el payoff exacto: `Todo lo que acabas de imaginar puede empezar a ser tuyo.`; el nombre no se envía a analytics.
+- La explicación recuerda el WhatsApp/proceso personal, destaca `Tus primeros 7 días son gratis.`, usa el riesgo reversible `Hoy no pagas nada.` y CTA `Quiero empezar mis 7 días con NIA →`.
+- Cards conservan anual por defecto, `US$39.99 / año`, mensual `US$6.99 / mes`, `Mejor opción`, selección, tracking, checkout y reset de scroll. Tests de pricing/funnel, typecheck y build PASS; lint conserva cinco warnings heredados.
+
 ## Funnel finishing pass — 2026-10-06
 - Las transiciones del funnel premium y las pantallas legacy `/descubre` resetean `window`, document y contenedor activo a `top: 0` con `behavior: auto`; `/descubre/planes` también lo hace al montar.
 - `preferredName` ahora solo se carga con `preferredNameConfirmed === true`; el campo inicia vacío, usa placeholder HTML `Juanita` y al enviar guarda el marcador explícito. No se añade PII a analytics.
