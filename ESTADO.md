@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Pricing personalizado post-funnel — 2026-10-06
+- `/descubre/planes` reutiliza `addressName()` y `preferredName` del estado del funnel para abrir con una sola dirección personal; sin PII en analytics.
+- La decisión de plan ahora lidera con los 7 días gratis, conserva US$39.99/año y US$6.99/mes, mantiene anual seleccionado, añade la etiqueta segura `Mejor opción` y usa el CTA `Empezar mis 7 días con NIA →`.
+- Checkout, routing, `checkoutMode`, eventos, duración de prueba y billing permanecen intactos. Tests específicos, funnel, typecheck y build PASS; lint conserva cinco warnings heredados.
+
 ## Personalización post-nombre del funnel — 2026-10-06
 - El tramo público posterior a `preferredName` ahora usa dirección personal: título del ejemplo vivido, saludo WhatsApp, continuidad y cierre futuro incorporan el nombre solo en los cuatro puntos definidos; sin fallback a `firstName`.
 - La pantalla de nombre usa la transición cálida solicitada. `addressName()` limpia espacios repetidos y conserva acentos/guiones; el evento `discover_preferred_name_entered` no recibe el valor del nombre.
