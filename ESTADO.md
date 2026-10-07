@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Scroll natural del funnel premium — 2026-10-06
+- Se eliminó el scroll anidado del funnel: `.premium-funnel` conserva únicamente clipping horizontal (`overflow-x: clip`) y `.premium-screen` participa en el flujo natural del documento con `min-height: 100dvh`, sin overflow vertical propio.
+- Se retiraron los parches `overflow-y: auto` de las pantallas premium y de pricing. El CTA inferior sigue fijo y el padding inferior existente mantiene el último contenido visible por encima de él.
+- El reset entre pantallas y al abrir pricing ahora resetea únicamente window/document con `behavior: auto`; no se intenta desplazar un contenedor de pantalla.
+- Regresión CSS/funnel, tests de funnel-personalization/pricing, typecheck y build PASS; lint conserva cinco warnings heredados. QA local verificado en 375/390/430/1440; sin cambios de copy ni de lógica funcional.
+
 ## Final funnel copy pass — 2026-10-06
 - Copy aprobado aplicado literalmente en las 10 pantallas activas: screen 4 corrige `y qué podría ayudarte`; screen 8 usa `Y sí, la conversación puede seguir siendo incómoda.` con nombres inline; screen 9 usa vocativo con dos puntos y `desde donde responder`; pricing usa `Ahora tengo una muy buena noticia para ti, {Nombre}.`.
 - Se conservan `preferredNameConfirmed`, `addressName`, placeholder `Juanita` únicamente en el input, privacidad de analytics, resets de scroll, precios, trial, selección y checkout.

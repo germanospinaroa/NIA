@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
@@ -45,13 +45,12 @@ export default function PremiumDiscover() {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const screenRef = useRef<HTMLElement>(null);
   const [preferredName, setPreferredName] = useState(() => { const state = readFunnelState(); return state.preferredNameConfirmed === true ? addressName(state.preferredName) : ''; });
   const screen = screens[index];
   const displayName = addressName(preferredName);
   const title = screen.kind === 'whatsapp' ? (displayName ? `${displayName}, imagina que mañana tienes una conversación que llevas días evitando.` : 'Imagina que mañana tienes una conversación que llevas días evitando.') : screen.kind === 'closing' ? (displayName ? `Pero tenemos que ser muy sinceros contigo, ${displayName}: esos momentos van a volver.` : 'Pero tenemos que ser muy sinceros contigo: esos momentos van a volver.') : screen.title;
   useEffect(() => { trackFunnel('discover_started'); trackFunnel('premium_funnel_started'); trackFunnel('discover_screen_viewed', { screen: 1 }); }, []);
-  useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; screenRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, [index]);
+  useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }, [index]);
   function next() {
     if (screen.kind === 'preferred-name') {
       const value = addressName(preferredName);
@@ -68,7 +67,7 @@ export default function PremiumDiscover() {
   return <main className={`premium-funnel ${screen.dark ? 'is-dark' : ''}`}>
     <header className="premium-header"><a href="/descubre" className="premium-mark" aria-label="NIA inicio"><span />NIA</a></header>
     <div className="premium-stage" style={screen.image ? { '--premium-image': `url(${screen.image})` } as CSSProperties : undefined}>
-      <AnimatePresence mode="wait"><motion.section ref={screenRef} key={index} className={`premium-screen premium-screen-${index + 1} ${screen.kind ? `is-${screen.kind}` : ''}`} initial={false} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -12 }} transition={{ duration: reduce ? 0 : .38, ease: [0.22, 1, 0.36, 1] }} aria-labelledby="premium-title">
+      <AnimatePresence mode="wait"><motion.section key={index} className={`premium-screen premium-screen-${index + 1} ${screen.kind ? `is-${screen.kind}` : ''}`} initial={false} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -12 }} transition={{ duration: reduce ? 0 : .38, ease: [0.22, 1, 0.36, 1] }} aria-labelledby="premium-title">
         {screen.image && <div className="premium-image" aria-hidden="true" />}<div className="premium-vignette" aria-hidden="true" />
         <div className="premium-copy"><h1 id="premium-title">{title.split('\n').map((line, i, lines) => <span key={line} className="premium-title-line">{line}{i < lines.length - 1 && <br />}</span>)}</h1>
           {screen.kind === 'preferred-name' ? <div className="premium-preferred-name"><p>Hasta ahora te he hablado de NIA.</p><p>Pero si esto va a ser sobre ti, quiero que desde aquí también <strong>se sienta tuyo</strong>.</p><p className="is-emphasis">Yo soy NIA.</p><p>Y quiero empezar por algo muy simple:</p><label htmlFor="premium-preferred-name">¿Cómo quieres que te llame?</label><input id="premium-preferred-name" autoFocus value={preferredName} onChange={event => setPreferredName(event.target.value)} placeholder="Juanita" maxLength={80} /></div> : screen.kind === 'whatsapp' ? <div className="premium-whatsapp-wrap"><div className="premium-body-lines">{screen.body.map(line => <p key={line} className={line.startsWith('“') || line === 'NIA te escribió a ti.' ? 'is-emphasis' : ''}>{line}</p>)}</div><WhatsAppMoment preferredName={displayName} /></div> : screen.kind === 'evidence' ? <EvidenceComposition /> : screen.kind === 'continuity' ? <div className="premium-body-lines premium-continuity-copy">{screen.body.map((line, i) => { const copy = i === 0 && displayName ? `Pero, ${displayName}, tú ya no llegas igual.` : i === 9 && displayName ? `Porque, ${displayName}, cambiar no ocurre por entender algo una vez.` : line; return <p key={copy} className={[0, 3, 4, 5, 6, 9, 11, 12].includes(i) ? 'is-emphasis' : ''}>{copy}</p>; })}</div> : <div className="premium-body-lines">{screen.body.map((line, i) => { const copy = screen.kind === 'closing' && i === 7 && displayName ? `${displayName}, no queremos que necesites a NIA para saber qué hacer.` : line; const emphasis = screen.kind === 'closing' ? [3, 5, 6, 7, 9, 11].includes(i) : line.length < 72 && (line.startsWith('No ') || line.startsWith('Es ') || line.startsWith('Creemos') || line.startsWith('NIA ') || line.startsWith('“') || line === 'Que cada vez dependas más de ti.'); const core = screen.kind === 'closing' && [5, 6].includes(i); return <p key={copy} className={`${emphasis ? 'is-emphasis ' : ''}${core ? 'is-core' : ''}`}>{copy}</p>; })}</div>}
