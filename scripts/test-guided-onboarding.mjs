@@ -10,6 +10,7 @@ import {
   optionLabel,
 } from '../lib/onboarding-choices.ts';
 import { isInvalidPreferredName, safePreferredName } from '../lib/profile-name.ts';
+import { hasConfirmedOnboardingIdentity } from '../lib/onboarding-identity.ts';
 
 const page = fs.readFileSync('app/onboarding/page.tsx', 'utf8');
 const profileRoute = fs.readFileSync('app/api/profile/route.ts', 'utf8');
@@ -34,11 +35,19 @@ for (const value of ['NIA', 'nia', 'Nia', ' NIA ']) {
   assert.equal(safePreferredName(value), '');
 }
 assert.equal(safePreferredName(' María José '), 'María José');
+assert.equal(hasConfirmedOnboardingIdentity({ onboarding: { identity: { status: 'answered', confirmed_at: '2026-10-07T00:00:00.000Z' } } }), true);
+assert.equal(hasConfirmedOnboardingIdentity({ onboarding: { identity: { status: 'answered' } } }), false);
+assert.equal(hasConfirmedOnboardingIdentity({ onboarding: { identity: { status: 'pending', confirmed_at: '2026-10-07T00:00:00.000Z' } } }), false);
 
 assert.match(page, /preferredNameConfirmed === true/);
 assert.match(page, /safePreferredName\(profile\.preferred_name\)/);
+assert.match(page, /hasConfirmedOnboardingIdentity\(nextLearning\)/);
+assert.match(page, /const nextLearningProfile = \{ \.\.\.learningProfile, onboarding:/);
+assert.match(page, /identity: \{ status: 'answered', confirmed_at:/);
+assert.match(page, /id="onboarding-preferred-name"/);
+assert.match(page, /completeOnboarding\(\)/);
 assert.doesNotMatch(page, /funnel\.preferredName \|\| funnel\.firstName/);
-assert.match(page, /setPreferredNameKnown\(Boolean\(nextPreferred\)\)/);
+assert.doesNotMatch(page, /preferredNameKnown/);
 assert.match(page, /learning_profile: nextLearningProfile/);
 assert.match(page, /maxLength=\{300\}/);
 assert.match(page, /const atLimit = max > 1 && selected\.length >= max && !isSelected;/);

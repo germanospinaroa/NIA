@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Finalización real de onboarding — 2026-10-07
+- La identidad ya no se infiere de nombres provenientes de Hotmart, del funnel ni del perfil: `/onboarding` exige los tres campos editables y guarda `learning_profile.onboarding.identity.status = answered` con `confirmed_at`. `NIA` sigue rechazado como nombre.
+- La resolución de etapas usa ese marcador explícito y conserva las secciones ya completadas. Si todo está completo y WhatsApp ya está conectado, el cliente llama `POST /api/onboarding/complete`; el éxito o una finalización previa redirige automáticamente a `/app`, los datos faltantes vuelven a su etapa y un fallo transitorio muestra `Continuar`.
+- La finalización server-side valida identidad explícita, mantiene frecuencia única, evita una segunda intervención diaria cuando ya existe una entrega exitosa, verifica persistencia de welcome/outbox y timestamp de finalización, y conserva la idempotencia de interacción y delivery.
+- El webhook de conexión solo personaliza el mensaje con una identidad confirmada; antes usa un saludo neutral. La confirmación de conexión sigue separada del welcome psicológico y los fallos de finalización quedan registrados sin marcar onboarding como completo.
+- Regresiones guiadas/finalización, auth onboarding, activation/welcome, WhatsApp/inbound e initial experience PASS; typecheck, lint, build y diff check PASS. Lint conserva cinco warnings heredados. Sin emails, WhatsApps, cambios de datos de usuarios ni migración nueva.
+
 ## Conflicto WhatsApp limitado al intento — 2026-10-07
 - `GET /api/whatsapp/connection` ahora devuelve únicamente el estado canónico de la cuenta cuando no recibe `attempt_id`; tokens rechazados, usados o expirados ya no producen una tarjeta de conflicto persistente.
 - Los conflictos, estados pendientes y éxitos se evalúan solo contra el token solicitado explícitamente. Filas de conexión `disconnected` se normalizan a `not_connected` para el cliente.

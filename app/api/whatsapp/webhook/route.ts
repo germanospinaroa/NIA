@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { extractLinkCode, hashLinkCode, normalizeInboundPhone, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
 import { persistInboundMessage, processInboundMessage, processUnresolvedInbound } from '@/lib/server/whatsapp-inbound';
 import { completeOnboardingAfterWhatsapp } from '@/lib/server/onboarding-finalization';
+import { hasConfirmedOnboardingIdentity } from '@/lib/onboarding-identity';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ received: true, duplicate: true });
   }
-  const { data: profile } = await admin.from('profiles').select('first_name,preferred_name').eq('id', token.user_id).maybeSingle();
+  const { data: profile } = await admin.from('profiles').select('first_name,preferred_name,learning_profile').eq('id', token.user_id).maybeSingle();
   await admin.from('profiles').update({ whatsapp_enabled: true, whatsapp_phone: verifiedFrom }).eq('id', token.user_id);
   let onboarding;
   try {
@@ -103,10 +104,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('[whatsapp onboarding completion failed]', { userId: token.user_id, reason: error instanceof Error ? error.message : 'unknown' });
   }
-  const name = profile?.preferred_name?.trim() || profile?.first_name?.trim();
-  const greeting = name ? `Hola, ${name}.` : 'Hola.';
+  const confirmedIdentity = hasConfirmedOnboardingIdentity(profile?.learning_profile);
+  const name = confirmedIdentity ? profile?.preferred_name?.trim() : '';
+  const greeting = name ? `Hola, ${name}.\n\n` : '';
   console.info('whatsapp_link_outbound_started', { userId: token.user_id, connectionId: connection.id, waIdSuffix: verifiedFrom.slice(-4) });
-  const delivery = await sendWhatsAppText(verifiedFrom, `${greeting}\n\nListo. Ya reconocí este número y quedó conectado con tu cuenta de NIA.\n\nAhora podrás recibir aquí tus mensajes.`);
+  const delivery = await sendWhatsAppText(verifiedFrom, `${greeting}Listo. Ya reconocí este número y quedó conectado con tu cuenta de NIA.\n\nAhora podrás recibir aquí tus mensajes.`);
   if (!delivery.ok) {
     console.error('whatsapp_link_confirmation_failed', { userId: token.user_id, connectionId: connection.id, waIdSuffix: from.slice(-4), reason: delivery.reason, status: 'status' in delivery ? delivery.status : undefined });
     return NextResponse.json({ received: true, connected: true, confirmation_sent: false, onboarding_completed: Boolean(onboarding?.alreadyCompleted || onboarding?.welcomeScheduled) });

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Check } from 'lucide-react';
 import { FunnelFrame } from '@/components/funnel/FunnelFrame';
@@ -9,6 +9,7 @@ import { WhatsAppConnectionPanel, type WhatsAppConnectionState } from '@/compone
 import { readFunnelState, saveFunnelState, trackFunnel } from '@/lib/funnel';
 import { readMvpState, saveMvpState } from '@/lib/mvp';
 import { isInvalidPreferredName, safePreferredName } from '@/lib/profile-name';
+import { hasConfirmedOnboardingIdentity } from '@/lib/onboarding-identity';
 import { COUNTRY_OPTIONS, countryByCode, countryFromBrowserLocale, timeLabel, timezoneFromBrowser, timezoneLabel } from '@/lib/locale';
 import {
   CONTEXT_OPTIONS,
@@ -69,6 +70,15 @@ function restoreKeys(section: Record<string, unknown> | null, options: readonly 
   return selections.map(selection => typeof selection === 'string' ? selection : record(selection).key).filter((key): key is string => isOptionKey(options, key));
 }
 
+function stageForCompletionError(error: unknown): Stage | null {
+  if (error === 'identity_required') return 'identity';
+  if (error === 'desired_change_required') return 'desired_change';
+  if (error === 'current_context_required') return 'context';
+  if (error === 'personalization_required') return 'personalization';
+  if (error === 'timing_required') return 'timing';
+  return null;
+}
+
 function ChoiceCards({ options, selected, max, onToggle, loading }: { options: readonly { key: string; label: string }[]; selected: string[]; max: number; onToggle: (key: string) => void; loading: boolean }) {
   return <div className="onboarding-choice-list" role="group">
     {options.map(option => {
@@ -87,7 +97,6 @@ export default function OnboardingPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [preferredName, setPreferredName] = useState('');
-  const [preferredNameKnown, setPreferredNameKnown] = useState(false);
   const [desiredChoice, setDesiredChoice] = useState<DesiredChangeKey | ''>('');
   const [desiredCustom, setDesiredCustom] = useState('');
   const [contextChoices, setContextChoices] = useState<ContextChoiceKey[]>([]);
@@ -101,8 +110,29 @@ export default function OnboardingPage() {
   const [whatsapp, setWhatsapp] = useState<WhatsAppConnectionState>({ status: 'not_connected' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [completionRetry, setCompletionRetry] = useState(false);
 
   useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, [stage]);
+
+  const completeOnboarding = useCallback(async () => {
+    setLoading(true); setError(''); setCompletionRetry(false);
+    try {
+      const response = await fetch('/api/onboarding/complete', { method: 'POST' });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (response.ok || result.error === 'already_completed') { router.replace('/app'); return; }
+      const missingStage = stageForCompletionError(result.error);
+      if (response.status === 422 && missingStage) {
+        setStage(missingStage); saveFunnelState({ onboardingStage: missingStage }); return;
+      }
+      setError('No pudimos terminar tu configuración ahora. Inténtalo de nuevo.');
+      setCompletionRetry(true);
+    } catch {
+      setError('No pudimos terminar tu configuración ahora. Inténtalo de nuevo.');
+      setCompletionRetry(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   useEffect(() => {
     const funnel = readFunnelState();
@@ -126,22 +156,29 @@ export default function OnboardingPage() {
       const restoredDesired = isOptionKey(DESIRED_CHANGE_OPTIONS, desired.key) ? desired.key as DesiredChangeKey : '';
       const restoredContext = restoreKeys(context, CONTEXT_OPTIONS).slice(0, 4) as ContextChoiceKey[];
       const restoredSupport = restoreKeys(personalization, SUPPORT_OPTIONS).slice(0, 2) as SupportChoiceKey[];
-      setFirstName(nextFirst); setLastName(nextLast); setPreferredName(nextPreferred); setPreferredNameKnown(Boolean(nextPreferred));
+      setFirstName(nextFirst); setLastName(nextLast); setPreferredName(nextPreferred);
       setDesiredChoice(restoredDesired); setDesiredCustom(normalizeChoiceText(desired.custom_text));
       setContextChoices(restoredContext); setContextCustom(normalizeChoiceText(context.custom_text));
       setSupportChoices(restoredSupport); setSupportCustom(normalizeChoiceText(personalization.custom_text)); setLearningProfile(nextLearning);
       const nextCountry = normalizeChoiceText(profile.country_code) || detectedCountry;
       const nextTimezone = normalizeChoiceText(profile.timezone) || detectedTimezone || countryByCode(nextCountry)?.defaultTimezone || '';
       setTime(normalizeChoiceText(profile.message_time_1) || '08:00'); setCountryCode(nextCountry); setTimezone(nextTimezone);
-      const nextStage: Stage = !nextFirst || !nextLast || !nextPreferred ? 'identity' : !validDesiredAnswer(nextLearning) ? 'desired_change' : !validContextAnswer(nextLearning) ? 'context' : !validPersonalizationAnswer(nextLearning) ? 'personalization' : (!normalizeChoiceText(profile.message_time_1) || !normalizeChoiceText(profile.country_code)) ? 'timing' : 'whatsapp';
-      setStage(nextStage);
-      saveFunnelState({ onboardingStage: nextStage, preferredName: nextPreferred, preferredNameConfirmed: Boolean(nextPreferred) });
       const connectionResponse = await fetch('/api/whatsapp/connection', { cache: 'no-store' });
       const connectionResult = await connectionResponse.json().catch(() => ({}));
-      setWhatsapp((connectionResult.connection ?? connectionResult) as WhatsAppConnectionState);
+      const nextWhatsapp = (connectionResult.connection ?? connectionResult) as WhatsAppConnectionState;
+      setWhatsapp(nextWhatsapp);
+      const nextStage: Stage | null = !hasConfirmedOnboardingIdentity(nextLearning) ? 'identity' : !validDesiredAnswer(nextLearning) ? 'desired_change' : !validContextAnswer(nextLearning) ? 'context' : !validPersonalizationAnswer(nextLearning) ? 'personalization' : (!normalizeChoiceText(profile.message_time_1) || !normalizeChoiceText(profile.country_code)) ? 'timing' : nextWhatsapp.status === 'connected' ? null : 'whatsapp';
+      if (nextStage) {
+        setStage(nextStage);
+        saveFunnelState({ onboardingStage: nextStage });
+      } else {
+        setStage('whatsapp');
+        saveFunnelState({ onboardingStage: 'whatsapp' });
+        await completeOnboarding();
+      }
     }).catch(() => setError('No pudimos cargar tu configuración. Vuelve a intentarlo.'));
     trackFunnel('onboarding_started');
-  }, [router]);
+  }, [completeOnboarding, router]);
 
   async function saveProfile(values: Record<string, unknown>) {
     const response = await fetch('/api/profile', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(values) });
@@ -158,7 +195,20 @@ export default function OnboardingPage() {
     if (isInvalidPreferredName(nextFirst) || isInvalidPreferredName(nextLast)) return;
     if (!nextFirst || !nextLast || !nextPreferred) return;
     setLoading(true); setError('');
-    try { await saveProfile({ first_name: nextFirst, last_name: nextLast, preferred_name: nextPreferred }); saveFunnelState({ preferredName: nextPreferred, preferredNameConfirmed: true, onboardingStage: 'desired_change' }); move('desired_change'); }
+    try {
+      const nextLearningProfile = { ...learningProfile, onboarding: { ...onboardingRecord(learningProfile), identity: { status: 'answered', confirmed_at: new Date().toISOString() } } };
+      await saveProfile({ first_name: nextFirst, last_name: nextLast, preferred_name: nextPreferred, learning_profile: nextLearningProfile });
+      setLearningProfile(nextLearningProfile);
+      saveFunnelState({ preferredName: nextPreferred, preferredNameConfirmed: true });
+      const nextStage: Stage | null = !validDesiredAnswer(nextLearningProfile) ? 'desired_change' : !validContextAnswer(nextLearningProfile) ? 'context' : !validPersonalizationAnswer(nextLearningProfile) ? 'personalization' : (!time || !countryCode || !timezone) ? 'timing' : whatsapp.status === 'connected' ? null : 'whatsapp';
+      if (nextStage) {
+        move(nextStage);
+      } else {
+        setStage('whatsapp');
+        saveFunnelState({ onboardingStage: 'whatsapp' });
+        await completeOnboarding();
+      }
+    }
     catch { setError('No pudimos guardar tus datos. Inténtalo de nuevo.'); }
     finally { setLoading(false); }
   }
@@ -228,19 +278,18 @@ export default function OnboardingPage() {
   async function handleWhatsappChange(next: WhatsAppConnectionState) {
     setWhatsapp(next);
     if (next.status !== 'connected') return;
-    const response = await fetch('/api/profile', { cache: 'no-store' }); const result = await response.json().catch(() => ({}));
-    if (result.profile?.onboarding_completed) router.push('/app');
+    await completeOnboarding();
   }
 
   const canContextContinue = contextChoices.length > 0 && (!contextChoices.includes('other') || Boolean(contextCustom.trim()));
   const canSupportContinue = supportChoices.length > 0 && (!supportChoices.includes('other') || Boolean(supportCustom.trim()));
 
   return <FunnelFrame><section className="funnel-screen onboarding-story-screen"><div className="funnel-content narrow onboarding-stage" key={stage}>
-    {stage === 'identity' && <><h1>Quiero conocerte un poco mejor.</h1><p className="funnel-copy">{preferredNameKnown ? 'Ya sé cómo te gusta que te llame. Solo necesito un par de datos para completar tu perfil.' : 'Solo necesito un par de datos para completar tu perfil.'}</p><label className="field-label" htmlFor="onboarding-first-name">Nombre(s)</label><input id="onboarding-first-name" autoFocus className="funnel-input" value={firstName} onChange={event => setFirstName(event.target.value)} maxLength={120} /><label className="field-label" htmlFor="onboarding-last-name">Apellido(s)</label><input id="onboarding-last-name" className="funnel-input" value={lastName} onChange={event => setLastName(event.target.value)} maxLength={120} />{!preferredNameKnown && <><label className="field-label" htmlFor="onboarding-preferred-name">¿Cómo quieres que te llame?</label><input id="onboarding-preferred-name" className="funnel-input" value={preferredName} onChange={event => setPreferredName(event.target.value)} placeholder="Tu nombre" maxLength={80} /></>}<button className="funnel-button" disabled={loading || !firstName.trim() || !lastName.trim() || !preferredName.trim()} onClick={() => void submitIdentity()}>Continuar <ArrowRight size={17} /></button></>}
+    {stage === 'identity' && <><h1>Quiero conocerte un poco mejor.</h1><p className="funnel-copy">Solo necesito un par de datos para completar tu perfil.</p><label className="field-label" htmlFor="onboarding-first-name">Nombre(s)</label><input id="onboarding-first-name" autoFocus className="funnel-input" value={firstName} onChange={event => setFirstName(event.target.value)} maxLength={120} /><label className="field-label" htmlFor="onboarding-last-name">Apellido(s)</label><input id="onboarding-last-name" className="funnel-input" value={lastName} onChange={event => setLastName(event.target.value)} maxLength={120} /><label className="field-label" htmlFor="onboarding-preferred-name">¿Cómo quieres que te llame?</label><input id="onboarding-preferred-name" className="funnel-input" value={preferredName} onChange={event => setPreferredName(event.target.value)} placeholder="Tu nombre" maxLength={80} /><button className="funnel-button" disabled={loading || !firstName.trim() || !lastName.trim() || !preferredName.trim()} onClick={() => void submitIdentity()}>Continuar <ArrowRight size={17} /></button></>}
     {stage === 'desired_change' && <><h1>¿Qué te gustaría empezar a cambiar primero?</h1><p className="funnel-copy">Elige una opción.</p><ChoiceCards options={DESIRED_CHANGE_OPTIONS} selected={desiredChoice ? [desiredChoice] : []} max={1} loading={loading} onToggle={key => { const next = key as DesiredChangeKey; setDesiredChoice(next); if (next !== 'other') setDesiredCustom(''); }} />{desiredChoice === 'other' && <label className="onboarding-custom-field" htmlFor="onboarding-desired-other">Cuéntame qué quieres trabajar<input id="onboarding-desired-other" className="funnel-input" value={desiredCustom} onChange={event => setDesiredCustom(event.target.value)} maxLength={300} /></label>}<button className="funnel-button" disabled={loading || !desiredChoice || (desiredChoice === 'other' && !desiredCustom.trim())} onClick={() => void submitDesiredChange()}>Continuar <ArrowRight size={17} /></button></>}
     {stage === 'context' && <><h1>¿En qué momentos te cuesta más actuar como quieres?</h1><p className="funnel-copy">Puedes elegir varias.</p><p className="onboarding-selection-helper">Elige hasta 4.</p><ChoiceCards options={CONTEXT_OPTIONS} selected={contextChoices} max={4} loading={loading} onToggle={toggleContext} />{contextChoices.includes('other') && <label className="onboarding-custom-field" htmlFor="onboarding-context-other">¿En qué otro momento te pasa?<input id="onboarding-context-other" className="funnel-input" value={contextCustom} onChange={event => setContextCustom(event.target.value)} maxLength={300} /></label>}<button className="funnel-button" disabled={loading || !canContextContinue} onClick={() => void submitContext()}>Continuar <ArrowRight size={17} /></button></>}
     {stage === 'personalization' && <><h1>Cuando empiezas a dudar, ¿qué crees que podría ayudarte más?</h1><p className="funnel-copy">Puedes elegir hasta dos.</p><ChoiceCards options={SUPPORT_OPTIONS} selected={supportChoices} max={2} loading={loading} onToggle={toggleSupport} />{supportChoices.includes('other') && <label className="onboarding-custom-field" htmlFor="onboarding-support-other">¿Qué suele ayudarte?<input id="onboarding-support-other" className="funnel-input" value={supportCustom} onChange={event => setSupportCustom(event.target.value)} maxLength={300} /></label>}<button className="funnel-button" disabled={loading || !canSupportContinue} onClick={() => void submitPersonalization()}>Continuar <ArrowRight size={17} /></button></>}
     {stage === 'timing' && <><h1>¿A qué hora quieres recibir tu mensaje?</h1><p className="onboarding-locale-intro">Tu hora local en {countryByCode(countryCode)?.name || 'tu país'} · {timezone ? timezoneLabel(timezone) : 'elige una zona horaria'}. Puedes cambiarla más adelante.</p><div className="onboarding-locale-fields"><label htmlFor="onboarding-country">País<select id="onboarding-country" value={countryCode} onChange={event => { const next = event.target.value; setCountryCode(next); setTimezone(countryByCode(next)?.defaultTimezone || ''); }}><option value="">Elige tu país</option>{COUNTRY_OPTIONS.map(country => <option key={country.code} value={country.code}>{country.flag} {country.name}</option>)}</select></label><label htmlFor="onboarding-timezone">Zona horaria<select id="onboarding-timezone" value={timezone} onChange={event => setTimezone(event.target.value)}><option value="">Elige tu zona horaria</option>{Array.from(new Set([timezone, ...COUNTRY_OPTIONS.map(country => country.defaultTimezone)].filter(Boolean))).map(option => <option key={option} value={option}>{timezoneLabel(option)}</option>)}</select></label><label htmlFor="onboarding-time">Hora de tu mensaje<input id="onboarding-time" type="time" value={time} onChange={event => setTime(event.target.value)} /></label></div><p className="onboarding-timezone-note"><strong>Recibirás tu mensaje a las {timeLabel(time)}</strong> según esta zona horaria.</p><button className="funnel-button" disabled={loading || !time || !countryCode || !timezone} onClick={() => void submitTiming()}>{loading ? 'Guardando…' : 'Continuar'} <ArrowRight size={17} /></button></>}
-    {stage === 'whatsapp' && <><h1>Conecta tu WhatsApp</h1><p className="funnel-copy">Aquí recibirás tu mensaje diario. La configuración termina cuando reconozcamos tu número.</p><WhatsAppConnectionPanel value={whatsapp} defaultCountryCode={countryCode || 'CO'} onChange={value => void handleWhatsappChange(value)} onError={setError} onDisconnect={async () => {}} showTest={false} showDisconnect={false} />{error && <p className="funnel-error" role="alert">{error}</p>}</>}
+    {stage === 'whatsapp' && <><h1>Conecta tu WhatsApp</h1><p className="funnel-copy">Aquí recibirás tu mensaje diario. La configuración termina cuando reconozcamos tu número.</p><WhatsAppConnectionPanel value={whatsapp} defaultCountryCode={countryCode || 'CO'} onChange={value => void handleWhatsappChange(value)} onError={setError} onDisconnect={async () => {}} showTest={false} showDisconnect={false} />{error && <p className="funnel-error" role="alert">{error}</p>}{completionRetry && <button type="button" className="funnel-button" disabled={loading} onClick={() => void completeOnboarding()}>{loading ? 'Continuando…' : 'Continuar'} <ArrowRight size={17} /></button>}</>}
   </div></section></FunnelFrame>;
 }
