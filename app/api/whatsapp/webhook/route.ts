@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   }
   if (!from || !code) return NextResponse.json({ received: true });
   const admin = createAdminClient();
-  const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at,expected_phone').eq('token_hash', hashLinkCode(code)).maybeSingle();
+  const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at,expected_phone,purpose').eq('token_hash', hashLinkCode(code)).maybeSingle();
   if (tokenError || !token || token.status !== 'pending' || new Date(token.expires_at).getTime() < Date.now()) return NextResponse.json({ received: true });
   const normalizedFrom = normalizeInboundPhone(from);
   if (token.expected_phone && normalizedFrom !== token.expected_phone) {

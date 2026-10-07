@@ -343,6 +343,27 @@ a { text-decoration: none; }
   .premium-screen-3 .premium-evidence-modules p { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.28; }
 }
 
+/* WhatsApp connection dialog: reusable opaque base for onboarding and /app/tu. */
+.whatsapp-connect-dialog { min-width: 0; border: 1px solid #5f4b3e; background: linear-gradient(145deg, #2b211c, #1d1815); color: #f5eee2; }
+.whatsapp-connect-dialog h3 { max-width: 100%; color: #f5eee2; font-family: var(--font-display); font-size: clamp(30px, 8vw, 42px); font-weight: 500; line-height: .98; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.whatsapp-dialog-close { flex: none; color: #cfc3b3; font-size: 28px; line-height: 1; }
+.whatsapp-dialog-intro { max-width: 38ch; margin-top: 12px; color: #cfc3b3; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.whatsapp-dialog-emphasis { margin-top: 28px; color: #f5eee2; font-family: var(--font-display); font-size: 24px; line-height: 1.08; letter-spacing: -.025em; }
+.whatsapp-field-label { display: block; margin-top: 18px; color: #cfc3b3; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.whatsapp-dialog-select, .whatsapp-phone-input { width: 100%; margin-top: 8px; border: 1px solid #5f4b3e; border-radius: 14px; background: rgb(255 248 236 / .06); color: #f5eee2; }
+.whatsapp-dialog-select { min-height: 50px; padding: 0 14px; }
+.whatsapp-phone-input { display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+.whatsapp-phone-input span { color: #d8a278; font-weight: 700; }
+.whatsapp-phone-input input { min-width: 0; flex: 1; height: 50px; border: 0; outline: 0; background: transparent; color: #f5eee2; font-size: 18px; }
+.whatsapp-phone-input input::placeholder { color: rgb(245 238 226 / .42); }
+.whatsapp-dialog-helper { color: #cfc3b3; font-size: 14px; line-height: 1.45; }
+.whatsapp-dialog-error { margin-top: 14px; color: #f4c1ae; font-size: 14px; }
+.whatsapp-dialog-primary, .whatsapp-dialog-secondary { min-height: 52px; width: 100%; margin-top: 18px; border-radius: 14px; padding: 0 18px; font-size: 14px; font-weight: 700; }
+.whatsapp-dialog-primary { background: #f5eee2; color: #241c18; }
+.whatsapp-dialog-secondary { border: 1px solid #5f4b3e; color: #f5eee2; }
+.whatsapp-dialog-primary:disabled, .whatsapp-dialog-secondary:disabled { opacity: .45; }
+.whatsapp-connect-dialog select option { background: #2b211c; color: #f5eee2; }
+
 /* Premium continuity for auth, plans and onboarding. Visual-only layer. */
 .nia-continuity-frame {
   --continuity-line: rgb(245 238 226 / .18);

@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Gestión separada de WhatsApp — 2026-10-07
+- `WhatsAppConnectionPanel` distingue `Cambiar número` de `Desconectar WhatsApp`. El reemplazo abre un token `purpose=replace`, conserva el número actual mientras está pendiente y solo lo sustituye después de verificar el nuevo número mediante el webhook inbound. La desconexión sigue siendo una acción independiente y cancela intentos de reemplazo pendientes del usuario.
+- `/api/whatsapp/connection` mantiene el estado canónico conectado aunque exista un token rechazado y devuelve estado seguro por `attempt_id` (`pending`, `conflict`, `succeeded`) para que el polling no confunda el número viejo con un reemplazo exitoso. La protección por usuario, `expected_phone`, E.164 y conflicto de número ajeno se conserva.
+- Se añadieron estilos base opacos para el diálogo WhatsApp fuera de `.nia-continuity-frame`, corrigiendo su reutilización en `/app/tu` sin envolver MvpShell ni duplicar el modal.
+- Migración requerida: `supabase/migrations/20261007190000_whatsapp_link_purpose.sql`, añade `whatsapp_link_tokens.purpose` (`connect|replace`) e índice de consulta. No se aplicó desde este workspace por no disponer de credencial/connector Supabase de escritura.
+- Tests WhatsApp/inbound/profile/initial-experience/onboarding-auth, typecheck, lint y build PASS; lint conserva cinco warnings heredados. E2E autenticado y QA interactivo de `/app/tu` no pudieron ejecutarse porque no existe `NIA_TEST_STORAGE_STATE`; la ruta no autenticada redirige correctamente a `/acceso`. No se enviaron WhatsApps reales.
+
 ## Estados públicos de post-compra — 2026-10-07
 - `/gracias` conserva una sola ruta y reconoce únicamente `status=pending` y `status=analysis`; cualquier otro estado vuelve al aprobado. Pending/analysis muestran solo `Volver a NIA` hacia `/`; el aprobado conserva `Activar mi acceso` hacia `/acceso`.
 - El parámetro es exclusivamente presentacional: no llama APIs, no crea usuarios, no modifica Supabase y no concede acceso. El webhook Hotmart y la validación posterior en `/acceso` siguen siendo la fuente de verdad.
