@@ -3,6 +3,7 @@ import { after, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { extractLinkCode, hashLinkCode, normalizeInboundPhone, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
 import { persistInboundMessage, processInboundMessage, processUnresolvedInbound } from '@/lib/server/whatsapp-inbound';
+import { completeOnboardingAfterWhatsapp } from '@/lib/server/onboarding-finalization';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -75,23 +76,41 @@ export async function POST(request: Request) {
   const verifiedFrom = normalizedFrom || from;
   const provider = whatsappProvider();
   const { data: existing } = await admin.from('whatsapp_connections').select('user_id').eq('provider', provider).in('wa_id', Array.from(new Set([from, verifiedFrom]))).eq('status', 'connected').maybeSingle();
-  if (existing && existing.user_id !== token.user_id) { await admin.from('whatsapp_link_tokens').update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: 'already_connected' }).eq('id', token.id); return NextResponse.json({ received: true }); }
+  if (existing && existing.user_id !== token.user_id) {
+    await admin.from('whatsapp_link_tokens').update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: 'already_connected' }).eq('id', token.id);
+    await sendWhatsAppText(verifiedFrom, 'Este número ya está conectado a otra cuenta de NIA. Vuelve a NIA para usar otro número.');
+    return NextResponse.json({ received: true, connected: false, conflict: true });
+  }
   const now = new Date().toISOString();
   const { data: connection, error: connectionError } = await admin.from('whatsapp_connections').upsert({ user_id: token.user_id, provider, wa_id: verifiedFrom, phone_number: verifiedFrom, status: 'connected', connected_at: now, last_message_at: now, updated_at: now }, { onConflict: 'user_id,provider' }).select('id').single();
   if (connectionError) return NextResponse.json({ error: 'connection_save_failed' }, { status: 500 });
   const { data: consumed, error: consumeError } = await admin.from('whatsapp_link_tokens').update({ status: 'used', used_at: now }).eq('id', token.id).eq('status', 'pending').select('id').maybeSingle();
   if (consumeError) return NextResponse.json({ error: 'link_consume_failed' }, { status: 500 });
-  if (!consumed) return NextResponse.json({ received: true, duplicate: true });
-  const { data: profile } = await admin.from('profiles').select('first_name').eq('id', token.user_id).maybeSingle();
+  if (!consumed) {
+    if (token.status === 'used') {
+      try {
+        const retry = await completeOnboardingAfterWhatsapp(admin, token.user_id);
+        return NextResponse.json({ received: true, duplicate: true, onboarding_completed: Boolean(retry.alreadyCompleted || retry.welcomeScheduled) });
+      } catch { /* The original webhook already persisted the connection; a later retry can finish it. */ }
+    }
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+  const { data: profile } = await admin.from('profiles').select('first_name,preferred_name').eq('id', token.user_id).maybeSingle();
   await admin.from('profiles').update({ whatsapp_enabled: true, whatsapp_phone: verifiedFrom }).eq('id', token.user_id);
-  const name = profile?.first_name?.trim();
+  let onboarding;
+  try {
+    onboarding = await completeOnboardingAfterWhatsapp(admin, token.user_id);
+  } catch (error) {
+    console.error('[whatsapp onboarding completion failed]', { userId: token.user_id, reason: error instanceof Error ? error.message : 'unknown' });
+  }
+  const name = profile?.preferred_name?.trim() || profile?.first_name?.trim();
   const greeting = name ? `Hola, ${name}.` : 'Hola.';
   console.info('whatsapp_link_outbound_started', { userId: token.user_id, connectionId: connection.id, waIdSuffix: verifiedFrom.slice(-4) });
   const delivery = await sendWhatsAppText(verifiedFrom, `${greeting}\n\nListo. Ya reconocí este número y quedó conectado con tu cuenta de NIA.\n\nAhora podrás recibir aquí tus mensajes.`);
   if (!delivery.ok) {
     console.error('whatsapp_link_confirmation_failed', { userId: token.user_id, connectionId: connection.id, waIdSuffix: from.slice(-4), reason: delivery.reason, status: 'status' in delivery ? delivery.status : undefined });
-    return NextResponse.json({ received: true, connected: true, confirmation_sent: false });
+    return NextResponse.json({ received: true, connected: true, confirmation_sent: false, onboarding_completed: Boolean(onboarding?.alreadyCompleted || onboarding?.welcomeScheduled) });
   }
   console.info('whatsapp_link_confirmation_sent', { userId: token.user_id, connectionId: connection.id, waIdSuffix: from.slice(-4), status: delivery.status, messageIdPresent: Boolean(delivery.providerMessageId) });
-  return NextResponse.json({ received: true, connected: true, confirmation_sent: true, provider_message_id: delivery.providerMessageId });
+  return NextResponse.json({ received: true, connected: true, confirmation_sent: true, provider_message_id: delivery.providerMessageId, onboarding_completed: Boolean(onboarding?.alreadyCompleted || onboarding?.welcomeScheduled) });
 }

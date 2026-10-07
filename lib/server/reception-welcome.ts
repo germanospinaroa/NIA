@@ -6,7 +6,7 @@ type DbClient = SupabaseClient;
 
 export async function ensureActivationWelcome(
   admin: DbClient,
-  input: { userId: string; firstName?: string | null; timezone?: string | null; now?: Date },
+  input: { userId: string; firstName?: string | null; preferredName?: string | null; timezone?: string | null; now?: Date },
 ) {
   const now = input.now ?? new Date();
   const date = localDate(input.timezone, now);
@@ -23,7 +23,7 @@ export async function ensureActivationWelcome(
 
   const { data, error } = await admin
     .from('interactions')
-    .insert({ user_id: input.userId, interaction_type: WELCOME_INTERACTION_TYPE, content: buildWelcomeMessage(input.firstName, now, input.timezone), local_date: date })
+    .insert({ user_id: input.userId, interaction_type: WELCOME_INTERACTION_TYPE, content: buildWelcomeMessage(input.preferredName || input.firstName, now, input.timezone), local_date: date })
     .select('*')
     .single();
   if (error?.code === '23505') {

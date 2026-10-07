@@ -9,7 +9,7 @@ export type CommunicationPreference = 'idea' | 'practical' | 'structured' | 'ada
 export type RecognitionContext = 'decision_doubt';
 export type OnboardingSituationChoice = 'doubt' | 'firm' | 'source_dependent';
 export type OnboardingFollowupChoice = 'new_information' | 'only_doubt' | 'unsure' | 'yes' | 'no' | 'think' | 'decision_changed' | 'confidence_changed';
-export type OnboardingStage = 'name' | 'connection' | 'problem' | 'evidence' | 'nia' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'personalization' | 'mechanism' | 'direction' | 'context' | 'contexts' | 'voice' | 'communication' | 'ready' | 'intro' | 'timing' | 'generating' | 'calibration' | 'whatsapp';
+export type OnboardingStage = 'name' | 'identity' | 'connection' | 'problem' | 'evidence' | 'nia' | 'demo_intro' | 'situation' | 'response' | 'explain' | 'personalization' | 'mechanism' | 'direction' | 'desired_change' | 'context' | 'contexts' | 'voice' | 'communication' | 'ready' | 'intro' | 'timing' | 'generating' | 'calibration' | 'whatsapp';
 export const checkoutMode: 'bypass' | 'hotmart' = 'bypass';
 export type FunnelState = {
   recognitionComplete: boolean;
@@ -20,6 +20,7 @@ export type FunnelState = {
   plan?: FunnelPlan;
   email?: string;
   firstName?: string;
+  preferredName?: string;
   directionText?: string;
   onboardingContext?: string;
   firstInterventionContent?: string;

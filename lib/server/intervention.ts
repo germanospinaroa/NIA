@@ -5,6 +5,7 @@ import { auditCandidateWithLLMWithMeta, createEmbeddingWithMeta, generateCalibra
 import { judgeSemanticRelationshipsWithMeta } from '@/lib/server/semantic-judge';
 import { errorCode, recordEvent, recordExecutionStage, recordProviderCall, startGenerationAttempt, finishGenerationAttempt, updateExecutionRun, type ExecutionContext } from '@/lib/server/operational-observability';
 import { intentionLabel, invalidIntention, validCustomIntention } from '@/lib/intention';
+import { preferredAddressName } from '@/lib/profile-name';
 import { hasInterventionValue } from '@/lib/intervention-quality';
 import { buildEditorialMemory, loadEditorialMemory } from '@/lib/server/editorial-memory';
 import { planEditorial } from '@/lib/server/editorial-planner';
@@ -98,7 +99,7 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
     return !transitionSignal || !signal.created_at || new Date(signal.created_at).getTime() > resolvedCalibrationAt;
   }) : rawSignals;
   const brief: InterventionBrief = {
-    firstName: profile.first_name,
+    firstName: preferredAddressName(profile) ?? undefined,
     desiredChange,
     currentContext: activeContext,
     contextDomain: profile.current_context_domain,

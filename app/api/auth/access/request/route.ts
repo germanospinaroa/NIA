@@ -35,13 +35,13 @@ export async function POST(request: Request) {
       createdQaUser = true;
     }
     if (createdQaUser) {
-      const { error: profileError } = await admin.from('profiles').upsert({ id: userId, first_name: 'NIA', account_status: 'pending_activation', must_set_password: true }, { onConflict: 'id' });
+      const { error: profileError } = await admin.from('profiles').upsert({ id: userId, account_status: 'pending_activation', must_set_password: true }, { onConflict: 'id' });
       if (profileError) return NextResponse.json({ error: 'access_unavailable' }, { status: 503 });
     } else {
       const { data: profile, error: profileLookupError } = await admin.from('profiles').select('id').eq('id', userId).maybeSingle();
       if (profileLookupError) return NextResponse.json({ error: 'access_unavailable' }, { status: 503 });
       if (!profile) {
-        const { error: profileInsertError } = await admin.from('profiles').insert({ id: userId, first_name: 'NIA', account_status: 'pending_activation', must_set_password: true });
+        const { error: profileInsertError } = await admin.from('profiles').insert({ id: userId, account_status: 'pending_activation', must_set_password: true });
         if (profileInsertError) return NextResponse.json({ error: 'access_unavailable' }, { status: 503 });
       }
     }

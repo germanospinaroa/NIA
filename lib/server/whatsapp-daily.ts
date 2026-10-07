@@ -5,7 +5,7 @@ import { dueSlots } from '@/lib/server/whatsapp-schedule';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type DbClient = SupabaseClient;
-type Profile = { id: string; first_name: string | null; timezone: string | null; message_frequency: number | null; message_time_1: string | null; message_time_2: string | null; whatsapp_enabled: boolean | null };
+type Profile = { id: string; first_name: string | null; preferred_name: string | null; timezone: string | null; message_frequency: number | null; message_time_1: string | null; message_time_2: string | null; whatsapp_enabled: boolean | null };
 type Connection = { user_id: string; wa_id: string | null; status: string };
 type DeliveryClaim = { id: string; claimToken: string; userId: string; interactionId: string; localDate: string; slot: string };
 
@@ -64,7 +64,7 @@ export async function runDailyWhatsApp(admin: DbClient, now = new Date(), option
   const { error: deliverySchemaError } = await admin.from('whatsapp_daily_deliveries').select('id').limit(1);
   if (deliverySchemaError) throw new Error(deliverySchemaError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_unavailable');
   const [{ data: profiles, error: profilesError }, { data: connections, error: connectionsError }] = await Promise.all([
-    admin.from('profiles').select('id,first_name,timezone,message_frequency,message_time_1,message_time_2,whatsapp_enabled').eq('whatsapp_enabled', true),
+    admin.from('profiles').select('id,first_name,preferred_name,timezone,message_frequency,message_time_1,message_time_2,whatsapp_enabled').eq('whatsapp_enabled', true),
     admin.from('whatsapp_connections').select('user_id,wa_id,status').eq('status', 'connected'),
   ]);
   if (profilesError || connectionsError) throw new Error('daily_whatsapp_unavailable');

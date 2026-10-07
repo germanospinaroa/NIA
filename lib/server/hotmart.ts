@@ -68,7 +68,7 @@ async function ensureUser(admin: SupabaseClient, input: ReturnType<typeof purcha
     const updated = await admin.auth.admin.updateUserById(user.id, { user_metadata: { ...(user.user_metadata ?? {}), first_name: input.firstName ?? user.user_metadata?.first_name, must_set_password: true, account_status: 'pending_activation' } });
     if (updated.error) throw new Error('hotmart_user_update_failed');
   }
-  const { error: profileError } = await admin.from('profiles').upsert({ id: user.id, first_name: input.firstName || 'NIA', account_status: 'pending_activation', must_set_password: true }, { onConflict: 'id' });
+  const { error: profileError } = await admin.from('profiles').upsert({ id: user.id, first_name: input.firstName || null, account_status: 'pending_activation', must_set_password: true }, { onConflict: 'id' });
   if (profileError) throw new Error('hotmart_profile_create_failed');
   return user.id;
 }

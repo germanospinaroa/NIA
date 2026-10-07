@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { buildBrief } from '@/lib/server/intervention';
 import { resolveIntervention } from '@/lib/server/intervention';
 import { composeNiaMessage } from '@/lib/server/message-composer';
+import { preferredAddressName } from '@/lib/profile-name';
 import { localDate } from '@/lib/server/whatsapp-schedule';
 import { claimDelivery, sendClaimedDelivery } from '@/lib/server/whatsapp-daily';
 import { loadEditorialMemory } from '@/lib/server/editorial-memory';
@@ -187,7 +188,7 @@ export async function POST(request: Request) {
     await recordExecutionStage(admin, run.context, 'intervention', { status: 'completed', intervention_id: result.interventionId });
     const recent = await admin.from('interactions').select('content,slot').eq('user_id', userId).order('created_at', { ascending: false }).limit(16);
     const recentContents = (recent.data ?? []).filter(row => typeof row.slot !== 'string' || !row.slot.startsWith('qa:')).slice(0, 8).map(row => row.content).filter((value): value is string => typeof value === 'string');
-    const content = composeNiaMessage({ content: result.intervention.text, firstName: profile.first_name, timezone: profile.timezone, userKey: userId, now, recentContents });
+    const content = composeNiaMessage({ content: result.intervention.text, firstName: preferredAddressName(profile), timezone: profile.timezone, userKey: userId, now, recentContents });
     await recordExecutionStage(admin, run.context, 'composer', { status: 'completed', content_length: content.length, shared_composer: true });
     const { data: interaction, error: interactionError } = await admin.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content, local_date: date, slot }).select('id,content').single();
     if (interactionError || !interaction) throw new Error('qa_interaction_save_failed');

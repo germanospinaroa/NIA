@@ -12,7 +12,7 @@ export async function GET() {
     supabase.from('whatsapp_link_tokens').select('status,rejection_reason,expires_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (error) return NextResponse.json({ status: 'unavailable', message: 'No pudimos consultar la conexión de WhatsApp.' }, { status: error.code === '42P01' ? 503 : 500 });
-  if (latestToken?.status === 'rejected' && latestToken.rejection_reason === 'already_connected') return NextResponse.json({ connection: { status: 'conflict' } });
+  if (latestToken?.status === 'rejected' && latestToken.rejection_reason === 'already_connected') return NextResponse.json({ connection: { status: 'conflict', message: 'Este número ya está conectado a otra cuenta de NIA.' } });
   if (latestToken?.status === 'pending' && latestToken.expires_at && new Date(latestToken.expires_at).getTime() > Date.now()) return NextResponse.json({ connection: { status: 'connecting' } });
   if (!data) return NextResponse.json({ connection: { status: 'not_connected' } });
   return NextResponse.json({ connection: { ...data, phone_number: maskPhone(data.phone_number) } });
