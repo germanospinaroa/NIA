@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { utilityCommandFromInbound } from '../lib/server/whatsapp-inbound.ts';
+
+assert.equal(utilityCommandFromInbound(' AYUDA... '), 'help');
+assert.equal(utilityCommandFromInbound('configuración?'), 'configuration');
+assert.equal(utilityCommandFromInbound('Una frase con soporte'), null);
+const route = fs.readFileSync('app/api/support/route.ts', 'utf8');
+const page = fs.readFileSync('app/app/tu/page.tsx', 'utf8');
+const migration = fs.readFileSync('supabase/migrations/20261007200000_support_requests.sql', 'utf8');
+assert.match(route, /auth\.getUser/);
+assert.match(route, /support_requests/);
+assert.match(route, /SUPPORT_EMAIL_TO/);
+assert.match(route, /RESEND_API_KEY/);
+assert.doesNotMatch(page, /germanospinaroa@gmail\.com/);
+assert.doesNotMatch(page, /SUPPORT_EMAIL_TO|RESEND_API_KEY/);
+assert.match(page, /id="soporte"/);
+assert.match(page, /maxLength=\{160\}/);
+assert.match(page, /maxLength=\{4000\}/);
+assert.match(migration, /enable row level security/i);
+assert.match(migration, /references auth\.users/);
+console.log('support and utility tests: PASS');

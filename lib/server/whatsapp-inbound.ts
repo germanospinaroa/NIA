@@ -7,7 +7,8 @@ import { claimDelivery, sendClaimedDelivery } from '@/lib/server/whatsapp-daily'
 import { localDate } from '@/lib/server/whatsapp-schedule';
 import { recordEvent, recordExecutionStage, startIdempotentExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
 import type { ContextKey, FeedbackType } from '@/lib/mvp';
-import type { EvolutionInboundMessage } from '@/lib/server/whatsapp';
+import { sendWhatsAppText, type EvolutionInboundMessage } from '@/lib/server/whatsapp';
+import { NIA_APP_URL } from '@/lib/app-url';
 
 type DbClient = SupabaseClient;
 type InboundRow = { id: string; user_id: string | null; provider: string; provider_message_id: string | null; status: string; execution_run_id: string | null; response_provider_message_id: string | null };
@@ -19,6 +20,21 @@ const FEEDBACK: Array<{ text: string; value: FeedbackType }> = [
 ];
 
 function normalized(text: string) { return text.trim().toLocaleLowerCase('es'); }
+
+export type WhatsAppUtilityCommand = 'help' | 'configuration' | 'support';
+
+export function utilityCommandFromInbound(text: string): WhatsAppUtilityCommand | null {
+  const value = text.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').replace(/[.!¿?¡,;:]+$/g, '').trim();
+  if (value === 'ayuda') return 'help';
+  if (value === 'configuracion') return 'configuration';
+  if (value === 'soporte') return 'support';
+  return null;
+}
+
+function utilityReply(command: WhatsAppUtilityCommand) {
+  if (command === 'support') return `Puedes contactar soporte desde NIA aquí:\n\n${NIA_APP_URL}#soporte\n\nAhí puedes escribirnos directamente.`;
+  return `Claro. Puedes entrar a NIA aquí:\n\n${NIA_APP_URL}\n\nDesde ahí puedes revisar o cambiar tu nombre, lo que quieres trabajar, la hora de tus mensajes, tu WhatsApp y tu plan.\n\nSi necesitas soporte, entra a Tú → Soporte.`;
+}
 
 export function feedbackFromInbound(text: string): FeedbackType | null {
   const value = normalized(text).replace(/[.!¿?]+$/g, '');
@@ -66,6 +82,17 @@ async function recordFeedback(admin: DbClient, inbound: InboundRow, userId: stri
 }
 
 export async function processInboundMessage(admin: DbClient, message: EvolutionInboundMessage, inbound: InboundRow, userId: string) {
+  const utilityCommand = utilityCommandFromInbound(message.text);
+  if (utilityCommand) {
+    const sent = await sendWhatsAppText(message.from, utilityReply(utilityCommand));
+    if (!sent.ok) {
+      await updateInbound(admin, inbound.id, { status: 'failed', processed_at: new Date().toISOString(), error_code: 'utility_reply_failed' });
+      return { kind: 'utility_command' as const, command: utilityCommand, sent: false };
+    }
+    await updateInbound(admin, inbound.id, { status: 'completed', processed_at: new Date().toISOString(), response_provider_message_id: sent.providerMessageId ?? null, error_code: null });
+    await recordEvent(admin, { userId, eventType: 'whatsapp_utility_command', entityType: 'whatsapp_inbound', entityId: inbound.id, metadata: { command: utilityCommand } });
+    return { kind: 'utility_command' as const, command: utilityCommand, sent: true, providerMessageId: sent.providerMessageId ?? null };
+  }
   const feedback = feedbackFromInbound(message.text);
   if (feedback) { await recordFeedback(admin, inbound, userId, feedback); return { kind: 'feedback' as const }; }
   const idempotencyKey = `whatsapp:evolution:${message.providerMessageId}`;

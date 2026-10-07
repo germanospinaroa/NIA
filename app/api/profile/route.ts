@@ -36,6 +36,11 @@ export async function PATCH(request: Request) {
     }
   }
 
+  if (['first_name', 'last_name', 'preferred_name'].some(key => key in values)) {
+    const identityComplete = ['first_name', 'last_name', 'preferred_name'].every(key => typeof values[key] === 'string' && String(values[key]).trim());
+    if (!identityComplete) return NextResponse.json({ error: 'identity_required' }, { status: 422 });
+  }
+
   if ('country_code' in values && (typeof values.country_code !== 'string' || !/^[A-Z]{2}$/.test(values.country_code))) {
     return NextResponse.json({ error: 'invalid_country_code' }, { status: 422 });
   }

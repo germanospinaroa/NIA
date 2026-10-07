@@ -20,6 +20,9 @@ assert.equal(receptionTimeOfDay(utc('2026-10-03T18:00:00Z'), bogota), 'afternoon
 assert.equal(receptionTimeOfDay(utc('2026-10-04T01:00:00Z'), bogota), 'evening');
 const welcome = buildWelcomeMessage('Adriana', utc('2026-10-03T13:00:00Z'), bogota);
 assert.match(welcome, /^Buenos días, Adriana\. Soy NIA\./);
+assert.match(welcome, /Desde hoy voy a acompañarte una vez al día/);
+assert.match(welcome, /https:\/\/nia\.gritlab\.pro\/app\/tu/);
+assert.match(welcome, /AYUDA o CONFIGURACIÓN/);
 assert.equal(/poco\s+a\s+poco/i.test(welcome), false);
 assert.match(fs.readFileSync(new URL('../lib/server/reception-welcome.ts', import.meta.url), 'utf8'), /ensureActivationWelcome/);
 assert.deepEqual(receptionInstructions('tuning').length > 0, true);

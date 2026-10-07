@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { parseEvolutionMessage } from '../lib/server/whatsapp.ts';
-import { contextKeyFromInbound, feedbackFromInbound } from '../lib/server/whatsapp-inbound.ts';
+import { contextKeyFromInbound, feedbackFromInbound, utilityCommandFromInbound } from '../lib/server/whatsapp-inbound.ts';
 
 const base = { event: 'messages.upsert', data: { key: { id: 'EV-IN-1', remoteJid: '573001234567@s.whatsapp.net', fromMe: false }, message: { conversation: 'Hola NIA' } } };
 const parsed = parseEvolutionMessage(base);
@@ -18,6 +18,12 @@ assert.equal(feedbackFromInbound('Así sí'), 'resonates');
 assert.equal(feedbackFromInbound('Más real'), 'needs_grounding');
 assert.equal(feedbackFromInbound('Otro enfoque'), 'different_angle');
 assert.equal(feedbackFromInbound('Hola NIA'), null);
+assert.equal(utilityCommandFromInbound('ayuda'), 'help');
+assert.equal(utilityCommandFromInbound('AYUDA.'), 'help');
+assert.equal(utilityCommandFromInbound('Configuración'), 'configuration');
+assert.equal(utilityCommandFromInbound('CONFIGURACION'), 'configuration');
+assert.equal(utilityCommandFromInbound('SOPORTE'), 'support');
+assert.equal(utilityCommandFromInbound('Necesito ayuda con esto'), null);
 assert.match(fs.readFileSync(new URL('../lib/server/whatsapp-inbound.ts', import.meta.url), 'utf8'), /allowRelevantFallback: false/);
 assert.doesNotMatch(fs.readFileSync(new URL('../lib/server/whatsapp-inbound.ts', import.meta.url), 'utf8'), /ensureWelcome|ensureActivationWelcome|welcome_delivery_failed/);
 const route = fs.readFileSync(new URL('../app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8');

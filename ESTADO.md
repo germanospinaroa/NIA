@@ -1,5 +1,13 @@
 # ESTADO — NIA
 
+## Experiencia completa de cuenta — 2026-10-07
+- `/app/tu` ahora presenta alias (`preferred_name` con fallback seguro), nombre completo y correo de solo lectura; `Editar nombre` guarda los tres campos sin tocar `onboarding_completed` ni el marcador de identidad. `MvpShell` usa el mismo helper de alias.
+- `NIA_PLAN_CONFIG` centraliza mensual/anual, precio, moneda, cadence, trial y offer. Hotmart acepta fechas ISO, epoch ms/s y strings numéricos; los trials NIA de importe cero solo se infieren con offer permitido, grant válido y próxima fecha futura. Las renovaciones pagadas pasan a `active` en la misma fila por subscriber code.
+- Se añadió `scripts/reconcile-hotmart-trials.mjs` (dry-run por defecto, `--apply`). Producción local: dry-run encontró 1 fila mensual real, `--apply` la corrigió a `trialing` con trial/fechas/USD; el dry-run posterior quedó en 0 candidatos. No se creó duplicado.
+- Welcome determinista actualizado con la estructura aprobada, URL canónica `NIA_APP_URL`, nombre confirmado y AYUDA/CONFIGURACIÓN. WhatsApp reconoce AYUDA, CONFIGURACIÓN/CONFIGURACION y SOPORTE antes de feedback/intervenciones, sin LLM ni progresión.
+- Soporte añadido en `/app/tu#soporte`, API server-side y migration aditiva `supabase/migrations/20261007200000_support_requests.sql`, con RLS y metadata solo de cuenta. El código Resend queda cerrado si faltan `RESEND_API_KEY`, `RESEND_FROM_EMAIL` o `SUPPORT_EMAIL_TO`; Vercel Production no tiene esas variables y no se fingió entrega.
+- Verificado: batería solicitada + `test:support-utility`, typecheck, lint (4 warnings heredados), build y `git diff --check` PASS. Falta aplicar la migración en Supabase: CLI/credencial de migración no disponible. QA visual autenticado 375/390/430/1440 bloqueado por ausencia de `NIA_TEST_STORAGE_STATE`; `/app/tu` protegido no se abrió con datos reales.
+
 ## Finalización real de onboarding — 2026-10-07
 - La identidad ya no se infiere de nombres provenientes de Hotmart, del funnel ni del perfil: `/onboarding` exige los tres campos editables y guarda `learning_profile.onboarding.identity.status = answered` con `confirmed_at`. `NIA` sigue rechazado como nombre.
 - La resolución de etapas usa ese marcador explícito y conserva las secciones ya completadas. Si todo está completo y WhatsApp ya está conectado, el cliente llama `POST /api/onboarding/complete`; el éxito o una finalización previa redirige automáticamente a `/app`, los datos faltantes vuelven a su etapa y un fallo transitorio muestra `Continuar`.

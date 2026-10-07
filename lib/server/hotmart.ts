@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { planForHotmartOffer } from '../hotmart-checkout.ts';
+import { planConfig, planForHotmartOffer } from '../hotmart-checkout.ts';
 
 type Json = Record<string, unknown>;
 
@@ -14,9 +14,21 @@ function stringValue(value: unknown) {
   return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
 }
 
-function dateValue(value: unknown) {
-  if (typeof value !== 'string' || !value) return null;
-  const timestamp = Date.parse(value);
+function booleanValue(value: unknown) {
+  if (value === true || value === 1) return true;
+  return typeof value === 'string' && ['true', '1', 'yes'].includes(value.trim().toLowerCase());
+}
+
+export function dateValue(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const milliseconds = Math.abs(value) < 1e12 ? value * 1000 : value;
+    const date = new Date(milliseconds);
+    return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+  }
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const normalized = value.trim();
+  if (/^\d+(?:\.\d+)?$/.test(normalized)) return dateValue(Number(normalized));
+  const timestamp = Date.parse(normalized);
   return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
@@ -56,7 +68,7 @@ export type HotmartPurchaseData = {
   currency: string | null;
 };
 
-export function purchaseData(payload: Json): HotmartPurchaseData {
+export function purchaseData(payload: Json, eventOverride?: string): HotmartPurchaseData {
   const data = (payload.data && typeof payload.data === 'object' ? payload.data : payload) as Json;
   const buyer = (data.buyer && typeof data.buyer === 'object' ? data.buyer : {}) as Json;
   const purchase = (data.purchase && typeof data.purchase === 'object' ? data.purchase : {}) as Json;
@@ -69,12 +81,17 @@ export function purchaseData(payload: Json): HotmartPurchaseData {
   const offerCode = stringValue(offer.code ?? data.offer_code);
   const subscriberCode = stringValue(at(subscription, ['subscriber', 'code']) ?? subscription.subscriber_code ?? data.subscriber_code);
   const transaction = stringValue(purchase.transaction ?? data.transaction);
-  const purchaseDate = dateValue(purchase.date ?? purchase.purchase_date ?? data.purchase_date);
+  const purchaseDate = dateValue(purchase.approved_date ?? purchase.date ?? purchase.purchase_date ?? purchase.order_date ?? data.purchase_date ?? data.order_date);
   const nextBilling = dateValue(purchase.date_next_charge ?? subscription.date_next_charge ?? subscription.next_charge_date ?? data.date_next_charge);
-  const cancellationDate = dateValue(data.cancellation_date ?? purchase.cancellation_date ?? subscription.cancellation_date);
+  const cancellationDate = dateValue(data.cancellation_date ?? purchase.cancellation_date ?? subscription.cancellation_date ?? subscription.date_cancellation);
   const status = String(purchase.status ?? subscription.status ?? payload.event ?? 'unknown').toLowerCase();
-  const trial = Boolean(subscription.trial_period || subscription.trial || purchase.trial || data.trial);
+  const event = String(eventOverride ?? payload.event ?? '').toUpperCase();
   const amount = price.value != null ? Number(price.value) : null;
+  const explicitTrial = [subscription.trial_period, subscription.trial, purchase.trial, data.trial, purchase.is_trial, subscription.is_trial].some(booleanValue);
+  const grantEvent = event === 'PURCHASE_APPROVED' || event === 'PURCHASE_COMPLETE';
+  const config = planConfig(planForHotmartOffer(offerCode));
+  const inferredTrial = Boolean(config && grantEvent && config.trialDays > 0 && amount === 0 && nextBilling && new Date(nextBilling).getTime() > Date.now());
+  const trial = grantEvent && amount !== null && amount > 0 ? false : Boolean(config && (explicitTrial || inferredTrial));
   return {
     email,
     firstName: stringValue(buyer.first_name ?? buyer.name?.toString().split(/\s+/)[0]),
@@ -146,7 +163,8 @@ async function upsertSubscription(admin: SupabaseClient, userId: string, input: 
   const isGrant = event === 'PURCHASE_APPROVED' || event === 'PURCHASE_COMPLETE';
   const isCancellation = event === 'SUBSCRIPTION_CANCELLATION' || event === 'PURCHASE_CANCELED';
   const status = isGrant ? input.trial ? 'trialing' : 'active' : isCancellation ? 'canceled' : event === 'PURCHASE_DELAYED' ? 'past_due' : event === 'PURCHASE_REFUNDED' ? 'refunded' : event === 'PURCHASE_CHARGEBACK' ? 'chargeback' : 'expired';
-  const values: Json = { user_id: userId, provider: 'hotmart', provider_subscription_id: input.subscriberCode, provider_product_id: input.productId, provider_product_name: input.productName, provider_plan_id: input.planId, plan_key: input.planKey, plan_name: input.planName, status, trial: input.trial, next_billing_at: input.nextBilling, current_period_end: input.nextBilling, access_until: isCancellation ? input.nextBilling : null, canceled_at: isCancellation ? input.cancellationDate : null, cancel_requested_at: isCancellation ? input.cancellationDate : null, trial_started_at: isGrant && input.trial ? input.purchaseDate : null, trial_ends_at: isGrant && input.trial ? input.nextBilling : null, subscriber_code: input.subscriberCode, purchase_transaction: input.transaction, purchase_status: input.status, currency: input.currency, amount: input.amount };
+  const config = planConfig(input.planKey);
+  const values: Json = { user_id: userId, provider: 'hotmart', provider_subscription_id: input.subscriberCode, provider_product_id: input.productId, provider_product_name: input.productName, provider_plan_id: input.planId, plan_key: input.planKey, plan_name: config?.displayName ?? input.planName, status, trial: input.trial, next_billing_at: input.nextBilling, current_period_end: input.nextBilling, access_until: isCancellation ? input.nextBilling : null, canceled_at: isCancellation ? input.cancellationDate : null, cancel_requested_at: isCancellation ? input.cancellationDate : null, trial_started_at: isGrant && input.trial ? input.purchaseDate : null, trial_ends_at: isGrant && input.trial ? input.nextBilling : null, subscriber_code: input.subscriberCode, purchase_transaction: input.transaction, purchase_status: input.status, currency: config?.currency ?? input.currency, amount: input.amount };
   const existing = await admin.from('subscriptions').select('id').eq('provider', 'hotmart').eq('provider_subscription_id', input.subscriberCode).maybeSingle();
   if (existing.error) throw new Error('hotmart_subscription_lookup_failed');
   const result = existing.data?.id ? await admin.from('subscriptions').update(values).eq('id', existing.data.id) : await admin.from('subscriptions').insert(values);
@@ -170,7 +188,7 @@ export async function processHotmartEvent(admin: SupabaseClient, payload: Json, 
   const inserted = await admin.from('hotmart_webhook_events').insert({ event_id: eventId, event_type: event, payload, status: 'received' }).select('id').maybeSingle();
   if (inserted.error?.code === '23505') return { duplicate: true, eventId };
   if (inserted.error || !inserted.data) throw new Error('hotmart_event_save_failed');
-  const data = purchaseData(payload);
+  const data = purchaseData(payload, event);
   const grantEvents = new Set(['PURCHASE_APPROVED', 'PURCHASE_COMPLETE']);
   const lifecycleEvents = new Set(['PURCHASE_CANCELED', 'PURCHASE_REFUNDED', 'PURCHASE_CHARGEBACK', 'PURCHASE_EXPIRED', 'PURCHASE_DELAYED', 'SUBSCRIPTION_CANCELLATION']);
   try {
