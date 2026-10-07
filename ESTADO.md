@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Funnel aprobado como raíz pública — 2026-10-07
+- `/` ahora renderiza directamente `PremiumDiscover`, la experiencia premium aprobada que antes vivía en `/descubre`.
+- El landing anterior se conserva como `components/landing/ArchivedLanding.tsx`, fuera del árbol `app/`, por lo que no queda publicado como ruta.
+- Se añadió regresión de routing raíz; precios, copy del funnel, onboarding y lógica de negocio no fueron modificados.
+
 ## Corrección single-select onboarding — 2026-10-07
 - `ChoiceCards` ya no deshabilita opciones no seleccionadas cuando `max === 1`; tocar otra respuesta reemplaza inmediatamente la anterior.
 - Los límites de contexto (4) y personalización (2), la exclusividad de `discover_with_me` y el resto del modelo guiado permanecen intactos.

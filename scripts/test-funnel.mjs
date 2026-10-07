@@ -8,6 +8,10 @@ const files = [
   'components/funnel/WhatsAppDemo.tsx', 'app/acceso/page.tsx', 'app/auth/callback/route.ts', 'app/onboarding/page.tsx',
 ];
 for (const file of files) assert.ok(fs.existsSync(file), file + ' exists');
+const publicRoot = fs.readFileSync('app/page.tsx', 'utf8');
+assert.match(publicRoot, /PremiumDiscover/);
+assert.doesNotMatch(publicRoot, /Punto NIA|microseñales|implementación pendiente/);
+assert.ok(fs.existsSync('components/landing/ArchivedLanding.tsx'), 'legacy landing remains archived in source');
 const source = files.map(file => fs.readFileSync(file, 'utf8')).join('\n');
 const events = [
   'discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed', 'access_code_requested',
