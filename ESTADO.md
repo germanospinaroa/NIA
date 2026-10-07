@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Pre-tráfico: legal, Hotmart y navegación — 2026-10-07
+- `/privacidad`, `/terminos` y `/cancelacion` son páginas públicas reales y están enlazadas desde `/descubre/planes` junto con el aviso de renovación automática. No exponen el correo privado de soporte ni alteran el copy científico.
+- `PremiumDiscover` persiste `discoverScreenIndex` dentro de `FunnelState`, reconstruye el historial con `niaDiscoverScreen` sin PII y soporta refresh, Back y Forward; índices inválidos vuelven al primer screen. El alias se restaura después del montaje para evitar hydration mismatch. El logo reinicia el funnel público hacia `/`.
+- Se conserva la promoción mensual US$6.99 tachado + US$4.99 real. Anual permanece US$49.99, trial de 7 días y offer `3z4a0vad`.
+- QA E2E con navegador en build de producción local: refresh, Back/Forward, nombre preferido, planes, precios, enlaces legales e índices inválidos PASS. No se verificó checkout real de Hotmart porque este workspace no tiene credenciales/API de edición; la descripción anual del proveedor requiere acción manual: `Acceso completo a NIA. 7 días gratis y luego US$49.99 al año. Cancela cuando quieras.`
+- Tests focalizados y batería solicitada PASS; typecheck/build/diff check PASS. Lint sin errores, con cuatro warnings heredados. Pendiente publicar y repetir smoke público sobre el SHA final.
+
 ## Experiencia completa de cuenta — 2026-10-07
 - `/app/tu` ahora presenta alias (`preferred_name` con fallback seguro), nombre completo y correo de solo lectura; `Editar nombre` guarda los tres campos sin tocar `onboarding_completed` ni el marcador de identidad. `MvpShell` usa el mismo helper de alias.
 - `NIA_PLAN_CONFIG` centraliza mensual/anual, precio, moneda, cadence, trial y offer. Hotmart acepta fechas ISO, epoch ms/s y strings numéricos; los trials NIA de importe cero solo se infieren con offer permitido, grant válido y próxima fecha futura. Las renovaciones pagadas pasan a `active` en la misma fila por subscriber code.

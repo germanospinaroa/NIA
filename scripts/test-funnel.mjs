@@ -19,7 +19,9 @@ const events = [
   'plans_viewed', 'plan_selected', 'access_started', 'access_code_verified', 'onboarding_started',
 ];
 for (const event of events) assert.match(source, new RegExp(event), event + ' is tracked');
-assert.match(source, /useState\(0\)/);
+assert.match(source, /discoverScreenIndex/);
+assert.match(source, /history\.pushState/);
+assert.match(source, /popstate/);
 assert.match(source, /router\.push\('\/descubre\/planes'\)/);
 for (const copy of [
   '¿Cuántas veces más vas a saber lo que quieres…', 'y terminar haciendo otra cosa?',

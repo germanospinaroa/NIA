@@ -1,10 +1,12 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { readFunnelState, saveFunnelState, trackFunnel } from '@/lib/funnel';
+import { readFunnelState, resetFunnelState, saveFunnelState, trackFunnel } from '@/lib/funnel';
 import { addressName } from '@/lib/funnel-personalization';
 
 type Screen = { title: string; body: string[]; cta: string; image?: string; dark?: boolean; kind?: 'evidence' | 'preferred-name' | 'whatsapp' | 'continuity' | 'closing' };
@@ -45,11 +47,35 @@ export default function PremiumDiscover() {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [preferredName, setPreferredName] = useState(() => { const state = readFunnelState(); return state.preferredNameConfirmed === true ? addressName(state.preferredName) : ''; });
+  const [preferredName, setPreferredName] = useState('');
+  const initialIndex = useRef(0);
   const screen = screens[index];
   const displayName = addressName(preferredName);
   const title = screen.kind === 'whatsapp' ? (displayName ? `${displayName}, imagina que mañana tienes una conversación que llevas días evitando.` : 'Imagina que mañana tienes una conversación que llevas días evitando.') : screen.kind === 'closing' ? (displayName ? `Pero tenemos que ser muy sinceros contigo, ${displayName}: esos momentos van a volver.` : 'Pero tenemos que ser muy sinceros contigo: esos momentos van a volver.') : screen.title;
   useEffect(() => { trackFunnel('discover_started'); trackFunnel('premium_funnel_started'); trackFunnel('discover_screen_viewed', { screen: 1 }); }, []);
+  useEffect(() => {
+    const stored = readFunnelState().discoverScreenIndex;
+    const restoredIndex = typeof stored === 'number' && Number.isInteger(stored) && stored >= 0 && stored < screens.length ? stored : 0;
+    const state = readFunnelState();
+    const restoredName = state.preferredNameConfirmed === true ? addressName(state.preferredName) : '';
+    initialIndex.current = restoredIndex;
+    setIndex(restoredIndex);
+    setPreferredName(restoredName);
+    const current = window.history.state?.niaDiscoverScreen;
+    if (restoredIndex > 0 && current !== restoredIndex) {
+      window.history.replaceState({ ...(window.history.state || {}), niaDiscoverScreen: 0 }, '', window.location.href);
+      for (let screenIndex = 1; screenIndex <= restoredIndex; screenIndex += 1) window.history.pushState({ niaDiscoverScreen: screenIndex }, '', window.location.href);
+    } else window.history.replaceState({ ...(window.history.state || {}), niaDiscoverScreen: restoredIndex }, '', window.location.href);
+    saveFunnelState({ discoverScreenIndex: restoredIndex });
+    function restoreFromHistory() {
+      const next = window.history.state?.niaDiscoverScreen;
+      if (!Number.isInteger(next) || next < 0 || next >= screens.length) return;
+      setIndex(next);
+      saveFunnelState({ discoverScreenIndex: next });
+    }
+    window.addEventListener('popstate', restoreFromHistory);
+    return () => window.removeEventListener('popstate', restoreFromHistory);
+  }, []);
   useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }, [index]);
   function next() {
     if (screen.kind === 'preferred-name') {
@@ -62,10 +88,10 @@ export default function PremiumDiscover() {
     trackFunnel('discover_screen_completed', { screen: index + 1 });
     if (index === 2) saveFunnelState({ recognitionComplete: true, recognitionStep: 3, recognitionContext: 'decision_doubt' });
     if (index === screens.length - 1) { trackFunnel('premium_funnel_completed'); router.push('/descubre/planes'); return; }
-    const nextIndex = index + 1; trackFunnel('discover_screen_viewed', { screen: nextIndex + 1 }); setIndex(nextIndex);
+    const nextIndex = index + 1; saveFunnelState({ discoverScreenIndex: nextIndex }); window.history.pushState({ ...(window.history.state || {}), niaDiscoverScreen: nextIndex }, '', window.location.href); trackFunnel('discover_screen_viewed', { screen: nextIndex + 1 }); setIndex(nextIndex);
   }
   return <main className={`premium-funnel ${screen.dark ? 'is-dark' : ''}`}>
-    <header className="premium-header"><a href="/descubre" className="premium-mark" aria-label="NIA inicio"><span />NIA</a></header>
+    <header className="premium-header"><Link href="/" onClick={resetFunnelState} className="premium-mark" aria-label="NIA inicio"><span />NIA</Link></header>
     <div className="premium-stage" style={screen.image ? { '--premium-image': `url(${screen.image})` } as CSSProperties : undefined}>
       <AnimatePresence mode="wait"><motion.section key={index} className={`premium-screen premium-screen-${index + 1} ${screen.kind ? `is-${screen.kind}` : ''}`} initial={false} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -12 }} transition={{ duration: reduce ? 0 : .38, ease: [0.22, 1, 0.36, 1] }} aria-labelledby="premium-title">
         {screen.image && <div className="premium-image" aria-hidden="true" />}<div className="premium-vignette" aria-hidden="true" />

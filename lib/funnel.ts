@@ -13,6 +13,7 @@ export type OnboardingStage = 'name' | 'identity' | 'connection' | 'problem' | '
 export const checkoutMode: 'bypass' | 'hotmart' = 'hotmart';
 export type FunnelState = {
   recognitionComplete: boolean;
+  discoverScreenIndex?: number;
   recognitionStep?: 1 | 2 | 3;
   recognitionContext?: RecognitionContext;
   feedback?: FunnelFeedback;
@@ -51,6 +52,11 @@ export function saveFunnelState(patch: Partial<FunnelState>) {
   const next = JSON.stringify({ ...readFunnelState(), ...patch });
   sessionStorage.setItem(KEY, next);
   localStorage.setItem(KEY, next);
+}
+export function resetFunnelState() {
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(KEY);
+  localStorage.removeItem(KEY);
 }
 export function trackFunnel(name: string, properties: Record<string, string | number | boolean> = {}) {
   if (typeof window === 'undefined') return;
