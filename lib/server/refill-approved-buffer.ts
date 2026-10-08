@@ -200,6 +200,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const preparationDate = nextPsychologicalDeliveryDate(profile, now, { alreadyDeliveredToday: state.delivery === 'sent', dailyInteractionToday: state.interaction });
   const decision = chooseNextIntervention({ today, schedule: profile, now, alreadyDeliveredToday: state.delivery === 'sent', dailyInteractionToday: state.interaction, dailyDelivery: state.delivery, currentContentVersion: currentVersion, activeRows: active.map(row => ({ id: row.id!, intendedLocalDate: row.intendedLocalDate, contextVersion: compatibleVersions.has(row.contextVersion) ? currentVersion : row.contextVersion, status: row.status as 'approved' | 'buffered', createdAt: row.createdAt })), preparationDate });
   await options.onEvent?.({ userId, eventType: decision.action === 'preserve' ? 'next_intervention_valid' : decision.action === 'reschedule' ? 'next_intervention_rescheduled' : decision.action === 'wait_for_delivery' ? 'next_intervention_waiting_for_delivery' : decision.invalidateIds.length ? 'next_intervention_stale' : 'next_intervention_missing', metadata: { intended_local_date: decision.targetLocalDate, content_version: currentVersion, reason: decision.reason } });
+  if (decision.action === 'prepare' || decision.action === 'invalidate_and_prepare') await options.onEvent?.({ userId, eventType: 'buffer_coverage_gap', metadata: { required_local_date: decision.targetLocalDate, content_version: currentVersion, reason: decision.reason } });
   if (decision.invalidateIds.length) {
     await invalidateRows(admin, userId, decision.invalidateIds, now);
     await options.onEvent?.({ userId, eventType: 'next_intervention_invalidated', metadata: { count: decision.invalidateIds.length, reason: decision.reason, content_version: currentVersion } });
@@ -252,5 +253,6 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const item = { user_id: userId, intended_local_date: targetDate, plan: nextPlan, message: generated.message, status: 'buffered' as const, normalized_message_hash: normalizedMessageHash(generated.message), intervention_signature: nextPlan.interventionSignature, context_version: currentVersion };
   const storedRow = await storeApprovedMessage(admin, item);
   await options.onEvent?.({ userId, eventType: 'next_intervention_prepared', metadata: { intended_local_date: targetDate, content_version: currentVersion, reused: false } });
+  await options.onEvent?.({ userId, eventType: 'buffer_coverage_repaired', metadata: { required_local_date: targetDate, content_version: currentVersion } });
   return { ...base, created: [rowToBufferItem(storedRow)], skipped: ['next_intervention_prepared'] };
 }
