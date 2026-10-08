@@ -127,14 +127,14 @@ for (const [target, value] of Object.entries(guidanceByMovement)) value.target =
 // These fields are part of the same canonical movement contract. Defaults are
 // derived from the canonical path so they cannot silently diverge from it;
 // exceptional movements below declare stricter evidence explicitly.
-const movementPaths: Record<string, string[]> = {
+export const CANONICAL_MOVEMENT_PATHS: Record<string, string[]> = {
   external_validation: ['external_validation:notice_the_consulting_pattern', 'external_validation:information_vs_delegating_decision', 'external_validation:define_decision_criterion', 'external_validation:set_reconsideration_threshold', 'external_validation:decide_with_sufficient_information', 'external_validation:review_outcome_without_self_punishment', 'external_validation:build_evidence_of_own_capacity'],
   uncertainty_clarification: ['uncertainty_clarification:name_the_concrete_question', 'uncertainty_clarification:identify_what_is_known', 'uncertainty_clarification:choose_a_sufficient_next_step', 'uncertainty_clarification:act_without_total_certainty'],
   decision_criteria: ['decision_criteria:name_the_decision_rule', 'decision_criteria:set_reconsideration_threshold', 'decision_criteria:decide_with_sufficient_information', 'decision_criteria:review_outcome_without_self_punishment'],
   situational_preparation: ['situational_preparation:notice_the_trigger', 'situational_preparation:prepare_an_alternative_response', 'situational_preparation:practice_the_response_in_context', 'situational_preparation:review_what_happened'],
   progress_monitoring: ['progress_monitoring:notice_two_observations', 'progress_monitoring:name_what_changed', 'progress_monitoring:build_evidence_of_own_capacity'],
 };
-for (const path of Object.values(movementPaths)) {
+for (const path of Object.values(CANONICAL_MOVEMENT_PATHS)) {
   path.forEach((target, index) => {
     const value = guidanceByMovement[target];
     if (!value) return;
@@ -161,6 +161,32 @@ for (const target of ['progress_monitoring:build_evidence_of_own_capacity']) {
 // This movement can use confirmed evidence already present in the base
 // context; it does not require the optional review-after-outcome movement.
 guidanceByMovement['external_validation:build_evidence_of_own_capacity'].buildsOn = 'external_validation:decide_with_sufficient_information';
+
+// Every mechanism in the psychological contract must enter one of these
+// already-supported movement families. This is the single mechanism →
+// movement contract used by progression and recurrent planning.
+export const CANONICAL_MECHANISM_FAMILIES: Record<string, keyof typeof CANONICAL_MOVEMENT_PATHS> = {
+  external_validation: 'external_validation',
+  uncertainty_clarification: 'uncertainty_clarification',
+  decision_criteria: 'decision_criteria',
+  implementation_intention: 'situational_preparation',
+  progress_monitoring: 'progress_monitoring',
+  avoidance_preparation: 'situational_preparation',
+  intention_retrieval: 'situational_preparation',
+  rumination_interrupt: 'uncertainty_clarification',
+  post_event_reappraisal: 'decision_criteria',
+  self_criticism_reframe: 'external_validation',
+  attention_reorientation: 'uncertainty_clarification',
+  emotional_differentiation: 'uncertainty_clarification',
+  cognitive_reappraisal: 'decision_criteria',
+  perspective_shift: 'decision_criteria',
+  context_clarification: 'uncertainty_clarification',
+};
+
+export function canonicalMovementPathForMechanism(mechanismId: string | null | undefined) {
+  const family = mechanismId ? CANONICAL_MECHANISM_FAMILIES[mechanismId] : undefined;
+  return family ? CANONICAL_MOVEMENT_PATHS[family] ?? null : null;
+}
 
 function matchesAny(text: string, signals: RegExp[]) {
   return signals.some(signal => signal.test(text));
@@ -216,4 +242,22 @@ export function getMovementTargetGuidance(canonicalTargetMovement: string | null
 
 export function allMovementTargetGuidance() {
   return Object.values(guidanceByMovement);
+}
+
+export function validateCanonicalMovementContract(mechanismIds: string[] = Object.keys(CANONICAL_MECHANISM_FAMILIES)) {
+  const errors: string[] = [];
+  for (const mechanismId of mechanismIds) {
+    const family = CANONICAL_MECHANISM_FAMILIES[mechanismId];
+    if (!family) {
+      errors.push(`${mechanismId}:missing_family_mapping`);
+      continue;
+    }
+    const path = CANONICAL_MOVEMENT_PATHS[family];
+    if (!path?.length) {
+      errors.push(`${mechanismId}:missing_movement_path`);
+      continue;
+    }
+    for (const movement of path) if (!getMovementTargetGuidance(movement)) errors.push(`${mechanismId}:${movement}:missing_guidance`);
+  }
+  return errors;
 }

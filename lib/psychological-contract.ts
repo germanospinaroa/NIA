@@ -1,3 +1,5 @@
+import { CANONICAL_MECHANISM_FAMILIES, canonicalMovementPathForMechanism, validateCanonicalMovementContract } from './movement-expression.ts';
+
 export type MechanismEvidenceLevel = 'evidence-informed' | 'product-heuristic';
 
 export type PsychologicalMechanism = {
@@ -102,10 +104,11 @@ function movementDescription(mechanismId: string, preferredMovement?: string | n
     'progress_monitoring:build_evidence_of_own_capacity': 'reconocer evidencia concreta de lo que ya pudiste hacer por tu cuenta',
   };
   if (key.startsWith(`${mechanismId}:`) && labels[key]) return labels[key];
-  if (mechanismId === 'external_validation') return 'distinguir información de entregar la decisión';
-  if (mechanismId === 'implementation_intention') return 'preparar una respuesta para una situación concreta';
-  if (mechanismId === 'decision_criteria') return 'hacer explícito qué dato justificaría revisar';
-  if (mechanismId === 'uncertainty_clarification') return 'convertir una duda amplia en un punto concreto';
+  const family = CANONICAL_MECHANISM_FAMILIES[mechanismId];
+  if (family === 'external_validation') return 'distinguir información de entregar la decisión';
+  if (family === 'situational_preparation') return 'preparar una respuesta para una situación concreta';
+  if (family === 'decision_criteria') return 'hacer explícito qué dato justificaría revisar';
+  if (family === 'uncertainty_clarification') return 'convertir una duda amplia en un punto concreto';
   return 'mirar la situación desde un criterio más útil';
 }
 
@@ -134,6 +137,12 @@ export function formulatePsychologicalIntervention(input: { currentContext: stri
     risk_flags: sufficient ? (mechanism?.risk_flags ?? []) : ['insufficient_observable_pattern'],
     sufficient,
   };
+}
+
+export function validatePsychologicalMechanismMovementContract() {
+  const errors = validateCanonicalMovementContract(psychologicalMechanisms.map(mechanism => mechanism.id));
+  if (!canonicalMovementPathForMechanism('context_clarification')) errors.push('context_clarification:missing_fallback_mapping');
+  return errors;
 }
 
 export type PsychologicalCandidateInput = {

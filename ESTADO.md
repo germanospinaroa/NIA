@@ -1186,3 +1186,10 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Cancelación Hotmart actualizada contra documentación oficial: Basic separado, token OAuth documentado, endpoint `developers.hotmart.com`, validación de estado `INACTIVE`, error seguro y modal nativo sin `window.confirm`.
 - Tests específicos, typecheck, lint y build locales PASS (lint conserva 4 warnings heredados). Vercel Production ya tiene `REFILL_BUFFER_ENABLED=true` y `REFILL_PRODUCTION_ENABLED=true`.
 - Bloqueos de producción: conector Supabase sin sesión (`USER_NOT_LOGGED_IN`), por lo que la migración y verificación de `cron.job` no pudieron ejecutarse; Vercel Production no tiene `HOTMART_CLIENT_ID`, `HOTMART_CLIENT_SECRET` ni `HOTMART_BASIC`, así que cancelación real queda bloqueada por configuración.
+
+## P0 Movement Contract Recovery (2026-10-08)
+- Causa: `PSYCHOLOGICAL_MOVEMENT_PATHS` cubría solo cinco familias; el planner usaba `${mechanismId}:reflect_or_observe` para mecanismos sin path, produciendo `missing_movement_guidance` en refill.
+- Solución: `lib/movement-expression.ts` ahora es la fuente canónica de familias mecanismo → path y guidance. Todos los mecanismos del contrato, más `context_clarification`, tienen mapping explícito a una familia soportada; el fallback inventado fue eliminado y un mecanismo desconocido falla con `unsupported_mechanism_movement_contract`.
+- `lib/psychological-progression.ts` reutiliza el mapa canónico; `movementKey()` ya no inventa movimientos desconocidos. Se añadió `validatePsychologicalMechanismMovementContract()` y `scripts/test-movement-contract.mjs` con reproducción del perfil productivo sintético y elegibilidad trialing.
+- Tests de progresión, valor psicológico, contrato de movimientos, refill, delivery buffer, onboarding, daily e idempotencia PASS; typecheck/build PASS; lint PASS con 4 warnings heredados.
+- Pendiente: commit/deploy y verificar en producción la creación real del buffer del usuario afectado. Supabase sigue sin sesión para consultar el row/crons directamente.

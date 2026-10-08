@@ -1,4 +1,4 @@
-import { getMovementTargetGuidance } from './movement-expression.ts';
+import { CANONICAL_MECHANISM_FAMILIES, CANONICAL_MOVEMENT_PATHS, getMovementTargetGuidance } from './movement-expression.ts';
 
 export type PsychologicalMovementRecord = {
   id?: string | null;
@@ -38,13 +38,9 @@ export type PsychologicalProgression = {
   continuity: PsychologicalContinuity;
 };
 
-export const PSYCHOLOGICAL_MOVEMENT_PATHS: Record<string, string[]> = {
-  external_validation: ['external_validation:notice_the_consulting_pattern', 'external_validation:information_vs_delegating_decision', 'external_validation:define_decision_criterion', 'external_validation:set_reconsideration_threshold', 'external_validation:decide_with_sufficient_information', 'external_validation:review_outcome_without_self_punishment', 'external_validation:build_evidence_of_own_capacity'],
-  uncertainty_clarification: ['uncertainty_clarification:name_the_concrete_question', 'uncertainty_clarification:identify_what_is_known', 'uncertainty_clarification:choose_a_sufficient_next_step', 'uncertainty_clarification:act_without_total_certainty'],
-  decision_criteria: ['decision_criteria:name_the_decision_rule', 'decision_criteria:set_reconsideration_threshold', 'decision_criteria:decide_with_sufficient_information', 'decision_criteria:review_outcome_without_self_punishment'],
-  implementation_intention: ['situational_preparation:notice_the_trigger', 'situational_preparation:prepare_an_alternative_response', 'situational_preparation:practice_the_response_in_context', 'situational_preparation:review_what_happened'],
-  progress_monitoring: ['progress_monitoring:notice_two_observations', 'progress_monitoring:name_what_changed', 'progress_monitoring:build_evidence_of_own_capacity'],
-};
+export const PSYCHOLOGICAL_MOVEMENT_PATHS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(CANONICAL_MECHANISM_FAMILIES).map(([mechanismId, family]) => [mechanismId, CANONICAL_MOVEMENT_PATHS[family]]),
+);
 const paths = PSYCHOLOGICAL_MOVEMENT_PATHS;
 
 function normalized(value: string | null | undefined) {
@@ -107,7 +103,7 @@ export function movementKey(record: PsychologicalMovementRecord): string | null 
   }
   if ((mechanism === 'implementation_intention' || mechanism === 'avoidance_preparation') && /(respuesta|frase|prepar|practic)/.test(text)) return text.includes('practic') ? 'situational_preparation:practice_the_response_in_context' : 'situational_preparation:prepare_an_alternative_response';
   if (mechanism === 'progress_monitoring') return /(cambio|avance|dos|ocasiones)/.test(text) ? 'progress_monitoring:name_what_changed' : 'progress_monitoring:notice_two_observations';
-  return `${mechanism}:new_functional_move`;
+  return null;
 }
 
 function hasConfirmedEvent(evidence: string[]) {

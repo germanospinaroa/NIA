@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PSYCHOLOGICAL_MOVEMENT_PATHS, movementKey, type PsychologicalMovementRecord } from './psychological-progression.ts';
+import { canonicalMovementPathForMechanism } from './movement-expression.ts';
 import { getMovementTargetGuidance } from './movement-expression.ts';
 
 export const INTERVENTION_MODES = ['introduce', 'deepen', 'apply', 'contrast', 'anticipate', 'reinforce', 'integrate', 'transfer', 'evidence', 'reflect_or_observe'] as const;
@@ -260,7 +261,8 @@ function prospectiveEligibility(key: string, history: PsychologicalMovementRecor
 }
 
 function candidatePlans(input: DailyPlannerInput): DailyInterventionPlan[] {
-  const path = PSYCHOLOGICAL_MOVEMENT_PATHS[input.mechanismId] ?? [`${input.mechanismId}:reflect_or_observe`];
+  const path = canonicalMovementPathForMechanism(input.mechanismId) ?? PSYCHOLOGICAL_MOVEMENT_PATHS[input.mechanismId];
+  if (!path?.length) throw new Error('unsupported_mechanism_movement_contract');
   const evidence = [...(input.confirmedEvidence ?? []), input.context].filter(Boolean);
   const history = relatedHistory(input);
   const exposures = input.exposures ?? [];
