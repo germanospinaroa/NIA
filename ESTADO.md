@@ -3,7 +3,7 @@
 ## Hotmart Analytics — 2026-10-08
 - Se añadió el launcher oficial de Hotmart Analytics con la cuenta `ca466c8d-ad85-30c6-ad61-62464a24e7e1`, cargado de forma asíncrona y únicamente en superficies públicas de adquisición/activación; no se carga desde `/admin` ni desde `/app`.
 - La atribución permitida (`utm_*`, `fbclid`, `src`, `sck`, `xcod`) se captura sin PII, persiste en almacenamiento first-party y se compone con `URLSearchParams` en los checkout oficiales mensual `r7w7emsp` y anual `3z4a0vad`.
-- Privacidad menciona Hotmart Analytics solo como medición de visitas/conversiones. El launcher cubre también la raíz pública `/`, que no usa `FunnelFrame`; tests focalizados, typecheck, lint, build y diff check PASS; lint mantiene cuatro warnings heredados. Pendiente commit y redeploy de esta cobertura final.
+- Privacidad menciona Hotmart Analytics solo como medición de visitas/conversiones. El launcher cubre también la raíz pública `/`, que no usa `FunnelFrame`; tests focalizados, typecheck, lint, build y diff check PASS; lint mantiene cuatro warnings heredados. Producción verificada con Chrome: launcher una vez en superficies públicas, excluido de `/admin`, recurso externo HTTP 200, UTM/`fbclid` persistidos y checkout mensual oficial conservado sin compra.
 
 ## Preview social e identidad del navegador — 2026-10-07
 - La imagen aprobada `nia-whatsapp-preview.png` se optimizó sin rediseño a `public/og/nia-whatsapp-preview.jpg` en 1200×630, manteniendo el encuadre y copy original.
