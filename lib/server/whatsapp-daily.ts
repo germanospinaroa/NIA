@@ -85,6 +85,15 @@ export async function runDailyWhatsApp(admin: DbClient, now = new Date(), option
     // A psychological subscription message is one intervention per local day;
     // configured legacy second slots must not create a second daily delivery.
     for (const due of slots.slice(0, 1)) {
+      // With a minute-level cron, sent or actively claimed rows should exit
+      // before touching interaction/buffer logic. Failed or unlocked pending
+      // rows remain retryable through claimDelivery below.
+      const { data: existingDelivery, error: existingDeliveryError } = await admin.from('whatsapp_daily_deliveries').select('status,locked_until').eq('user_id', profile.id).eq('local_date', due.localDate).eq('slot', due.slot).maybeSingle();
+      if (existingDeliveryError) {
+        results.push({ userId: profile.id, slot: due.slot, status: 'skipped', reason: 'daily_whatsapp_delivery_unavailable' });
+        continue;
+      }
+      if (existingDelivery?.status === 'sent' || existingDelivery?.status === 'locked' || existingDelivery?.status === 'claimed' || (existingDelivery?.status === 'pending' && existingDelivery.locked_until && new Date(existingDelivery.locked_until).getTime() > Date.now())) continue;
       let daily;
       try { daily = await getOrCreateDailyInteraction(admin, profile.id, 'whatsapp', now, due.slot); } catch (error) {
         results.push({ userId: profile.id, slot: due.slot, status: 'skipped', reason: error instanceof Error ? error.message : 'generation_failed' });

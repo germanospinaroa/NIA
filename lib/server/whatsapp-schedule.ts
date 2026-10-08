@@ -14,6 +14,12 @@ export type DailyDeliveryState = { alreadyDeliveredToday: boolean; dailyInteract
 export const SCHEDULE_PREPARATION_MINUTES = 15;
 export const REFILL_CRON_INTERVAL_MINUTES = 15;
 
+export function configuredTimeMinutes(value: string | null | undefined) {
+  const [hour, minute] = String(value || '').split(':').map(Number);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
 function nextRefillOpportunityMinutes(currentMinutes: number) {
   return (Math.floor(currentMinutes / REFILL_CRON_INTERVAL_MINUTES) + 1) * REFILL_CRON_INTERVAL_MINUTES;
 }
@@ -36,14 +42,26 @@ export function nextPsychologicalDeliveryDate(profile: Pick<ScheduleProfile, 'ti
   return addLocalDays(clock.date, 1);
 }
 
+/**
+ * Date for reusing an already prepared NEXT after a scheduling-only change.
+ * The preparation margin is deliberately not consulted here: content already
+ * exists, so only the user's new delivery time matters.
+ */
+export function dateForPreparedNext(profile: Pick<ScheduleProfile, 'timezone' | 'message_time_1'>, now = new Date(), alreadyDeliveredToday = false) {
+  const clock = localClock(profile.timezone, now);
+  if (alreadyDeliveredToday) return addLocalDays(clock.date, 1);
+  const selectedMinutes = configuredTimeMinutes(profile.message_time_1);
+  const currentMinutes = clock.hour * 60 + clock.minute;
+  return selectedMinutes !== null && selectedMinutes > currentMinutes ? clock.date : addLocalDays(clock.date, 1);
+}
+
 export function dueSlots(profile: ScheduleProfile, now = new Date()) {
   const clock = localClock(profile.timezone, now);
   const configured = [profile.message_time_1, profile.message_frequency === 2 ? profile.message_time_2 : null].filter((value): value is string => Boolean(value));
   return configured.map((value, index) => ({ value, slot: String(index + 1) })).filter(({ value }) => {
-    const [hour, minute] = value.split(':').map(Number);
-    if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return false;
+    const scheduledMinutes = configuredTimeMinutes(value);
+    if (scheduledMinutes === null) return false;
     const currentMinutes = clock.hour * 60 + clock.minute;
-    const scheduledMinutes = hour * 60 + minute;
     return currentMinutes >= scheduledMinutes && currentMinutes < scheduledMinutes + 15;
   }).map(({ slot }) => ({ slot, localDate: clock.date }));
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { chooseNextIntervention } from '../lib/server/next-intervention.ts';
+import { dateForPreparedNext } from '../lib/server/whatsapp-schedule.ts';
 
 const schedule = { timezone: 'America/Bogota', message_time_1: '17:15' };
 const now = new Date('2026-10-08T21:00:00.000Z'); // 16:00 local
@@ -44,5 +45,11 @@ assert.equal(rescheduled.targetLocalDate, '2026-10-08');
 const legacy = chooseNextIntervention({ today: '2026-10-08', schedule, now, alreadyDeliveredToday: false, dailyInteractionToday: false, dailyDelivery: 'none', currentContentVersion: versionA, activeRows: [row('06', '2026-10-09'), row('07', '2026-10-10'), row('08', '2026-10-11')], preparationDate: '2026-10-09' });
 assert.equal(legacy.keepId, '06');
 assert.deepEqual(legacy.invalidateIds, ['07', '08']);
+
+// A prepared NEXT is reusable without the 15-minute generation margin.
+assert.equal(dateForPreparedNext({ timezone: 'America/Bogota', message_time_1: '18:00' }, new Date('2026-10-08T22:48:00.000Z')), '2026-10-08');
+assert.equal(dateForPreparedNext({ timezone: 'America/Bogota', message_time_1: '18:00' }, new Date('2026-10-08T22:59:00.000Z')), '2026-10-08');
+assert.equal(dateForPreparedNext({ timezone: 'America/Bogota', message_time_1: '18:00' }, new Date('2026-10-08T23:01:00.000Z')), '2026-10-09');
+assert.equal(dateForPreparedNext({ timezone: 'America/Bogota', message_time_1: '18:00' }, new Date('2026-10-08T22:48:00.000Z'), true), '2026-10-09');
 
 console.log('one-NEXT delivery contract tests: PASS');
