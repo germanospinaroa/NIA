@@ -11,6 +11,7 @@ export const TARGET_BUFFER_DAYS = 5;
 export const MIN_BUFFER_DAYS = MIN_APPROVED_BUFFER_DAYS;
 export const DEFAULT_MAX_COST_USD = 0.03;
 export const DEFAULT_REFILL_RUN_MAX_COST_USD = 0.15;
+export const ELIGIBLE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
 
 export type RefillPriority = 'critical' | 'urgent' | 'normal';
 
@@ -42,7 +43,7 @@ export type RefillOrchestrationResult = {
 };
 
 export function isEligibleProductionUser(row: ProductionEligibilityRow) {
-  return row.accountStatus === 'active' && row.whatsappEnabled === true && row.whatsappConnected && row.subscriptionStatus === 'active';
+  return row.accountStatus === 'active' && row.whatsappEnabled === true && row.whatsappConnected && ELIGIBLE_SUBSCRIPTION_STATUSES.includes(row.subscriptionStatus as typeof ELIGIBLE_SUBSCRIPTION_STATUSES[number]);
 }
 
 export function refillPriority(bufferBefore: number, minBufferDays = MIN_BUFFER_DAYS, targetBufferDays = TARGET_BUFFER_DAYS): RefillPriority | null {
@@ -130,15 +131,15 @@ export async function refillEligibleProductionUsers(admin: SupabaseClient, optio
   const userIds = profileRows.map(row => row.id);
   const [{ data: connections, error: connectionError }, { data: subscriptions, error: subscriptionError }, { data: bufferRows, error: bufferError }] = await Promise.all([
     admin.from('whatsapp_connections').select('user_id,wa_id,status').in('user_id', userIds).eq('status', 'connected'),
-    admin.from('subscriptions').select('user_id,status').in('user_id', userIds).eq('status', 'active'),
+    admin.from('subscriptions').select('user_id,status').in('user_id', userIds).in('status', [...ELIGIBLE_SUBSCRIPTION_STATUSES]),
     admin.from('approved_intervention_buffer').select('user_id').in('user_id', userIds).in('status', ['approved', 'buffered']),
   ]);
   if (connectionError) throw new Error('refill_connections_unavailable');
   if (subscriptionError) throw new Error('refill_subscriptions_unavailable');
   if (bufferError) throw new Error('refill_buffer_counts_unavailable');
   const connected = new Set((connections ?? []).filter(row => Boolean(row.wa_id)).map(row => row.user_id));
-  const activeSubscription = new Set((subscriptions ?? []).map(row => row.user_id));
-  const eligibility = profileRows.map(row => ({ userId: row.id, accountStatus: row.account_status, whatsappEnabled: row.whatsapp_enabled, whatsappConnected: connected.has(row.id), subscriptionStatus: activeSubscription.has(row.id) ? 'active' : null }));
+  const subscriptionStatus = new Map((subscriptions ?? []).map(row => [row.user_id, row.status]));
+  const eligibility = profileRows.map(row => ({ userId: row.id, accountStatus: row.account_status, whatsappEnabled: row.whatsapp_enabled, whatsappConnected: connected.has(row.id), subscriptionStatus: subscriptionStatus.get(row.id) ?? null }));
   const eligibleIds = new Set(eligibility.filter(isEligibleProductionUser).map(row => row.userId));
   const counts = new Map<string, number>();
   for (const row of bufferRows ?? []) if (eligibleIds.has(row.user_id)) counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1);

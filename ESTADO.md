@@ -1177,3 +1177,12 @@ NIA Identity es una experiencia breve para mujeres profesionales que normalmente
 - Retest real controlado: 5 items generados y bufferizados, 0 WhatsApp. Se detectó y corrigió un bug de harness de normalización de filas; después se detectó una expresión de `confirmed_event` demasiado amplia que trataba `decidir` como evento ocurrido. Los 5 items se invalidaron para no dejar reservas inválidas.
 - API real registrada: 14 llamadas (7 Sol, 7 Luna; 5 repairs), coste estimado USD 0.029612. No se repitió el retest tras la corrección porque el presupuesto restante no permitía completar otra corrida de 5 días dentro del hard cap USD 0.05.
 - Estado: NOT READY; falta una corrida real válida posterior a la corrección de elegibilidad. No deploy ni WhatsApp.
+
+## Production Release Recovery (2026-10-08)
+- En curso: se desacopló la activación determinista de la preparación psicológica. `completeOnboardingAfterWhatsapp()` marca onboarding completado, persiste/verifica welcome y delivery, y deja el primer buffer como best-effort con evento `first_buffer_prepare_failed` y retry posterior.
+- El cron de welcome ahora ejecuta `recoverIncompleteActivations()` antes de enviar welcomes; la recuperación exige cuenta activa, WhatsApp Evolution conectado y todos los datos deterministas completos, sin fabricar respuestas.
+- `active` y `trialing` son elegibles para refill; estados cancelados, vencidos, reembolsados, chargeback y pago pendiente quedan fuera.
+- Nueva migración pendiente de aplicar: `supabase/migrations/20261008150000_restore_nia_delivery_crons.sql`, crea/recrea `nia-daily-whatsapp` y `nia-buffer-refill` y preserva `nia-welcome-dispatch`.
+- Cancelación Hotmart actualizada contra documentación oficial: Basic separado, token OAuth documentado, endpoint `developers.hotmart.com`, validación de estado `INACTIVE`, error seguro y modal nativo sin `window.confirm`.
+- Tests específicos, typecheck, lint y build locales PASS (lint conserva 4 warnings heredados). Vercel Production ya tiene `REFILL_BUFFER_ENABLED=true` y `REFILL_PRODUCTION_ENABLED=true`.
+- Bloqueos de producción: conector Supabase sin sesión (`USER_NOT_LOGGED_IN`), por lo que la migración y verificación de `cron.job` no pudieron ejecutarse; Vercel Production no tiene `HOTMART_CLIENT_ID`, `HOTMART_CLIENT_SECRET` ni `HOTMART_BASIC`, así que cancelación real queda bloqueada por configuración.

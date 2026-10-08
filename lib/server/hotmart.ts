@@ -223,14 +223,66 @@ export async function processHotmartEvent(admin: SupabaseClient, payload: Json, 
   }
 }
 
-export async function cancelHotmartSubscription(subscriberCode: string) {
+export class HotmartCancellationError extends Error {
+  readonly code: 'hotmart_not_configured' | 'hotmart_auth_failed' | 'hotmart_cancel_failed';
+  readonly stage: 'config' | 'token' | 'cancel';
+  readonly providerStatus?: number;
+  readonly providerCode?: string;
+  constructor(code: 'hotmart_not_configured' | 'hotmart_auth_failed' | 'hotmart_cancel_failed', stage: 'config' | 'token' | 'cancel', providerStatus?: number, providerCode?: string) {
+    super(code);
+    this.code = code;
+    this.stage = stage;
+    this.providerStatus = providerStatus;
+    this.providerCode = providerCode;
+  }
+}
+
+function providerCode(body: unknown) {
+  if (!body || typeof body !== 'object') return null;
+  const value = (body as Record<string, unknown>).code ?? (body as Record<string, unknown>).error ?? (body as Record<string, unknown>).error_code;
+  return typeof value === 'string' ? value.slice(0, 80) : null;
+}
+
+function responseHasInactiveStatus(body: unknown) {
+  return Boolean(body && typeof body === 'object' && String((body as Record<string, unknown>).status || '').toUpperCase() === 'INACTIVE');
+}
+
+function responseLooksAlreadyCanceled(body: unknown) {
+  const text = JSON.stringify(body || '').toLowerCase();
+  return text.includes('already') && (text.includes('cancel') || text.includes('inactive'));
+}
+
+export async function cancelHotmartSubscription(subscriberCode: string, fetchImpl: typeof fetch = fetch) {
   const clientId = process.env.HOTMART_CLIENT_ID;
   const clientSecret = process.env.HOTMART_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('hotmart_not_configured');
-  const tokenResponse = await fetch('https://api-sec-vlc.hotmart.com/security/oauth/token', { method: 'POST', headers: { authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`, 'content-type': 'application/x-www-form-urlencoded' }, body: 'grant_type=client_credentials' });
-  if (!tokenResponse.ok) throw new Error('hotmart_token_failed');
-  const token = await tokenResponse.json();
-  const response = await fetch(`https://api-sec-vlc.hotmart.com/payments/api/v1/subscriptions/${encodeURIComponent(subscriberCode)}/cancel`, { method: 'POST', headers: { authorization: `Bearer ${token.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify({ send_mail: false }) });
-  if (!response.ok) throw new Error('hotmart_cancel_failed');
-  return response.json();
+  const basic = process.env.HOTMART_BASIC;
+  if (!clientId || !clientSecret || !basic) throw new HotmartCancellationError('hotmart_not_configured', 'config');
+
+  const tokenUrl = new URL('https://api-sec-vlc.hotmart.com/security/oauth/token');
+  tokenUrl.searchParams.set('grant_type', 'client_credentials');
+  tokenUrl.searchParams.set('client_id', clientId);
+  tokenUrl.searchParams.set('client_secret', clientSecret);
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await fetchImpl(tokenUrl, { method: 'POST', headers: { authorization: `Basic ${basic}`, 'content-type': 'application/json' } });
+  } catch {
+    throw new HotmartCancellationError('hotmart_auth_failed', 'token');
+  }
+  const tokenBody = await tokenResponse.json().catch(() => ({}));
+  if (!tokenResponse.ok || typeof tokenBody?.access_token !== 'string') throw new HotmartCancellationError('hotmart_auth_failed', 'token', tokenResponse.status, providerCode(tokenBody) ?? undefined);
+
+  const cancellationUrl = `https://developers.hotmart.com/payments/api/v1/subscriptions/${encodeURIComponent(subscriberCode)}/cancel`;
+  let response: Response;
+  try {
+    response = await fetchImpl(cancellationUrl, { method: 'POST', headers: { authorization: `Bearer ${tokenBody.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify({ send_mail: false }) });
+  } catch {
+    throw new HotmartCancellationError('hotmart_cancel_failed', 'cancel');
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (responseLooksAlreadyCanceled(body)) return { status: 'INACTIVE', alreadyCanceled: true, response: body };
+    throw new HotmartCancellationError('hotmart_cancel_failed', 'cancel', response.status, providerCode(body) ?? undefined);
+  }
+  if (!responseHasInactiveStatus(body)) throw new HotmartCancellationError('hotmart_cancel_failed', 'cancel', response.status, providerCode(body) ?? 'unexpected_status');
+  return { status: 'INACTIVE', alreadyCanceled: false, response: body };
 }

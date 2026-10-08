@@ -45,6 +45,7 @@
     "test:daily-invariant-migration": "node scripts/test-daily-invariant-migration.mjs",
     "test:recurrent-long-horizon": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-recurrent-long-horizon.mjs",
     "test:buffer-refill-orchestration": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-buffer-refill-orchestration.mjs",
+    "test:production-recovery": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-production-recovery.mjs",
     "test:buffer-delivered-exposure-loop": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-buffer-delivered-exposure-loop.mjs",
     "test:material-novelty": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-material-novelty.mjs",
     "test:hotmart-access": "node --experimental-strip-types scripts/test-hotmart-access.mjs",

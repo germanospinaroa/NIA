@@ -47,6 +47,8 @@ assert.equal(budget.users[1].skipped.includes('budget_exhausted'), true);
 
 const eligible = { userId: 'eligible', accountStatus: 'active', whatsappEnabled: true, whatsappConnected: true, subscriptionStatus: 'active' };
 assert.equal(isEligibleProductionUser(eligible), true);
+assert.equal(isEligibleProductionUser({ ...eligible, subscriptionStatus: 'trialing' }), true);
+for (const status of ['canceled', 'cancelled', 'expired', 'refunded', 'chargeback', 'past_due', 'overdue']) assert.equal(isEligibleProductionUser({ ...eligible, subscriptionStatus: status }), false, `${status} must be excluded`);
 for (const field of ['accountStatus', 'whatsappEnabled', 'whatsappConnected', 'subscriptionStatus']) {
   const copy = { ...eligible };
   if (field === 'accountStatus') copy[field] = 'pending_activation';
