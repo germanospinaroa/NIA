@@ -40,18 +40,40 @@ export type FunnelState = {
   onboardingFollowupChoice?: OnboardingFollowupChoice;
 };
 const KEY = 'nia_funnel_state';
+
+function readStoredState(storage: Storage): Partial<FunnelState> {
+  try {
+    const raw = storage.getItem(KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Partial<FunnelState> : {};
+  } catch {
+    return {};
+  }
+}
+
 export function readFunnelState(): FunnelState {
   if (typeof window === 'undefined') return { recognitionComplete: false };
-  try {
-    const raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || '{}';
-    return { recognitionComplete: false, ...JSON.parse(raw) };
-  } catch { return { recognitionComplete: false }; }
+  const localState = readStoredState(window.localStorage);
+  const sessionState = readStoredState(window.sessionStorage);
+  const state = { recognitionComplete: false, ...localState, ...sessionState };
+  if (!Object.prototype.hasOwnProperty.call(sessionState, 'discoverScreenIndex')) delete state.discoverScreenIndex;
+  return state;
 }
 export function saveFunnelState(patch: Partial<FunnelState>) {
   if (typeof window === 'undefined') return;
   const next = JSON.stringify({ ...readFunnelState(), ...patch });
   sessionStorage.setItem(KEY, next);
-  localStorage.setItem(KEY, next);
+  const durable = { ...readFunnelState(), ...patch };
+  delete durable.discoverScreenIndex;
+  localStorage.setItem(KEY, JSON.stringify(durable));
+}
+export function resetDiscoverProgress() {
+  if (typeof window === 'undefined') return;
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    const state = readStoredState(storage);
+    delete state.discoverScreenIndex;
+    storage.setItem(KEY, JSON.stringify(state));
+  }
 }
 export function resetFunnelState() {
   if (typeof window === 'undefined') return;

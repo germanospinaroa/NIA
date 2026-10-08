@@ -1,12 +1,12 @@
 'use client';
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { readFunnelState, resetFunnelState, saveFunnelState, trackFunnel } from '@/lib/funnel';
+import { readFunnelState, resetDiscoverProgress, saveFunnelState, trackFunnel } from '@/lib/funnel';
 import { addressName } from '@/lib/funnel-personalization';
 import { captureMarketingAttribution } from '@/lib/marketing-attribution';
 import { AcquisitionAnalytics } from '@/components/analytics/AcquisitionAnalytics';
@@ -24,6 +24,15 @@ const screens: Screen[] = [
   { title: 'Y sí, la conversación puede seguir siendo incómoda.', body: ['Pero tú ya no llegas igual.', 'Ese mensaje no buscaba decirte qué hacer.', 'Buscaba dejarte algo que pudieras usar cuando llegara el momento real:', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.', 'Y mañana NIA no empieza de cero.', 'Recuerda lo que estás trabajando, retoma lo que todavía aparece y profundiza desde ahí.', 'Porque cambiar no ocurre por entender algo una vez.', 'Ocurre cuando empiezas a responder diferente en esos momentos que antes te llevaban al mismo lugar.', 'NIA no te manda mensajes.', 'Construye un proceso contigo.'], cta: 'Quiero seguir', kind: 'continuity' },
   { title: 'Esos momentos van a volver.', body: ['Vas a tener otra decisión que te haga dudar.', 'Otra conversación en la que sea más fácil callarte.', 'Otra opinión que te haga preguntarte si deberías abandonar la tuya.', 'NIA no promete que nunca vuelvas a dudar.', 'Promete trabajar contigo para que, cuando esa duda aparezca, tengas algo diferente desde donde responder.', 'Porque la duda puede volver.', 'Lo que puede cambiar es quién decide cuando aparezca.', 'No queremos que necesites a NIA para saber qué hacer.', 'Queremos que NIA te ayude a construir algo mucho más valioso:', 'tu propio criterio.', 'Para que cada vez necesites menos que alguien más te diga qué hacer.', 'Y cada vez puedas confiar más en ti.'], cta: 'Quiero vivir NIA', dark: true, kind: 'closing' },
 ];
+
+function validDiscoverIndex(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < screens.length ? value : null;
+}
+
+function navigationType() {
+  const entry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+  return entry?.type ?? 'navigate';
+}
 
 function WhatsAppMoment({ preferredName }: { preferredName?: string }) {
   const name = addressName(preferredName);
@@ -50,21 +59,21 @@ export default function PremiumDiscover() {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [preferredName, setPreferredName] = useState('');
-  const initialIndex = useRef(0);
   const screen = screens[index];
   const displayName = addressName(preferredName);
   const title = screen.kind === 'whatsapp' ? (displayName ? `${displayName}, imagina que mañana tienes una conversación que llevas días evitando.` : 'Imagina que mañana tienes una conversación que llevas días evitando.') : screen.kind === 'closing' ? (displayName ? `Pero tenemos que ser muy sinceros contigo, ${displayName}: esos momentos van a volver.` : 'Pero tenemos que ser muy sinceros contigo: esos momentos van a volver.') : screen.title;
   useEffect(() => { captureMarketingAttribution(); trackFunnel('discover_started'); trackFunnel('premium_funnel_started'); trackFunnel('discover_screen_viewed', { screen: 1 }); }, []);
   useEffect(() => {
-    const stored = readFunnelState().discoverScreenIndex;
-    const restoredIndex = typeof stored === 'number' && Number.isInteger(stored) && stored >= 0 && stored < screens.length ? stored : 0;
     const state = readFunnelState();
+    const type = navigationType();
+    const historyIndex = validDiscoverIndex(window.history.state?.niaDiscoverScreen);
+    const storedIndex = validDiscoverIndex(state.discoverScreenIndex);
+    const restoredIndex = type === 'reload' ? historyIndex ?? storedIndex ?? 0 : type === 'back_forward' ? historyIndex ?? 0 : 0;
     const restoredName = state.preferredNameConfirmed === true ? addressName(state.preferredName) : '';
-    initialIndex.current = restoredIndex;
     setIndex(restoredIndex);
     setPreferredName(restoredName);
-    const current = window.history.state?.niaDiscoverScreen;
-    if (restoredIndex > 0 && current !== restoredIndex) {
+    const current = validDiscoverIndex(window.history.state?.niaDiscoverScreen);
+    if (type === 'reload' && restoredIndex > 0 && current === null) {
       window.history.replaceState({ ...(window.history.state || {}), niaDiscoverScreen: 0 }, '', window.location.href);
       for (let screenIndex = 1; screenIndex <= restoredIndex; screenIndex += 1) window.history.pushState({ niaDiscoverScreen: screenIndex }, '', window.location.href);
     } else window.history.replaceState({ ...(window.history.state || {}), niaDiscoverScreen: restoredIndex }, '', window.location.href);
@@ -93,7 +102,7 @@ export default function PremiumDiscover() {
     const nextIndex = index + 1; saveFunnelState({ discoverScreenIndex: nextIndex }); window.history.pushState({ ...(window.history.state || {}), niaDiscoverScreen: nextIndex }, '', window.location.href); trackFunnel('discover_screen_viewed', { screen: nextIndex + 1 }); setIndex(nextIndex);
   }
   return <main className={`premium-funnel ${screen.dark ? 'is-dark' : ''}`}><AcquisitionAnalytics />
-    <header className="premium-header"><Link href="/" onClick={resetFunnelState} className="premium-mark" aria-label="NIA inicio"><span />NIA</Link></header>
+    <header className="premium-header"><Link href="/" onClick={resetDiscoverProgress} className="premium-mark" aria-label="NIA inicio"><span />NIA</Link></header>
     <div className="premium-stage" style={screen.image ? { '--premium-image': `url(${screen.image})` } as CSSProperties : undefined}>
       <AnimatePresence mode="wait"><motion.section key={index} className={`premium-screen premium-screen-${index + 1} ${screen.kind ? `is-${screen.kind}` : ''}`} initial={false} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -12 }} transition={{ duration: reduce ? 0 : .38, ease: [0.22, 1, 0.36, 1] }} aria-labelledby="premium-title">
         {screen.image && <div className="premium-image" aria-hidden="true" />}<div className="premium-vignette" aria-hidden="true" />
