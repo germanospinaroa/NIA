@@ -29,7 +29,7 @@ assert.equal(gapResult.users[0].priority, 'critical');
 
 refillCalls = 0;
 await orchestrateRefillUsers([{ userId: 'u2', bufferBefore: 5, requiredLocalDate: '2026-10-08', requiredDateCovered: true }], { refill: async () => { refillCalls += 1; return emptyResult; }, globalMaxCostUsd: 1 });
-assert.equal(refillCalls, 0);
+assert.equal(refillCalls, 1, 'one-NEXT reconciliation inspects even a full legacy buffer');
 
 const profileRoute = fs.readFileSync('app/api/profile/route.ts', 'utf8');
 const reconciliation = fs.readFileSync('lib/server/delivery-schedule-reconciliation.ts', 'utf8');

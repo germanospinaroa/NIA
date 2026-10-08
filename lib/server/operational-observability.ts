@@ -92,7 +92,7 @@ export async function startIdempotentExecutionRun(
   const existingBeforeInsert = await findExecutionByIdempotencyKey(db, input.userId, input.idempotencyKey);
   if (existingBeforeInsert) return { created: false, context: executionContextFromRow(existingBeforeInsert) };
   if (input.concurrencyKey) {
-    const active = await findActiveExecutionByConcurrencyKey(db, input.userId, input.concurrencyKey);
+    const active = await findActiveExecutionByConcurrencyKey(db, input.userId, input.concurrencyKey, input.executionContext ?? 'qa');
     if (active) return { created: false, active: true, context: executionContextFromRow(active) };
   }
 
@@ -104,7 +104,7 @@ export async function startIdempotentExecutionRun(
     const existingAfterInsert = await findExecutionByIdempotencyKey(db, input.userId, input.idempotencyKey);
     if (existingAfterInsert) return { created: false, context: executionContextFromRow(existingAfterInsert) };
     if (input.concurrencyKey) {
-      const active = await findActiveExecutionByConcurrencyKey(db, input.userId, input.concurrencyKey);
+      const active = await findActiveExecutionByConcurrencyKey(db, input.userId, input.concurrencyKey, input.executionContext ?? 'qa');
       if (active) return { created: false, active: true, context: executionContextFromRow(active) };
     }
     throw error;
@@ -159,12 +159,12 @@ async function findExecutionByIdempotencyKey(db: DbClient, userId: string, idemp
   return data as ExecutionRow | null;
 }
 
-async function findActiveExecutionByConcurrencyKey(db: DbClient, userId: string, concurrencyKey: string): Promise<ExecutionRow | null> {
+async function findActiveExecutionByConcurrencyKey(db: DbClient, userId: string, concurrencyKey: string, executionContext: 'production' | 'qa' = 'qa'): Promise<ExecutionRow | null> {
   const { data, error } = await db
     .from('execution_runs')
     .select('id,user_id,request_id,channel,trigger_source,idempotency_key,execution_context,concurrency_key,started_at,status')
     .eq('user_id', userId)
-    .eq('execution_context', 'qa')
+    .eq('execution_context', executionContext)
     .eq('concurrency_key', concurrencyKey)
     .in('status', ['started', 'generating', 'auditing'])
     .order('started_at', { ascending: false })

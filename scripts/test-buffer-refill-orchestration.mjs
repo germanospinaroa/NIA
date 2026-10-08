@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { isEligibleProductionUser, orchestrateRefillUsers, refillPriority } from '../lib/server/refill-approved-buffer.ts';
 
-assert.equal(refillPriority(5), null);
-assert.equal(refillPriority(4), 'normal');
-assert.equal(refillPriority(2), 'urgent');
+assert.equal(refillPriority(5), 'normal');
+assert.equal(refillPriority(1), 'normal');
+assert.equal(refillPriority(2), 'normal');
 assert.equal(refillPriority(0), 'critical');
 
 const users = [
@@ -12,7 +12,7 @@ const users = [
   { userId: 'B', bufferBefore: 4 },
   { userId: 'C', bufferBefore: 2 },
   { userId: 'D', bufferBefore: 0 },
-  { userId: 'E', bufferBefore: 2 },
+  { userId: 'E', bufferBefore: 1 },
 ];
 const calls = [];
 const events = [];
@@ -24,24 +24,23 @@ const result = await orchestrateRefillUsers(users, {
     calls.push(userId);
     if (userId === 'E') throw new Error('simulated_generation_failure');
     const before = users.find(user => user.userId === userId).bufferBefore;
-    return { userId, minBufferDays: 3, targetBufferDays: 5, created: Array.from({ length: 5 - before }, (_, index) => ({ id: `${userId}-${index}` })), skipped: [], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0.01 }, usageRecords: [] };
+    return { userId, minBufferDays: 1, targetBufferDays: 1, created: before ? [] : [{ id: `${userId}-next` }], skipped: [], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0.01 }, usageRecords: [] };
   },
 });
 
-assert.deepEqual(result.users.find(user => user.userId === 'A'), { userId: 'A', bufferBefore: 5, bufferAfter: 5, created: 0, skipped: ['buffer_at_target'], failureReason: null, estimatedCostUsd: 0, priority: null });
-for (const userId of ['B', 'C', 'D']) {
+for (const userId of ['A', 'B', 'C', 'D']) {
   const row = result.users.find(user => user.userId === userId);
-  assert.equal(row.bufferAfter, 5);
+  assert.equal(row.bufferAfter, 1);
   assert.equal(row.failureReason, null);
 }
 const failed = result.users.find(user => user.userId === 'E');
 assert.equal(failed.failureReason, 'simulated_generation_failure');
-assert.deepEqual(calls, ['B', 'C', 'D', 'E']);
+assert.deepEqual(calls, ['A', 'B', 'C', 'D', 'E']);
 assert.equal(events.some(event => event.eventType === 'refill_failed' && event.userId === 'E'), true);
-assert.equal(events.some(event => event.eventType === 'zero_buffer' && event.userId === 'D'), true);
-assert.equal(result.users.every(user => user.bufferAfter <= 5), true);
+assert.equal(events.some(event => event.eventType === 'refill_started' && event.userId === 'D'), true);
+assert.equal(result.users.every(user => user.bufferAfter <= 1), true);
 
-const budget = await orchestrateRefillUsers([{ userId: 'G', bufferBefore: 0 }, { userId: 'H', bufferBefore: 0 }], { globalMaxCostUsd: 0.01, perUserMaxCostUsd: 0.03, refill: async userId => ({ userId, minBufferDays: 3, targetBufferDays: 5, created: [], skipped: [], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, outputTokens: 0, completionTokens: 0, judgeOutput: 0, estimatedCostUsd: 0.01 }, usageRecords: [] }) });
+const budget = await orchestrateRefillUsers([{ userId: 'G', bufferBefore: 0 }, { userId: 'H', bufferBefore: 0 }], { globalMaxCostUsd: 0.01, perUserMaxCostUsd: 0.03, refill: async userId => ({ userId, minBufferDays: 1, targetBufferDays: 1, created: [], skipped: [], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0.01 }, usageRecords: [] }) });
 assert.equal(budget.budgetExhausted, true);
 assert.equal(budget.users[1].skipped.includes('budget_exhausted'), true);
 

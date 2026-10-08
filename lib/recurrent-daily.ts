@@ -146,7 +146,26 @@ export function invalidateDependentBufferItems<T extends { id?: string; status: 
   return items.map(item => item.id && invalidated.has(item.id) ? { ...item, status: 'invalidated' as const } : item);
 }
 
-export function contextVersion(context: string, goal: string) {
+export function contextVersion(context: string, goal: string, editorial: {
+  communicationPreference?: string | null;
+  voiceStyle?: string | null;
+  contextDomain?: string | null;
+  concepts?: string[] | null;
+} = {}) {
+  // This column is the content version of NEXT. Delivery-only settings such
+  // as time, timezone and WhatsApp state intentionally stay out of it.
+  return normalizedMessageHash(JSON.stringify({
+    goal: goal.trim(),
+    context: context.trim(),
+    communicationPreference: editorial.communicationPreference ?? null,
+    voiceStyle: editorial.voiceStyle ?? null,
+    contextDomain: editorial.contextDomain ?? null,
+    concepts: [...(editorial.concepts ?? [])].map(value => value.trim()).filter(Boolean).sort(),
+  }));
+}
+
+/** Version used by rows created before editorial fields joined the contract. */
+export function legacyContextVersion(context: string, goal: string) {
   return normalizedMessageHash(`${goal}\n${context}`);
 }
 

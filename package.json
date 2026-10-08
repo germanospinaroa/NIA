@@ -93,7 +93,9 @@
     "semantic:replay": "node scripts/replay-semantic-calibration.mjs",
     "test:cancellation-flow": "node scripts/test-cancellation-flow.mjs",
     "test:schedule-change": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-schedule-change.mjs",
-    "test:schedule-async": "node scripts/test-schedule-async.mjs"
+    "test:schedule-async": "node scripts/test-schedule-async.mjs",
+    "test:one-next-delivery": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-one-next-delivery.mjs",
+    "test:one-next-migration": "node scripts/test-one-next-migration.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
