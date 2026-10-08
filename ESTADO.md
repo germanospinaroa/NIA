@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Preview social e identidad del navegador — 2026-10-07
+- La imagen aprobada `nia-whatsapp-preview.png` se optimizó sin rediseño a `public/og/nia-whatsapp-preview.jpg` en 1200×630, manteniendo el encuadre y copy original.
+- El metadata raíz usa `https://nia.gritlab.pro` como base, el title/description aprobados, Open Graph `website` y Twitter `summary_large_image` con la misma imagen absoluta.
+- Se reemplazó `app/favicon.ico` y se añadieron `app/icon.png` (512×512) y `app/apple-icon.png` (180×180), todos con la marca NIA en marfil sobre carbón.
+- Verificación local: typecheck, build y `git diff --check` PASS. Pendiente despliegue y comprobación pública de HTML/assets.
+
 ## Pre-tráfico: legal, Hotmart y navegación — 2026-10-07
 - `/privacidad`, `/terminos` y `/cancelacion` son páginas públicas reales y están enlazadas desde `/descubre/planes` junto con el aviso de renovación automática. No exponen el correo privado de soporte ni alteran el copy científico.
 - `PremiumDiscover` persiste `discoverScreenIndex` dentro de `FunnelState`, reconstruye el historial con `niaDiscoverScreen` sin PII y soporta refresh, Back y Forward; índices inválidos vuelven al primer screen. El alias se restaura después del montaje para evitar hydration mismatch. El logo reinicia el funnel público hacia `/`.
