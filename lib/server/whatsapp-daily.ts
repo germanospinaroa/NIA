@@ -16,11 +16,19 @@ function deliveryError(code: string) {
 export async function claimDelivery(admin: DbClient, input: { userId: string; interactionId: string; localDate: string; slot: string }) {
   const { error: insertError } = await admin.from('whatsapp_daily_deliveries').insert({ user_id: input.userId, interaction_id: input.interactionId, local_date: input.localDate, slot: input.slot, status: 'pending' });
   if (insertError && insertError.code !== '23505') throw new Error(insertError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
-  const { data: current, error: selectError } = await admin.from('whatsapp_daily_deliveries').select('id,status,locked_until,attempt_count').eq('user_id', input.userId).eq('local_date', input.localDate).eq('slot', input.slot).maybeSingle();
+  let { data: current, error: selectError } = await admin.from('whatsapp_daily_deliveries').select('id,status,locked_until,attempt_count').eq('user_id', input.userId).eq('local_date', input.localDate).eq('slot', input.slot).maybeSingle();
+  // A schedule change can move a failed delivery to a new slot while keeping
+  // the same daily interaction. Reuse that row instead of creating a second
+  // delivery or losing the retry to the interaction_id unique constraint.
+  if (!current && insertError?.code === '23505') {
+    const existing = await admin.from('whatsapp_daily_deliveries').select('id,status,locked_until,attempt_count').eq('user_id', input.userId).eq('local_date', input.localDate).eq('interaction_id', input.interactionId).maybeSingle();
+    current = existing.data;
+    selectError = existing.error;
+  }
   if (selectError) throw new Error(selectError.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
   if (!current || current.status === 'sent' || (current.locked_until && new Date(current.locked_until).getTime() > Date.now())) return null;
   const claimToken = randomUUID();
-  const update = admin.from('whatsapp_daily_deliveries').update({ status: 'pending', claim_token: claimToken, locked_until: new Date(Date.now() + 5 * 60 * 1000).toISOString(), attempt_count: Number(current.attempt_count ?? 0) + 1, interaction_id: input.interactionId }).eq('id', current.id).in('status', ['pending', 'failed']);
+  const update = admin.from('whatsapp_daily_deliveries').update({ status: 'pending', slot: input.slot, claim_token: claimToken, locked_until: new Date(Date.now() + 5 * 60 * 1000).toISOString(), attempt_count: Number(current.attempt_count ?? 0) + 1, interaction_id: input.interactionId }).eq('id', current.id).in('status', ['pending', 'failed']);
   const result = current.locked_until ? await update.eq('locked_until', current.locked_until).select('id,claim_token').maybeSingle() : await update.is('locked_until', null).select('id,claim_token').maybeSingle();
   if (result.error) throw new Error(result.error.code === '42P01' ? 'daily_whatsapp_schema_missing' : 'daily_whatsapp_delivery_unavailable');
   return result.data?.claim_token === claimToken ? { id: current.id, claimToken } : null;

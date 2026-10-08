@@ -39,6 +39,8 @@ assert.match(refill, /requiredLocalDate/);
 assert.match(refill, /intended_local_date/);
 assert.match(daily, /interaction_type', 'daily_message'/);
 assert.match(delivery, /claimDelivery/);
+assert.match(delivery, /interaction_id.*input\.interactionId/);
+assert.match(delivery, /slot: input\.slot/);
 assert.doesNotMatch(reconciliation, /nia_welcome/);
 
 console.log('schedule change and date coverage tests: PASS');
