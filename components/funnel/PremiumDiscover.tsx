@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { readFunnelState, resetFunnelState, saveFunnelState, trackFunnel } from '@/lib/funnel';
 import { addressName } from '@/lib/funnel-personalization';
+import { captureMarketingAttribution } from '@/lib/marketing-attribution';
+import { AcquisitionAnalytics } from '@/components/analytics/AcquisitionAnalytics';
 
 type Screen = { title: string; body: string[]; cta: string; image?: string; dark?: boolean; kind?: 'evidence' | 'preferred-name' | 'whatsapp' | 'continuity' | 'closing' };
 
@@ -52,7 +54,7 @@ export default function PremiumDiscover() {
   const screen = screens[index];
   const displayName = addressName(preferredName);
   const title = screen.kind === 'whatsapp' ? (displayName ? `${displayName}, imagina que mañana tienes una conversación que llevas días evitando.` : 'Imagina que mañana tienes una conversación que llevas días evitando.') : screen.kind === 'closing' ? (displayName ? `Pero tenemos que ser muy sinceros contigo, ${displayName}: esos momentos van a volver.` : 'Pero tenemos que ser muy sinceros contigo: esos momentos van a volver.') : screen.title;
-  useEffect(() => { trackFunnel('discover_started'); trackFunnel('premium_funnel_started'); trackFunnel('discover_screen_viewed', { screen: 1 }); }, []);
+  useEffect(() => { captureMarketingAttribution(); trackFunnel('discover_started'); trackFunnel('premium_funnel_started'); trackFunnel('discover_screen_viewed', { screen: 1 }); }, []);
   useEffect(() => {
     const stored = readFunnelState().discoverScreenIndex;
     const restoredIndex = typeof stored === 'number' && Number.isInteger(stored) && stored >= 0 && stored < screens.length ? stored : 0;
@@ -90,7 +92,7 @@ export default function PremiumDiscover() {
     if (index === screens.length - 1) { trackFunnel('premium_funnel_completed'); router.push('/descubre/planes'); return; }
     const nextIndex = index + 1; saveFunnelState({ discoverScreenIndex: nextIndex }); window.history.pushState({ ...(window.history.state || {}), niaDiscoverScreen: nextIndex }, '', window.location.href); trackFunnel('discover_screen_viewed', { screen: nextIndex + 1 }); setIndex(nextIndex);
   }
-  return <main className={`premium-funnel ${screen.dark ? 'is-dark' : ''}`}>
+  return <main className={`premium-funnel ${screen.dark ? 'is-dark' : ''}`}><AcquisitionAnalytics />
     <header className="premium-header"><Link href="/" onClick={resetFunnelState} className="premium-mark" aria-label="NIA inicio"><span />NIA</Link></header>
     <div className="premium-stage" style={screen.image ? { '--premium-image': `url(${screen.image})` } as CSSProperties : undefined}>
       <AnimatePresence mode="wait"><motion.section key={index} className={`premium-screen premium-screen-${index + 1} ${screen.kind ? `is-${screen.kind}` : ''}`} initial={false} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -12 }} transition={{ duration: reduce ? 0 : .38, ease: [0.22, 1, 0.36, 1] }} aria-labelledby="premium-title">

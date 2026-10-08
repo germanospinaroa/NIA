@@ -7,7 +7,7 @@ e=a.getElementsByTagName(u)[0];h.async=1;h.src=n;e.parentNode.insertBefore(h,e)
 
 hot('account','ca466c8d-ad85-30c6-ad61-62464a24e7e1');`;
 
-export function HotmartAnalytics() {
+export function AcquisitionAnalytics() {
   return (
     <Script id="hotmart_launcher_script" strategy="afterInteractive">
       {HOTMART_LAUNCHER}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { HotmartAnalytics } from '@/components/analytics/HotmartAnalytics';
+import { AcquisitionAnalytics as HotmartAnalytics } from '@/components/analytics/AcquisitionAnalytics';
 
 export default function ActivatePage() {
   const router = useRouter();
