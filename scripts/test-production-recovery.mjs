@@ -10,7 +10,8 @@ const cancelRoute = fs.readFileSync('app/api/subscription/cancel/route.ts', 'utf
 const tuPage = fs.readFileSync('app/app/tu/page.tsx', 'utf8');
 
 assert(finalization.indexOf('onboarding_completed: true') < finalization.indexOf('const welcome = await ensureActivationWelcome'));
-assert.match(finalization, /first_buffer_prepare_failed/);
+assert.doesNotMatch(finalization, /first_buffer_prepare_failed/);
+assert.match(finalization, /pending_background_refill/);
 assert.match(finalization, /recoverIncompleteActivations/);
 assert.match(welcomeCron, /recoverIncompleteActivations/);
 assert.match(welcomeCron, /recovery/);

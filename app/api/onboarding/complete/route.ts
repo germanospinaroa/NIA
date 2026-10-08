@@ -15,7 +15,7 @@ export async function POST() {
   if (!connection?.wa_id) return NextResponse.json({ error: 'whatsapp_not_connected' }, { status: 409 });
   try {
     const result = await completeOnboardingAfterWhatsapp(createAdminClient(), user.id);
-    return NextResponse.json({ success: true, intended_local_date: result.intendedLocalDate, welcome_scheduled: result.welcomeScheduled, welcome_due_at: result.welcomeDueAt ?? null, buffer_prepared: result.bufferPrepared });
+    return NextResponse.json({ success: true, intended_local_date: result.intendedLocalDate, welcome_scheduled: result.welcomeScheduled, welcome_due_at: result.welcomeDueAt ?? null, buffer_prepared: result.bufferPrepared, buffer_status: result.bufferStatus });
   } catch (error) {
     console.error('[onboarding complete] failed', { userId: user.id, reason: error instanceof Error ? error.message : 'unknown' });
     const reason = error instanceof Error ? error.message : 'onboarding_completion_failed';

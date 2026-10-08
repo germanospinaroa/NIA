@@ -7,6 +7,10 @@ const bogota = { timezone: 'America/Bogota', message_time_1: '16:15', message_fr
 const at1400 = new Date('2026-10-08T19:00:00.000Z');
 
 assert.equal(nextPsychologicalDeliveryDate(bogota, at1400), '2026-10-08');
+assert.equal(nextPsychologicalDeliveryDate({ ...bogota, message_time_1: '14:30' }, at1400), '2026-10-08');
+assert.equal(nextPsychologicalDeliveryDate({ ...bogota, message_time_1: '14:16' }, new Date('2026-10-08T19:01:00.000Z')), '2026-10-09');
+assert.equal(nextPsychologicalDeliveryDate({ ...bogota, message_time_1: '17:15' }, new Date('2026-10-08T21:56:00.000Z')), '2026-10-08');
+assert.equal(nextPsychologicalDeliveryDate({ ...bogota, message_time_1: '17:15' }, new Date('2026-10-08T22:05:00.000Z')), '2026-10-09');
 assert.equal(nextPsychologicalDeliveryDate({ ...bogota, message_time_1: '14:00' }, at1400), '2026-10-09');
 assert.equal(nextPsychologicalDeliveryDate(bogota, at1400, { alreadyDeliveredToday: true, dailyInteractionToday: true }), '2026-10-09');
 assert.equal(nextPsychologicalDeliveryDate(bogota, at1400, { alreadyDeliveredToday: false, dailyInteractionToday: true }), '2026-10-08');
@@ -32,9 +36,11 @@ const reconciliation = fs.readFileSync('lib/server/delivery-schedule-reconciliat
 const refill = fs.readFileSync('lib/server/refill-approved-buffer.ts', 'utf8');
 const daily = fs.readFileSync('lib/server/daily-message.ts', 'utf8');
 const delivery = fs.readFileSync('lib/server/whatsapp-daily.ts', 'utf8');
-assert.match(profileRoute, /reconcileUserDeliverySchedule/);
+assert.match(profileRoute, /inspectUserDeliverySchedule/);
+assert.doesNotMatch(profileRoute, /refillApprovedBuffer|generateWriterV2|judgeSemanticFidelity/);
+assert.doesNotMatch(reconciliation, /refillApprovedBuffer|generateWriterV2|judgeSemanticFidelity/);
 assert.match(reconciliation, /same_day_delivery_preserved/);
-assert.match(reconciliation, /buffer_coverage_repaired/);
+assert.match(reconciliation, /schedule_reconciliation_pending/);
 assert.match(refill, /requiredLocalDate/);
 assert.match(refill, /intended_local_date/);
 assert.match(daily, /interaction_type', 'daily_message'/);

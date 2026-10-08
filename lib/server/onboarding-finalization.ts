@@ -2,7 +2,6 @@ import { localDate } from './whatsapp-schedule';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ensureActivationWelcome } from './reception-welcome';
 import { scheduleWelcomeDelivery } from './welcome-delivery';
-import { refillApprovedBuffer } from './refill-approved-buffer';
 import { firstPsychologicalLocalDate } from './whatsapp-schedule';
 import { hasConfirmedOnboardingIdentity } from '@/lib/onboarding-identity';
 import { recordEvent } from './operational-observability';
@@ -50,20 +49,6 @@ function missingOnboardingRequirement(profile: RecoveryProfile) {
   return null;
 }
 
-async function prepareFirstBufferBestEffort(admin: SupabaseClient, userId: string, intendedLocalDate: string, now: Date) {
-  try {
-    const prepared = await refillApprovedBuffer(admin, userId, { now, minBufferDays: 1, targetBufferDays: 1, maxCostUsd: Number(process.env.REFILL_MAX_COST_USD || 0.03), firstIntendedLocalDate: intendedLocalDate });
-    const preparedSuccessfully = prepared.created.length > 0 || prepared.skipped.includes('buffer_at_target');
-    if (!preparedSuccessfully) {
-      await recordEvent(admin, { userId, eventType: 'first_buffer_prepare_failed', entityType: 'approved_intervention_buffer', metadata: { reason: prepared.skipped[0] || 'no_buffer_created', intended_local_date: intendedLocalDate } });
-    }
-    return preparedSuccessfully;
-  } catch (error) {
-    await recordEvent(admin, { userId, eventType: 'first_buffer_prepare_failed', entityType: 'approved_intervention_buffer', metadata: { reason: error instanceof Error ? error.message : 'buffer_prepare_failed', intended_local_date: intendedLocalDate } });
-    return false;
-  }
-}
-
 export async function completeOnboardingAfterWhatsapp(admin: SupabaseClient, userId: string, now = new Date()) {
   const { data: profile, error: profileError } = await admin.from('profiles').select('first_name,last_name,preferred_name,desired_change_original,current_context_original,learning_profile,timezone,country_code,message_time_1,message_frequency,message_time_2,onboarding_completed').eq('id', userId).maybeSingle();
   if (profileError || !profile) throw new Error('profile_unavailable');
@@ -102,8 +87,7 @@ export async function completeOnboardingAfterWhatsapp(admin: SupabaseClient, use
   ]);
   if (persistedWelcomeError || persistedDeliveryError || !persistedWelcome || !persistedDelivery || persistedDelivery.interaction_id !== String(persistedWelcome.id)) throw new Error('welcome_persistence_failed');
 
-  const bufferPrepared = await prepareFirstBufferBestEffort(admin, userId, intendedLocalDate, now);
-  return { alreadyCompleted: Boolean(profile.onboarding_completed), intendedLocalDate, welcomeScheduled: true, welcomeDueAt: delivery.due_at, bufferPrepared };
+  return { alreadyCompleted: Boolean(profile.onboarding_completed), intendedLocalDate, welcomeScheduled: true, welcomeDueAt: delivery.due_at, bufferPrepared: false, bufferStatus: 'pending_background_refill' as const };
 }
 
 export async function recoverIncompleteActivations(admin: SupabaseClient, now = new Date()) {

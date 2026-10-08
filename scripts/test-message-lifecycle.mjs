@@ -19,7 +19,7 @@ assert.doesNotMatch(whatsapp, /daily\.kind === ['"]welcome/);
 assert.doesNotMatch(onboarding, /fetch\(['"]\/api\/daily/);
 assert.doesNotMatch(onboarding, /first_intervention/);
 assert.match(onboarding, /fetch\(['"]\/api\/onboarding\/complete/);
-assert.match(finalization, /refillApprovedBuffer/);
+assert.doesNotMatch(finalization, /refillApprovedBuffer|generateWriterV2|judgeSemanticFidelity/);
 assert.match(finalization, /scheduleWelcomeDelivery/);
 assert.match(reception, /reception starts at tuning/);
 assert.equal(calculateReceptionStage({ welcomeDelivered: false, psychologicalInterventionsDelivered: 0 }), 'tuning');

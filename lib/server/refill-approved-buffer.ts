@@ -110,6 +110,9 @@ export async function orchestrateRefillUsers(candidates: RefillOrchestrationCand
       const bufferAfter = Math.min(targetBufferDays, candidate.bufferBefore + created);
       if (estimatedCostUsd >= globalMaxCostUsd) budgetExhausted = true;
       await emitRefillEvent(options, { userId: candidate.userId, eventType: 'refill_completed', metadata: { buffer_before: candidate.bufferBefore, buffer_after: bufferAfter, created, priority, estimated_cost_usd: cost } });
+      const coverageRepaired = Boolean(candidate.requiredLocalDate && result.created.some(item => item.intendedLocalDate === candidate.requiredLocalDate));
+      if (coverageGap && coverageRepaired) await emitRefillEvent(options, { userId: candidate.userId, eventType: 'buffer_coverage_repaired', metadata: { required_local_date: candidate.requiredLocalDate, buffer_before: candidate.bufferBefore, buffer_after: bufferAfter, created } });
+      if (!coverageGap || coverageRepaired) await emitRefillEvent(options, { userId: candidate.userId, eventType: 'schedule_reconciled', metadata: { required_local_date: candidate.requiredLocalDate ?? null, coverage_repaired: coverageRepaired, buffer_before: candidate.bufferBefore, buffer_after: bufferAfter } });
       users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter, created, skipped: result.skipped, failureReason: null, estimatedCostUsd: cost, priority });
     } catch (error) {
       const failureReason = error instanceof Error ? error.message : 'refill_failed';

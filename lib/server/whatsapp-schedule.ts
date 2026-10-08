@@ -12,6 +12,11 @@ export type ScheduleProfile = { timezone: string | null; message_frequency: numb
 export type DailyDeliveryState = { alreadyDeliveredToday: boolean; dailyInteractionToday: boolean };
 
 export const SCHEDULE_PREPARATION_MINUTES = 15;
+export const REFILL_CRON_INTERVAL_MINUTES = 15;
+
+function nextRefillOpportunityMinutes(currentMinutes: number) {
+  return (Math.floor(currentMinutes / REFILL_CRON_INTERVAL_MINUTES) + 1) * REFILL_CRON_INTERVAL_MINUTES;
+}
 
 export function addLocalDays(date: string, days: number) {
   const [year, month, day] = date.split('-').map(Number);
@@ -24,7 +29,9 @@ export function nextPsychologicalDeliveryDate(profile: Pick<ScheduleProfile, 'ti
   const [hour, minute] = String(profile.message_time_1 || '').split(':').map(Number);
   const selectedMinutes = hour * 60 + minute;
   const currentMinutes = clock.hour * 60 + clock.minute;
-  if (Number.isInteger(hour) && Number.isInteger(minute) && selectedMinutes >= currentMinutes + preparationMinutes) return clock.date;
+  const nextRefillMinutes = nextRefillOpportunityMinutes(currentMinutes);
+  const minimumPreparationMinutes = Math.max(currentMinutes + preparationMinutes, nextRefillMinutes + preparationMinutes);
+  if (Number.isInteger(hour) && Number.isInteger(minute) && selectedMinutes >= minimumPreparationMinutes) return clock.date;
   if (state.dailyInteractionToday && Number.isInteger(hour) && Number.isInteger(minute) && selectedMinutes > currentMinutes) return clock.date;
   return addLocalDays(clock.date, 1);
 }

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { intentionLabel, invalidIntention, isValidIntention, validCustomIntention } from '@/lib/intention';
 import { isInvalidPreferredName } from '@/lib/profile-name';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { reconcileUserDeliverySchedule, type SchedulingProfile } from '@/lib/server/delivery-schedule-reconciliation';
+import { inspectUserDeliverySchedule, type SchedulingProfile } from '@/lib/server/delivery-schedule-reconciliation';
 
 const allowed = new Set([
   'first_name', 'last_name', 'preferred_name', 'direction_key', 'direction_text', 'voice_style', 'communication_preference', 'message_frequency', 'message_time_1', 'message_time_2', 'timezone', 'country_code',
@@ -91,7 +91,7 @@ export async function PATCH(request: Request) {
   let scheduleReconciliation: Record<string, unknown> | null = null;
   if (scheduleChangeRequested && previousSchedule && data.onboarding_completed && data.whatsapp_enabled) {
     try {
-      scheduleReconciliation = await reconcileUserDeliverySchedule(createAdminClient(), previousSchedule as SchedulingProfile, data as SchedulingProfile);
+      scheduleReconciliation = await inspectUserDeliverySchedule(createAdminClient(), previousSchedule as SchedulingProfile, data as SchedulingProfile);
     } catch (reconciliationError) {
       console.error('[profile PATCH] schedule reconciliation failed', { code: reconciliationError instanceof Error ? reconciliationError.message : 'schedule_reconciliation_failed' });
       scheduleReconciliation = { changed: true, status: 'retry_scheduled' };
