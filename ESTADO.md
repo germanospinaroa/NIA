@@ -4,7 +4,7 @@
 - La imagen aprobada `nia-whatsapp-preview.png` se optimizó sin rediseño a `public/og/nia-whatsapp-preview.jpg` en 1200×630, manteniendo el encuadre y copy original.
 - El metadata raíz usa `https://nia.gritlab.pro` como base, el title/description aprobados, Open Graph `website` y Twitter `summary_large_image` con la misma imagen absoluta.
 - Se reemplazó `app/favicon.ico` y se añadieron `app/icon.png` (512×512) y `app/apple-icon.png` (180×180), todos con la marca NIA en marfil sobre carbón.
-- Verificación local: typecheck, build y `git diff --check` PASS. Pendiente despliegue y comprobación pública de HTML/assets.
+- Verificación local y pública: typecheck, build y `git diff --check` PASS; JPG, favicon, icon y apple-icon responden HTTP 200; HTML publica Open Graph/Twitter con la URL absoluta correcta. Desplegado en producción como `af13b6c` y alias verificado.
 
 ## Pre-tráfico: legal, Hotmart y navegación — 2026-10-07
 - `/privacidad`, `/terminos` y `/cancelacion` son páginas públicas reales y están enlazadas desde `/descubre/planes` junto con el aviso de renovación automática. No exponen el correo privado de soporte ni alteran el copy científico.
