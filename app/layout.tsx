@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fraunces, Instrument_Sans } from "next/font/google";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
 import "./globals.css";
 
 const display = Fraunces({
@@ -49,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="es"
       className={`${display.variable} ${body.variable} antialiased`}
     >
-      <body>{children}</body>
+      <body><MetaPixel />{children}</body>
     </html>
   );
 }

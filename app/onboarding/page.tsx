@@ -119,7 +119,7 @@ export default function OnboardingPage() {
     try {
       const response = await fetch('/api/onboarding/complete', { method: 'POST' });
       const result = await response.json().catch(() => ({})) as { error?: string };
-      if (response.ok || result.error === 'already_completed') { router.replace('/app'); return; }
+      if (response.ok || result.error === 'already_completed') { trackFunnel('onboarding_completed'); router.replace('/app'); return; }
       const missingStage = stageForCompletionError(result.error);
       if (response.status === 422 && missingStage) {
         setStage(missingStage); saveFunnelState({ onboardingStage: missingStage }); return;
@@ -179,6 +179,8 @@ export default function OnboardingPage() {
     }).catch(() => setError('No pudimos cargar tu configuración. Vuelve a intentarlo.'));
     trackFunnel('onboarding_started');
   }, [completeOnboarding, router]);
+
+  useEffect(() => { trackFunnel('onboarding_step_viewed', { stage }); }, [stage]);
 
   async function saveProfile(values: Record<string, unknown>) {
     const response = await fetch('/api/profile', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(values) });
@@ -278,6 +280,7 @@ export default function OnboardingPage() {
   async function handleWhatsappChange(next: WhatsAppConnectionState) {
     setWhatsapp(next);
     if (next.status !== 'connected') return;
+    trackFunnel('whatsapp_connected');
     await completeOnboarding();
   }
 

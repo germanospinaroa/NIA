@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { FunnelFrame } from '@/components/funnel/FunnelFrame';
+import { ThankYouTracker } from '@/components/analytics/ThankYouTracker';
 
 type ThankYouPageProps = {
   searchParams?: Promise<{ status?: string | string[] | undefined }>;
@@ -34,5 +35,5 @@ export default async function ThankYouPage({ searchParams }: ThankYouPageProps) 
     },
   }[state];
 
-  return <FunnelFrame><section className="funnel-screen"><div className="funnel-content narrow"><h1>{content.title}</h1><p className="funnel-copy">{content.body}</p><Link className="funnel-button" href={content.href}>{content.action} <ArrowRight size={17} /></Link><p className="mt-5 text-[13px] text-[var(--continuity-muted)]">{content.secondary}</p></div></section></FunnelFrame>;
+  return <FunnelFrame><ThankYouTracker status={state} /><section className="funnel-screen"><div className="funnel-content narrow"><h1>{content.title}</h1><p className="funnel-copy">{content.body}</p><Link className="funnel-button" href={content.href}>{content.action} <ArrowRight size={17} /></Link><p className="mt-5 text-[13px] text-[var(--continuity-muted)]">{content.secondary}</p></div></section></FunnelFrame>;
 }

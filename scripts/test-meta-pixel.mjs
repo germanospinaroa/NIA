@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const pixel = fs.readFileSync('components/analytics/MetaPixel.tsx', 'utf8');
+const layout = fs.readFileSync('app/layout.tsx', 'utf8');
+const hotmart = fs.readFileSync('components/analytics/AcquisitionAnalytics.tsx', 'utf8');
+const activation = fs.readFileSync('app/activate/page.tsx', 'utf8');
+const onboarding = fs.readFileSync('app/onboarding/page.tsx', 'utf8');
+const thankYou = fs.readFileSync('components/analytics/ThankYouTracker.tsx', 'utf8');
+
+assert.match(pixel, /NEXT_PUBLIC_META_PIXEL_ID/);
+assert.match(pixel, /1088085690595815|PIXEL_ID/);
+assert.match(pixel, /connect\.facebook\.net\/en_US\/fbevents\.js/);
+assert.match(pixel, /fbq\?\.\('init', PIXEL_ID\)/);
+assert.match(pixel, /fbq\?\.\('track', 'PageView'\)/);
+assert.match(pixel, /usePathname/);
+assert.match(pixel, /__niaMetaPixelInitialized/);
+assert.match(pixel, /pathname === path \|\| pathname\.startsWith/);
+assert.match(pixel, /trackCustom/);
+for (const event of ['NIA_FunnelStart', 'NIA_FunnelStepView', 'NIA_FunnelStepComplete', 'NIA_PreferredNameSubmitted', 'NIA_FunnelComplete', 'NIA_PlansView', 'NIA_PlanSelected', 'NIA_CheckoutClick', 'NIA_ThankYouView', 'CompleteRegistration', 'NIA_AccountActivated', 'NIA_OnboardingStart', 'NIA_OnboardingStepView', 'NIA_WhatsAppConnected', 'NIA_OnboardingComplete']) assert.match(pixel, new RegExp(event));
+assert.doesNotMatch(pixel, /InitiateCheckout|Purchase/);
+assert.doesNotMatch(pixel, /email|phone|surname|desired_change|psychological|intervention|support/i);
+assert.match(layout, /MetaPixel/);
+assert.match(layout, /<MetaPixel\s*\/>/);
+assert.match(hotmart, /hotmart_launcher_script/);
+assert.match(hotmart, /ca466c8d-ad85-30c6-ad61-62464a24e7e1/);
+assert.match(activation, /trackFunnel\('account_activated'\)/);
+assert.match(onboarding, /trackFunnel\('onboarding_started'\)/);
+assert.match(onboarding, /trackFunnel\('onboarding_step_viewed', \{ stage \}\)/);
+assert.match(onboarding, /trackFunnel\('whatsapp_connected'\)/);
+assert.match(onboarding, /trackFunnel\('onboarding_completed'\)/);
+assert.match(thankYou, /thank_you_viewed/);
+console.log('meta pixel tests: PASS');

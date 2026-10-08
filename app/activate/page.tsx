@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AcquisitionAnalytics as HotmartAnalytics } from '@/components/analytics/AcquisitionAnalytics';
+import { trackFunnel } from '@/lib/funnel';
 
 export default function ActivatePage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function ActivatePage() {
     if (updateError) { setError('No pudimos crear tu contraseña. Solicita un código nuevo.'); setBusy(false); return; }
     const response = await fetch('/api/activation/complete', { method: 'POST' });
     if (!response.ok) { setError('La contraseña se creó, pero no pudimos terminar la activación. Inténtalo de nuevo.'); setBusy(false); return; }
+    trackFunnel('account_activated');
     router.push('/onboarding');
   }
 
