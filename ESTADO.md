@@ -1,5 +1,11 @@
 # ESTADO — NIA
 
+## Semántica de entrada del funnel — 2026-10-08
+- `discoverScreenIndex` ya es continuidad de la pestaña actual: se conserva en `sessionStorage`, se excluye de `localStorage` y se ignora cualquier índice histórico durable antiguo al entrar de nuevo a `/`.
+- `PremiumDiscover` distingue `navigate` (pantalla 1), `reload` (restaura índice válido de sesión/History API) y `back_forward` (restaura únicamente el estado histórico válido). Back/Forward conserva sus entradas y el logo usa `resetDiscoverProgress()` sin borrar nombre, plan ni atribución.
+- Se añadió `test:funnel-entry-semantics`; funnel, navegación, personalización, typecheck, lint, build y diff check PASS; lint conserva cuatro warnings heredados.
+- QA productivo con Chrome limpio: raíz nueva/pestaña nueva pantalla 1; pantalla 5 recarga en 5; Back 4; Forward 5; índice viejo en `localStorage` ignorado; `utm_source`, `utm_campaign` y `fbclid` preservados. Deployment inicial del código `dpl_9HjJggG6aBbPHbtJP66u5ZXx8YC4` READY; se hará un despliegue final con la documentación de este cierre.
+
 ## Meta Pixel — 2026-10-08
 - Se añadió `components/analytics/MetaPixel.tsx`, montado desde `app/layout.tsx`, con el Pixel público `NEXT_PUBLIC_META_PIXEL_ID`, carga asíncrona única de `https://connect.facebook.net/en_US/fbevents.js`, init y PageView inicial; las rutas `/admin*` y `/app*` no generan tracking de adquisición.
 - El puente escucha únicamente eventos estructurales/comerciales de `trackFunnel`: funnel, planes, checkout click, thank-you, activación y onboarding. No reenvía PII, respuestas, texto libre, contenido psicológico, `Purchase` ni `InitiateCheckout`; Hotmart Analytics sigue separado e intacto.
