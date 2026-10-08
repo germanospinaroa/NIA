@@ -1,5 +1,12 @@
 # ESTADO — NIA
 
+## Meta Pixel — 2026-10-08
+- Se añadió `components/analytics/MetaPixel.tsx`, montado desde `app/layout.tsx`, con el Pixel público `NEXT_PUBLIC_META_PIXEL_ID`, carga asíncrona única de `https://connect.facebook.net/en_US/fbevents.js`, init y PageView inicial; las rutas `/admin*` y `/app*` no generan tracking de adquisición.
+- El puente escucha únicamente eventos estructurales/comerciales de `trackFunnel`: funnel, planes, checkout click, thank-you, activación y onboarding. No reenvía PII, respuestas, texto libre, contenido psicológico, `Purchase` ni `InitiateCheckout`; Hotmart Analytics sigue separado e intacto.
+- Se añadió `ThankYouTracker`, y activación/onboarding emiten eventos solo tras éxito real o conexión real. `test:meta-pixel` cubre montaje, ID, exclusiones, eventos permitidos, privacidad y coexistencia.
+- `NEXT_PUBLIC_META_PIXEL_ID` está configurada en Vercel Production sin exponer valores sensibles. Tests relevantes, typecheck, lint, build y `git diff --check` PASS; lint mantiene cuatro warnings heredados.
+- Producción: `fbevents.js` HTTP 200, `window.fbq` disponible, config de Meta con el Pixel correcto y un solo script Meta; deployment `dpl_3oeahqmL6o4xhU2VAFwxEU5EgP8d`, commit `ea808687eb43c539dc284552d91db8fe2f467fce`, alias `https://nia.gritlab.pro`. La navegación pública y checkout UTM mensual fueron verificados sin compra. El Helper visual de Meta no está instalado en este entorno; se verificó runtime/red equivalente.
+
 ## Hotmart Analytics — 2026-10-08
 - Se añadió el launcher oficial de Hotmart Analytics con la cuenta `ca466c8d-ad85-30c6-ad61-62464a24e7e1`, cargado de forma asíncrona y únicamente en superficies públicas de adquisición/activación; no se carga desde `/admin` ni desde `/app`.
 - La atribución permitida (`utm_*`, `fbclid`, `src`, `sck`, `xcod`) se captura sin PII, persiste en almacenamiento first-party y se compone con `URLSearchParams` en los checkout oficiales mensual `r7w7emsp` y anual `3z4a0vad`.
