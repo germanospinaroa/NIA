@@ -9,6 +9,26 @@ export function localClock(timezone: string | null | undefined, now = new Date()
 
 export type ScheduleProfile = { timezone: string | null; message_frequency: number | null; message_time_1: string | null; message_time_2: string | null };
 
+export type DailyDeliveryState = { alreadyDeliveredToday: boolean; dailyInteractionToday: boolean };
+
+export const SCHEDULE_PREPARATION_MINUTES = 15;
+
+export function addLocalDays(date: string, days: number) {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+export function nextPsychologicalDeliveryDate(profile: Pick<ScheduleProfile, 'timezone' | 'message_time_1'>, now = new Date(), state: DailyDeliveryState = { alreadyDeliveredToday: false, dailyInteractionToday: false }, preparationMinutes = SCHEDULE_PREPARATION_MINUTES) {
+  const clock = localClock(profile.timezone, now);
+  if (state.alreadyDeliveredToday) return addLocalDays(clock.date, 1);
+  const [hour, minute] = String(profile.message_time_1 || '').split(':').map(Number);
+  const selectedMinutes = hour * 60 + minute;
+  const currentMinutes = clock.hour * 60 + clock.minute;
+  if (Number.isInteger(hour) && Number.isInteger(minute) && selectedMinutes >= currentMinutes + preparationMinutes) return clock.date;
+  if (state.dailyInteractionToday && Number.isInteger(hour) && Number.isInteger(minute) && selectedMinutes > currentMinutes) return clock.date;
+  return addLocalDays(clock.date, 1);
+}
+
 export function dueSlots(profile: ScheduleProfile, now = new Date()) {
   const clock = localClock(profile.timezone, now);
   const configured = [profile.message_time_1, profile.message_frequency === 2 ? profile.message_time_2 : null].filter((value): value is string => Boolean(value));

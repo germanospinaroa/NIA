@@ -91,7 +91,8 @@
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",
     "semantic:replay": "node scripts/replay-semantic-calibration.mjs",
-    "test:cancellation-flow": "node scripts/test-cancellation-flow.mjs"
+    "test:cancellation-flow": "node scripts/test-cancellation-flow.mjs",
+    "test:schedule-change": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-schedule-change.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

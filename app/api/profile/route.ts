@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { intentionLabel, invalidIntention, isValidIntention, validCustomIntention } from '@/lib/intention';
 import { isInvalidPreferredName } from '@/lib/profile-name';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { reconcileUserDeliverySchedule, type SchedulingProfile } from '@/lib/server/delivery-schedule-reconciliation';
 
 const allowed = new Set([
   'first_name', 'last_name', 'preferred_name', 'direction_key', 'direction_text', 'voice_style', 'communication_preference', 'message_frequency', 'message_time_1', 'message_time_2', 'timezone', 'country_code',
@@ -26,6 +28,13 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: 'invalid_profile_payload' }, { status: 400 });
   const values = Object.fromEntries(Object.entries(body).filter(([key]) => allowed.has(key)));
+  const scheduleChangeRequested = ['message_time_1', 'message_time_2', 'message_frequency', 'timezone'].some(key => key in values);
+  let previousSchedule: Record<string, unknown> | null = null;
+  if (scheduleChangeRequested) {
+    const { data: currentSchedule, error: currentScheduleError } = await supabase.from('profiles').select('id,timezone,message_time_1,message_time_2,message_frequency,onboarding_completed,whatsapp_enabled').eq('id', user.id).maybeSingle();
+    if (currentScheduleError || !currentSchedule) return NextResponse.json({ error: 'profile_unavailable' }, { status: 500 });
+    previousSchedule = currentSchedule;
+  }
 
   for (const key of ['first_name', 'last_name', 'preferred_name']) {
     if (!(key in values)) continue;
@@ -79,5 +88,14 @@ export async function PATCH(request: Request) {
     });
     return NextResponse.json({ error: 'profile_update_failed' }, { status: 400 });
   }
-  return NextResponse.json({ profile: data });
+  let scheduleReconciliation: Record<string, unknown> | null = null;
+  if (scheduleChangeRequested && previousSchedule && data.onboarding_completed && data.whatsapp_enabled) {
+    try {
+      scheduleReconciliation = await reconcileUserDeliverySchedule(createAdminClient(), previousSchedule as SchedulingProfile, data as SchedulingProfile);
+    } catch (reconciliationError) {
+      console.error('[profile PATCH] schedule reconciliation failed', { code: reconciliationError instanceof Error ? reconciliationError.message : 'schedule_reconciliation_failed' });
+      scheduleReconciliation = { changed: true, status: 'retry_scheduled' };
+    }
+  }
+  return NextResponse.json({ profile: data, schedule_reconciliation: scheduleReconciliation });
 }

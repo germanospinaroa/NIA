@@ -5,7 +5,7 @@ import { judgeSemanticFidelity } from '@/lib/server/semantic-fidelity-judge';
 import { getMovementTargetGuidance } from '@/lib/movement-expression';
 import { contextVersion, hasExactMessageDuplicate, MIN_APPROVED_BUFFER_DAYS, normalizedMessageHash, planDailyIntervention, projectedReceptionStage, type ApprovedBufferItem, type ProspectiveLearning } from '@/lib/recurrent-daily';
 import { storeApprovedMessage } from '@/lib/server/approved-message-buffer';
-import { localDate } from '@/lib/server/whatsapp-schedule';
+import { addLocalDays, localDate, nextPsychologicalDeliveryDate } from '@/lib/server/whatsapp-schedule';
 
 export const TARGET_BUFFER_DAYS = 5;
 export const MIN_BUFFER_DAYS = MIN_APPROVED_BUFFER_DAYS;
@@ -23,7 +23,7 @@ export type ProductionEligibilityRow = {
   subscriptionStatus: string | null;
 };
 
-export type RefillOrchestrationCandidate = { userId: string; bufferBefore: number };
+export type RefillOrchestrationCandidate = { userId: string; bufferBefore: number; requiredLocalDate?: string; requiredDateCovered?: boolean; refillStartDate?: string };
 
 export type RefillOrchestrationUserResult = {
   userId: string;
@@ -69,7 +69,7 @@ type RefillOrchestrationOptions = {
   targetBufferDays?: number;
   perUserMaxCostUsd?: number;
   globalMaxCostUsd?: number;
-  refill?: (userId: string, options: { minBufferDays: number; targetBufferDays: number; maxCostUsd: number }) => Promise<RefillResult>;
+  refill?: (userId: string, options: { minBufferDays: number; targetBufferDays: number; maxCostUsd: number; requiredLocalDate?: string; refillStartDate?: string }) => Promise<RefillResult>;
   onEvent?: (event: { userId?: string; eventType: string; metadata?: Record<string, unknown> }) => void | Promise<void>;
 };
 
@@ -88,12 +88,13 @@ export async function orchestrateRefillUsers(candidates: RefillOrchestrationCand
   let budgetExhausted = false;
 
   for (const candidate of candidates) {
-    const priority = refillPriority(candidate.bufferBefore, minBufferDays, targetBufferDays);
+    const coverageGap = Boolean(candidate.requiredLocalDate && !candidate.requiredDateCovered);
+    const priority = coverageGap ? 'critical' : refillPriority(candidate.bufferBefore, minBufferDays, targetBufferDays);
     if (!priority) {
       users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter: candidate.bufferBefore, created: 0, skipped: ['buffer_at_target'], failureReason: null, estimatedCostUsd: 0, priority: null });
       continue;
     }
-    await emitRefillEvent(options, { userId: candidate.userId, eventType: candidate.bufferBefore === 0 ? 'zero_buffer' : candidate.bufferBefore < minBufferDays ? 'below_min_buffer' : 'refill_started', metadata: { buffer_before: candidate.bufferBefore, priority } });
+    await emitRefillEvent(options, { userId: candidate.userId, eventType: coverageGap ? 'buffer_coverage_gap' : candidate.bufferBefore === 0 ? 'zero_buffer' : candidate.bufferBefore < minBufferDays ? 'below_min_buffer' : 'refill_started', metadata: { buffer_before: candidate.bufferBefore, priority, required_local_date: candidate.requiredLocalDate ?? null } });
     const remainingBudget = globalMaxCostUsd - estimatedCostUsd;
     if (remainingBudget <= 0) {
       budgetExhausted = true;
@@ -102,7 +103,7 @@ export async function orchestrateRefillUsers(candidates: RefillOrchestrationCand
       continue;
     }
     try {
-      const result = await refill(candidate.userId, { minBufferDays, targetBufferDays, maxCostUsd: Math.min(perUserMaxCostUsd, remainingBudget) });
+      const result = await refill(candidate.userId, { minBufferDays, targetBufferDays, maxCostUsd: Math.min(perUserMaxCostUsd, remainingBudget), requiredLocalDate: candidate.requiredLocalDate, refillStartDate: candidate.refillStartDate });
       const cost = Number(result.usage.estimatedCostUsd || 0);
       estimatedCostUsd += cost;
       const created = result.created.length;
@@ -124,36 +125,53 @@ function estimatedJudgeCost(input = 0, output = 0) { return (input * 0.2 + outpu
 function futureDate(timezone: string | null | undefined, now: Date, offset: number) { return localDate(timezone, new Date(now.getTime() + offset * 86_400_000)); }
 
 export async function refillEligibleProductionUsers(admin: SupabaseClient, options: RefillOrchestrationOptions & { now?: Date } = {}) {
-  const { data: profiles, error: profileError } = await admin.from('profiles').select('id,account_status,whatsapp_enabled').eq('account_status', 'active').eq('whatsapp_enabled', true);
+  const now = options.now ?? new Date();
+  const utcToday = now.toISOString().slice(0, 10);
+  const stateWindowStart = addLocalDays(utcToday, -2);
+  const stateWindowEnd = addLocalDays(utcToday, 2);
+  const { data: profiles, error: profileError } = await admin.from('profiles').select('id,account_status,whatsapp_enabled,timezone,message_time_1,message_frequency,message_time_2').eq('account_status', 'active').eq('whatsapp_enabled', true);
   if (profileError) throw new Error('refill_profiles_unavailable');
-  const profileRows = (profiles ?? []) as Array<{ id: string; account_status: string | null; whatsapp_enabled: boolean | null }>;
+  const profileRows = (profiles ?? []) as Array<{ id: string; account_status: string | null; whatsapp_enabled: boolean | null; timezone: string | null; message_time_1: string | null; message_frequency: number | null; message_time_2: string | null }>;
   if (!profileRows.length) return { eligibleUsers: 0, ...await orchestrateRefillUsers([], options) };
   const userIds = profileRows.map(row => row.id);
-  const [{ data: connections, error: connectionError }, { data: subscriptions, error: subscriptionError }, { data: bufferRows, error: bufferError }] = await Promise.all([
+  const [{ data: connections, error: connectionError }, { data: subscriptions, error: subscriptionError }, { data: bufferRows, error: bufferError }, { data: dailyInteractions, error: interactionError }, { data: dailyDeliveries, error: deliveryError }] = await Promise.all([
     admin.from('whatsapp_connections').select('user_id,wa_id,status').in('user_id', userIds).eq('status', 'connected'),
     admin.from('subscriptions').select('user_id,status').in('user_id', userIds).in('status', [...ELIGIBLE_SUBSCRIPTION_STATUSES]),
-    admin.from('approved_intervention_buffer').select('user_id').in('user_id', userIds).in('status', ['approved', 'buffered']),
+    admin.from('approved_intervention_buffer').select('user_id,intended_local_date').in('user_id', userIds).in('status', ['approved', 'buffered']),
+    admin.from('interactions').select('user_id,local_date').in('user_id', userIds).eq('interaction_type', 'daily_message').gte('local_date', stateWindowStart).lte('local_date', stateWindowEnd),
+    admin.from('whatsapp_daily_deliveries').select('user_id,local_date,status').in('user_id', userIds).gte('local_date', stateWindowStart).lte('local_date', stateWindowEnd),
   ]);
   if (connectionError) throw new Error('refill_connections_unavailable');
   if (subscriptionError) throw new Error('refill_subscriptions_unavailable');
   if (bufferError) throw new Error('refill_buffer_counts_unavailable');
+  if (interactionError) throw new Error('refill_interactions_unavailable');
+  if (deliveryError) throw new Error('refill_deliveries_unavailable');
   const connected = new Set((connections ?? []).filter(row => Boolean(row.wa_id)).map(row => row.user_id));
   const subscriptionStatus = new Map((subscriptions ?? []).map(row => [row.user_id, row.status]));
   const eligibility = profileRows.map(row => ({ userId: row.id, accountStatus: row.account_status, whatsappEnabled: row.whatsapp_enabled, whatsappConnected: connected.has(row.id), subscriptionStatus: subscriptionStatus.get(row.id) ?? null }));
   const eligibleIds = new Set(eligibility.filter(isEligibleProductionUser).map(row => row.userId));
   const counts = new Map<string, number>();
-  for (const row of bufferRows ?? []) if (eligibleIds.has(row.user_id)) counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1);
-  const candidates = [...eligibleIds].map(userId => ({ userId, bufferBefore: counts.get(userId) ?? 0 }));
+  const bufferedDates = new Map<string, Set<string>>();
+  for (const row of bufferRows ?? []) if (eligibleIds.has(row.user_id)) { counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1); const dates = bufferedDates.get(row.user_id) ?? new Set<string>(); dates.add(String(row.intended_local_date)); bufferedDates.set(row.user_id, dates); }
+  const candidates = [...eligibleIds].map(userId => {
+    const profile = profileRows.find(row => row.id === userId)!;
+    const today = localDate(profile.timezone, now);
+    const dailyInteractionToday = (dailyInteractions ?? []).some(row => row.user_id === userId && String(row.local_date) === today);
+    const alreadyDeliveredToday = (dailyDeliveries ?? []).some(row => row.user_id === userId && String(row.local_date) === today && row.status === 'sent');
+    const deliveryDate = nextPsychologicalDeliveryDate(profile, now, { alreadyDeliveredToday, dailyInteractionToday });
+    const requiredLocalDate = dailyInteractionToday && deliveryDate === today ? addLocalDays(today, 1) : deliveryDate;
+    return { userId, bufferBefore: counts.get(userId) ?? 0, requiredLocalDate, requiredDateCovered: bufferedDates.get(userId)?.has(requiredLocalDate) ?? false, refillStartDate: requiredLocalDate };
+  });
   return {
     eligibleUsers: candidates.length,
     ...await orchestrateRefillUsers(candidates, {
       ...options,
-      refill: (userId, refillOptions) => refillApprovedBuffer(admin, userId, { ...refillOptions, now: options.now }),
+      refill: (userId, refillOptions) => refillApprovedBuffer(admin, userId, { ...refillOptions, now, fillFromFirstIntendedDate: true }),
     }),
   };
 }
 
-export async function refillApprovedBuffer(admin: SupabaseClient, userId: string, options: { now?: Date; minBufferDays?: number; targetBufferDays?: number; maxCostUsd?: number; firstIntendedLocalDate?: string; onUsage?: (record: RefillResult['usageRecords'][number]) => void | Promise<void> } = {}): Promise<RefillResult> {
+export async function refillApprovedBuffer(admin: SupabaseClient, userId: string, options: { now?: Date; minBufferDays?: number; targetBufferDays?: number; maxCostUsd?: number; firstIntendedLocalDate?: string; requiredLocalDate?: string; refillStartDate?: string; fillFromFirstIntendedDate?: boolean; onUsage?: (record: RefillResult['usageRecords'][number]) => void | Promise<void> } = {}): Promise<RefillResult> {
   const now = options.now ?? new Date();
   const minBufferDays = options.minBufferDays ?? Number(process.env.MIN_BUFFER_DAYS || MIN_APPROVED_BUFFER_DAYS);
   const targetBufferDays = options.targetBufferDays ?? Number(process.env.TARGET_BUFFER_DAYS || TARGET_BUFFER_DAYS);
@@ -173,12 +191,22 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     contextVersion: row.context_version,
     createdAt: row.created_at,
   })) as ApprovedBufferItem[];
-  const existingRows = reservedRows.filter(row => row.status === 'approved' || row.status === 'buffered');
-  if (existingRows.length >= targetBufferDays) return { userId, minBufferDays, targetBufferDays, created: [], skipped: ['buffer_at_target'], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0 }, usageRecords: [] };
+  let existingRows = reservedRows.filter(row => row.status === 'approved' || row.status === 'buffered');
+  const requiredDate = options.requiredLocalDate;
+  const requiredRow = requiredDate ? existingRows.find(row => row.intendedLocalDate === requiredDate) : null;
+  if (requiredDate) {
+    const rowsToInvalidate = existingRows.filter(row => row.intendedLocalDate < requiredDate || (!requiredRow && row.intendedLocalDate >= requiredDate)).map(row => row.id).filter((id): id is string => Boolean(id));
+    if (rowsToInvalidate.length) {
+      const { error: invalidationError } = await admin.from('approved_intervention_buffer').update({ status: 'invalidated', invalidated_at: now.toISOString() }).eq('user_id', userId).in('id', rowsToInvalidate).in('status', ['approved', 'buffered']);
+      if (invalidationError) throw new Error('schedule_buffer_repair_failed');
+      existingRows = existingRows.filter(row => !row.id || !rowsToInvalidate.includes(row.id));
+    }
+  }
+  if (existingRows.length >= targetBufferDays && (!options.requiredLocalDate || Boolean(requiredRow))) return { userId, minBufferDays, targetBufferDays, created: [], skipped: ['buffer_at_target'], calls: { writer: 0, judge: 0, repairs: 0 }, usage: { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0 }, usageRecords: [] };
 
   const { brief } = await buildBrief(admin, userId, 'intention');
   const deliveredExposures = brief.movementExposures ?? [];
-  const plannedSignatures = new Set(reservedRows.map(row => row.interventionSignature));
+  const plannedSignatures = new Set(existingRows.map(row => row.interventionSignature));
   const created: ApprovedBufferItem[] = [];
   const skipped: string[] = [];
   const usage = { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0 };
@@ -186,13 +214,16 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const usageRecords: RefillResult['usageRecords'] = [];
   const recordUsage = async (record: RefillResult['usageRecords'][number]) => { usageRecords.push(record); await options.onUsage?.(record); };
   const historicalMessages = brief.recentInterventions ?? [];
-  const firstOffset = options.firstIntendedLocalDate ? null : 1;
-  for (let offset = firstOffset ?? 0; existingRows.length + created.length < targetBufferDays && (!options.firstIntendedLocalDate || offset === 0); offset += 1) {
+  const singleFirstDate = Boolean(options.firstIntendedLocalDate && !options.fillFromFirstIntendedDate);
+  const startDate = options.refillStartDate || options.requiredLocalDate || options.firstIntendedLocalDate;
+  const requiredNeedsRepair = Boolean(requiredDate && !requiredRow);
+  const firstOffset = options.firstIntendedLocalDate && singleFirstDate ? null : startDate ? 0 : 1;
+  for (let offset = firstOffset ?? 0; (requiredNeedsRepair && !created.some(item => item.intendedLocalDate === requiredDate)) || existingRows.length + created.length < targetBufferDays ? (!singleFirstDate || offset === 0) : false; offset += 1) {
     // Reserve a conservative allowance for one Writer + one Judge before
     // starting an item. A repair is allowed only if the remaining budget can
     // pay for the second pair as well.
     if (usage.estimatedCostUsd + 0.005 > maxCostUsd) break;
-    const intendedLocalDate = offset === 0 && options.firstIntendedLocalDate ? options.firstIntendedLocalDate : futureDate(typeof profile.timezone === 'string' ? profile.timezone : null, now, offset);
+    const intendedLocalDate = startDate ? addLocalDays(startDate, offset) : futureDate(typeof profile.timezone === 'string' ? profile.timezone : null, now, offset);
     if (existingRows.some(row => row.intendedLocalDate === intendedLocalDate) || created.some(row => row.intendedLocalDate === intendedLocalDate)) continue;
     const prospectiveLearning: ProspectiveLearning[] = [...existingRows, ...created].map(item => ({ bufferItemId: item.id ?? `planned:${item.intendedLocalDate}`, intendedLocalDate: item.intendedLocalDate, canonicalMovement: item.plan.canonicalMovement, takeaway: item.plan.expectedTakeaway ?? item.plan.reason, message: item.message, interventionSignature: item.interventionSignature, newContribution: item.plan.newContribution, expectedTakeaway: item.plan.expectedTakeaway }));
     const planned = planDailyIntervention({ goal: brief.desiredChange, context: brief.currentContext, confirmedEvidence: brief.confirmedEvidence, mechanismId: brief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: deliveredExposures.map(exposure => ({ mechanismId: brief.psychologicalContract?.mechanism_id, psychologicalMovementKey: exposure.canonicalMovement, movement: exposure.canonicalMovement, takeaway: exposure.takeaway, text: exposure.message })), exposures: deliveredExposures, plannedSignatures: [...plannedSignatures], prospectiveLearning, intendedLocalDate, projectedReceptionStage: projectedReceptionStage(deliveredExposures.length, prospectiveLearning.length) }).selected;

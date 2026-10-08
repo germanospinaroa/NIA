@@ -20,9 +20,9 @@ assert.match(migration, /nia-buffer-refill/);
 assert.match(migration, /vault\.decrypted_secrets/);
 assert.match(migration, /cron\.unschedule/);
 assert.doesNotMatch(tuPage, /window\.confirm/);
-assert.match(tuPage, /¿Cancelar tu suscripción\?/);
+assert.match(tuPage, /¿Quieres cancelar tu suscripción\?/);
 assert.match(tuPage, /Cancelando…/);
-assert.match(cancelRoute, /cancellation_state_failed/);
+assert.match(cancelRoute, /provider_cancelled_local_sync_pending/);
 
 const originalEnv = { ...process.env };
 process.env.HOTMART_CLIENT_ID = 'client-id';
