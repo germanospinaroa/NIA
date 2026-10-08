@@ -1,5 +1,10 @@
 # ESTADO — NIA
 
+## Hotmart Analytics — 2026-10-08
+- Se añadió el launcher oficial de Hotmart Analytics con la cuenta `ca466c8d-ad85-30c6-ad61-62464a24e7e1`, cargado de forma asíncrona y únicamente en superficies públicas de adquisición/activación; no se carga desde `/admin` ni desde `/app`.
+- La atribución permitida (`utm_*`, `fbclid`, `src`, `sck`, `xcod`) se captura sin PII, persiste en almacenamiento first-party y se compone con `URLSearchParams` en los checkout oficiales mensual `r7w7emsp` y anual `3z4a0vad`.
+- Privacidad menciona Hotmart Analytics solo como medición de visitas/conversiones. Tests focalizados, typecheck, lint, build y diff check PASS; lint mantiene cuatro warnings heredados. Pendiente commit, deploy y QA público.
+
 ## Preview social e identidad del navegador — 2026-10-07
 - La imagen aprobada `nia-whatsapp-preview.png` se optimizó sin rediseño a `public/og/nia-whatsapp-preview.jpg` en 1200×630, manteniendo el encuadre y copy original.
 - El metadata raíz usa `https://nia.gritlab.pro` como base, el title/description aprobados, Open Graph `website` y Twitter `summary_large_image` con la misma imagen absoluta.

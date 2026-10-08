@@ -1,4 +1,5 @@
 import type { FunnelPlan } from '@/lib/funnel';
+import { readMarketingAttribution } from './marketing-attribution.ts';
 
 export type NiaPlanConfig = {
   key: FunnelPlan;
@@ -19,7 +20,13 @@ export const NIA_PLAN_CONFIG: Record<FunnelPlan, NiaPlanConfig> = {
 export const HOTMART_CHECKOUTS = NIA_PLAN_CONFIG;
 
 export function checkoutForPlan(plan: FunnelPlan) {
-  return HOTMART_CHECKOUTS[plan];
+  const checkout = HOTMART_CHECKOUTS[plan];
+  if (typeof window === 'undefined') return checkout;
+  const url = new URL(checkout.url);
+  for (const [key, value] of Object.entries(readMarketingAttribution())) {
+    if (value) url.searchParams.set(key, value);
+  }
+  return { ...checkout, url: url.toString() };
 }
 
 export function planForHotmartOffer(offerCode: unknown): FunnelPlan | null {
