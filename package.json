@@ -90,7 +90,8 @@
     "test:intervention-blueprint-real": "node --env-file=.env.local --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-intervention-blueprint-real.mjs --confirm-real",
     "redteam": "node --experimental-strip-types scripts/redteam.mjs",
     "redteam:analyze": "node scripts/analyze-redteam.mjs",
-    "semantic:replay": "node scripts/replay-semantic-calibration.mjs"
+    "semantic:replay": "node scripts/replay-semantic-calibration.mjs",
+    "test:cancellation-flow": "node scripts/test-cancellation-flow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
