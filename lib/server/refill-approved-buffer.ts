@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildBrief } from '@/lib/server/intervention';
-import { generateWriterV2, evaluateWriterV2, writerV2InputFromBrief, applySemanticFidelity } from '@/lib/server/writer-v2';
+import { generateWriterV2, evaluateWriterV2, writerV2InputFromBrief, applySemanticFidelity, repairGuidanceKeys } from '@/lib/server/writer-v2';
 import { judgeSemanticFidelity } from '@/lib/server/semantic-fidelity-judge';
 import { getMovementTargetGuidance } from '@/lib/movement-expression';
 import { contextVersion, legacyContextVersion, MESSAGE_CONTRACT_VERSION, normalizedMessageHash, planDailyIntervention, projectedReceptionStage, type ApprovedBufferItem } from '@/lib/recurrent-daily';
@@ -261,8 +261,9 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   if (!evaluation.approved) await emitQualityEvent(options, userId, 'writer_quality_rejected', evaluation, 1);
   if (!evaluation.approved && base.usage.estimatedCostUsd + 0.005 <= maxCostUsd) {
     base.calls.repairs += 1;
-    await emitRefillEvent(options, { userId, eventType: 'writer_repair_requested', metadata: { repair_reasons: evaluation.hardFailures, contract_version: MESSAGE_CONTRACT_VERSION, attempt: 2 } });
-    generated = await generateWriterV2(input, { model: 'gpt-6.1-sol', maxOutputTokens: 240, repairReasons: evaluation.hardFailures });
+    await emitRefillEvent(options, { userId, eventType: 'writer_repair_requested', metadata: { repair_reasons: evaluation.hardFailures, repair_guidance_keys: repairGuidanceKeys(evaluation.hardFailures), contract_version: MESSAGE_CONTRACT_VERSION, attempt: 2 } });
+    const previousRejectedMessage = generated.message;
+    generated = await generateWriterV2(input, { model: 'gpt-6.1-sol', maxOutputTokens: 240, repairReasons: evaluation.hardFailures, previousRejectedMessage });
     base.calls.writer += 1;
     base.usage.writerInput += generated.usage?.prompt_tokens ?? 0;
     base.usage.writerOutput += generated.usage?.completion_tokens ?? 0;

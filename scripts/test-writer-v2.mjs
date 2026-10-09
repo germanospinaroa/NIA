@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { applySemanticFidelity, evaluateWriterV2, generateWriterV2WithRepair, hasTransferableValue, writerV2Prompt } from '../lib/server/writer-v2.ts';
+import { applySemanticFidelity, buildWriterRepairInstructions, evaluateWriterV2, generateWriterV2WithRepair, hasTransferableValue, repairGuidanceForFailure, repairGuidanceKeys, writerV2Prompt } from '../lib/server/writer-v2.ts';
 
 const input = {
   firstName: 'Juanita',
@@ -14,6 +14,13 @@ const input = {
 };
 
 assert.match(writerV2Prompt(input), /psychological_move/);
+const repairPrompt = JSON.parse(writerV2Prompt(input, ['circular_abstract_explanation', 'unknown_failure']));
+assert.deepEqual(repairPrompt.repair_reasons, ['circular_abstract_explanation', 'unknown_failure']);
+assert.match(repairPrompt.repair_guidance[0], /Reescribe desde cero/);
+assert.match(repairPrompt.repair_guidance[1], /Conserva el movimiento psicol[oó]gico/);
+assert.match(repairGuidanceForFailure('circular_abstract_explanation'), /abstracciones circulares/);
+assert.match(buildWriterRepairInstructions(['immediate_clarity'])[0], /una sola lectura/);
+assert.deepEqual(repairGuidanceKeys(['circular_abstract_explanation', 'El texto adelantó external_validation:foo']), ['circular_abstract_explanation', 'unknown']);
 assert.match(writerV2Prompt({ ...input, canonicalTargetMovement: 'external_validation:notice_the_consulting_pattern', targetMovementGuidance: { target: 'external_validation:notice_the_consulting_pattern', purpose: 'Reconocer la secuencia.', inScope: ['primera respuesta'], outOfScope: ['information_vs_delegating_decision'] } }), /target_movement_guidance/);
 assert.equal(evaluateWriterV2('Confía en ti y recuerda que tú sabes qué es mejor para ti.', input).approved, false);
 assert.ok(evaluateWriterV2('Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para que reconsideres tu decisión, Juanita.', input).approved);
@@ -25,6 +32,12 @@ assert.equal(hasTransferableValue('Sueles dudar y pedir opiniones antes de decid
 assert.equal(hasTransferableValue('Confía en ti y recuerda que todo estará bien.'), false);
 assert.equal(hasTransferableValue('Observa cómo te sientes.'), false);
 assert.equal(evaluateWriterV2('Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para reconsiderar.', { ...input, recentMovements: [input.psychologicalMove] }).approved, false);
+
+assert.ok(evaluateWriterV2('Ubicar ese momento permite reconocer el momento concreto en que aparece la oportunidad de decir lo que quieres.', input).hardFailures.includes('circular_abstract_explanation'));
+assert.ok(evaluateWriterV2('Expresar lo que realmente quieres decir permite expresar lo que realmente quieres decir.', input).hardFailures.includes('circular_abstract_explanation'));
+assert.equal(evaluateWriterV2('Reconocer esa duda puede ayudarte a detenerte.', input).hardFailures.includes('circular_abstract_explanation'), false);
+assert.equal(evaluateWriterV2('Puedes decir lo que quieres con claridad.', input).hardFailures.includes('circular_abstract_explanation'), false);
+assert.equal(evaluateWriterV2('Ese momento importa.', input).hardFailures.includes('circular_abstract_explanation'), false);
 
 const concreteQuestionInput = { ...input, psychologicalMove: 'uncertainty_clarification:name_the_concrete_question', canonicalTargetMovement: 'uncertainty_clarification:name_the_concrete_question', movementExplanation: 'Convertir una duda amplia en un punto concreto que pueda nombrarse.' };
 assert.equal(evaluateWriterV2('Para empezar, necesito saber ___.', concreteQuestionInput).hardFailures.includes('movement_not_expressed'), false);
@@ -69,10 +82,12 @@ const orderedRepeat = evaluateWriterV2('Una revisita con un ángulo distinto y u
 assert.equal(orderedRepeat.hardFailures.includes('repeated_psychological_movement'), true, 'initial ordered progression keeps its repeat guard');
 
 let calls = 0;
+let repairOptions;
 const repaired = await generateWriterV2WithRepair(input, {
   model: 'fixture',
   generate: async (_input, options) => {
     calls += 1;
+    if (calls === 2) repairOptions = options;
     return { message: calls === 1 ? 'Confía en ti.' : 'Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para reconsiderar, Juanita.', usage: {}, model: options.model, responseId: `fixture-${calls}` };
   },
 });
@@ -80,6 +95,29 @@ assert.equal(calls, 2);
 assert.equal(repaired.repaired, true);
 assert.equal(repaired.attempts.length, 2);
 assert.equal(repaired.attempts.at(-1).evaluation.approved, true);
+assert.ok(repairOptions.repairReasons.includes('no_transferable_value'));
+assert.equal(repairOptions.previousRejectedMessage, 'Confía en ti.');
+
+calls = 0;
+repairOptions = undefined;
+const circularRepair = await generateWriterV2WithRepair(input, {
+  model: 'fixture',
+  generate: async (_input, options) => {
+    calls += 1;
+    if (calls === 2) repairOptions = options;
+    const message = calls === 1
+      ? 'Ubicar ese momento permite reconocer el momento concreto en que aparece la oportunidad de decir lo que quieres.'
+      : 'Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para reconsiderar, Juanita.';
+    return { message, usage: {}, model: options.model, responseId: `circular-fixture-${calls}` };
+  },
+});
+assert.equal(calls, 2);
+assert.equal(circularRepair.attempts[0].evaluation.approved, false);
+assert.ok(circularRepair.attempts[0].evaluation.hardFailures.includes('circular_abstract_explanation'));
+assert.equal(repairOptions.previousRejectedMessage, 'Ubicar ese momento permite reconocer el momento concreto en que aparece la oportunidad de decir lo que quieres.');
+assert.ok(repairOptions.repairReasons.includes('circular_abstract_explanation'));
+assert.ok(repairOptions.repairReasons.length > 0);
+assert.equal(circularRepair.attempts.at(-1).evaluation.approved, true);
 
 calls = 0;
 const noRepair = await generateWriterV2WithRepair(input, {

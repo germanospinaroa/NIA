@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ContextKey } from '@/lib/mvp';
 import { feedbackFor, type InterventionBrief, type InterventionCandidate, type InterventionResult } from '@/lib/intervention-engine';
-import { applySemanticFidelity, evaluateWriterV2, generateWriterV2, writerV2InputFromBrief, type WriterV2Evaluation } from '@/lib/server/writer-v2';
+import { applySemanticFidelity, evaluateWriterV2, generateWriterV2, repairGuidanceKeys, writerV2InputFromBrief, type WriterV2Evaluation } from '@/lib/server/writer-v2';
 import { judgeSemanticFidelity, SEMANTIC_FIDELITY_MODEL } from '@/lib/server/semantic-fidelity-judge';
 import { finishGenerationAttempt, recordEvent, recordExecutionStage, recordProviderCall, startGenerationAttempt, updateExecutionRun, type ExecutionContext } from '@/lib/server/operational-observability';
 import { movementKey } from '@/lib/psychological-progression';
@@ -145,6 +145,7 @@ export async function resolveWithWriterV2(input: {
   let totalTokens = 0;
   let repairUsed = false;
   let lastReasons: string[] = [];
+  let previousRejectedMessage: string | null = null;
 
   for (let attempt = 1; attempt <= WRITER_V2_MAX_ATTEMPTS; attempt += 1) {
     if (attempt > WRITER_V2_MAX_ATTEMPTS) throw new Error('writer_attempt_limit_exceeded');
@@ -152,7 +153,7 @@ export async function resolveWithWriterV2(input: {
     const started = Date.now();
     await recordEvent(supabase, { userId, eventType: 'generation_started', entityType: 'execution_run', entityId: execution?.executionId, executionRunId: execution?.executionId, metadata: { writer_version: 'v2', model: WRITER_V2_MODEL, attempt } });
     try {
-      const generated = await generateWriterV2(writerInput, { model: WRITER_V2_MODEL, maxOutputTokens: 320, repairReasons: lastReasons });
+      const generated = await generateWriterV2(writerInput, { model: WRITER_V2_MODEL, maxOutputTokens: 320, repairReasons: lastReasons, previousRejectedMessage });
       const usage = { inputTokens: generated.usage?.prompt_tokens ?? 0, outputTokens: generated.usage?.completion_tokens ?? 0, totalTokens: generated.usage?.total_tokens ?? 0 };
       totalInput += usage.inputTokens; totalOutput += usage.outputTokens; totalTokens += usage.totalTokens;
       if (execution) await recordProviderCall(supabase, execution, { generationAttemptId: generationAttempt?.id, provider: 'openai', model: WRITER_V2_MODEL, operation: 'generation', ...usage, latencyMs: Date.now() - started, status: 'success' });
@@ -194,6 +195,7 @@ export async function resolveWithWriterV2(input: {
       const candidate = candidateFromMessage(brief, generated.message, evaluation);
       allCandidates.push(candidate);
       lastReasons = evaluation.hardFailures;
+      previousRejectedMessage = generated.message;
       if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'completed', candidateCount: 1, approvedCandidateCount: evaluation.approved ? 1 : 0, rejectionCount: evaluation.approved ? 0 : 1, usage });
       if (execution) {
         await recordExecutionStage(supabase, execution, 'generation', { status: 'completed', writer_version: 'v2', model: WRITER_V2_MODEL, attempt, candidate_count: 1, writer_attempts: attempt, input_tokens: totalInput, output_tokens: totalOutput, total_tokens: totalTokens, estimated_cost_usd: estimatedCost(totalInput, totalOutput), repair_used: attempt > 1, reception_stage: input.reception?.stage ?? null, psychological_interventions_delivered: input.reception?.psychologicalInterventionsDelivered ?? null, time_of_day: input.reception?.timeOfDay ?? null });
@@ -201,6 +203,7 @@ export async function resolveWithWriterV2(input: {
       }
       if (evaluation.approved) { selected = candidate; repairUsed = attempt > 1; break; }
       await recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution?.executionId, executionRunId: execution?.executionId, metadata: { layer: 'writer_v2_critical_gates', reasons: evaluation.hardFailures, contract_version: 'nia_daily_v4', attempt, name_present: evaluation.namePresent, paragraph_count: evaluation.paragraphCount, char_count: evaluation.charCount, clarity: evaluation.semanticJudge?.immediate_clarity ?? null, personalization: evaluation.semanticJudge?.personalized ?? null } });
+      if (attempt < WRITER_V2_MAX_ATTEMPTS) await recordEvent(supabase, { userId, eventType: 'writer_repair_requested', entityType: 'execution_run', entityId: execution?.executionId, executionRunId: execution?.executionId, metadata: { failure_codes: evaluation.hardFailures, repair_guidance_keys: repairGuidanceKeys(evaluation.hardFailures), attempt: attempt + 1, contract_version: 'nia_daily_v4' } });
       repairUsed = attempt === 2;
     } catch (error) {
       if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'failed', error });

@@ -53,7 +53,7 @@ const inventedPsychology = /\b(eres insegura|tienes ansiedad|tienes un trauma|te
 const emptyClosing = /(?:nos leemos mañana|descansa[,.]? mañana seguimos|aquí estaré|recuerda que)[.! ]*$/i;
 const forbiddenLanguage = /poco\s+a\s+poco/i;
 const internalSystemLanguage = /\b(?:movimiento\s+psicol[oó]gico|señal\s+observable|movimiento\s+esperado|contribuci[oó]n\s+nueva|etapa\s+de\s+recepci[oó]n|criterio\s+can[oó]nico|evidencia\s+del\s+movimiento)\b/i;
-const circularAbstractExplanation = /(?:ubicar|localizar|reconocer|identificar)\s+(?:(?:ese|el|la)\s+)?(?:detalle|momento|señal|instante)\b[^.]{0,180}(?:permite|ayuda a|sirve para)\s+(?:ubicar|localizar|reconocer|identificar)|(?:decir|expresar)\s+lo\s+(?:que|realmente)\s+quieres[^.]{0,120}(?:decir|expresar)/i;
+const circularAbstractExplanation = /(?:ubicar|localizar|reconocer|identificar)\s+(?:(?:ese|el|la)\s+)?(?:detalle|momento|señal|instante)\b[^.]{0,180}(?:permite|ayuda a|sirve para)\s+(?:ubicar|localizar|reconocer|identificar)|\b(?:decir|expresar)\s+lo\s+que(?:\s+realmente)?\s+quieres(?:\s+decir)?\b[^.]{0,120}\b(?:decir|expresar)\s+lo\s+que(?:\s+realmente)?\s+quieres(?:\s+decir)?\b/i;
 const words = (value: string) => new Set(value.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-záéíóúñü]{4,}/gi) ?? []);
 
 function normalizedTokens(value: string) {
@@ -122,6 +122,48 @@ export function writerV2InputFromBrief(brief: InterventionBrief, reception?: Par
 }
 
 export function writerV2Prompt(input: WriterV2Input, repairReasons: string[] = []) {
+  return writerV2PromptWithRepair(input, repairReasons);
+}
+
+const REPAIR_GUIDANCE: Record<string, string> = {
+  circular_abstract_explanation: 'Reescribe desde cero. El intento anterior explicó una idea simple mediante abstracciones circulares o repeticiones conceptuales. No repitas construcciones donde reconocer/ubicar un momento o detalle vuelve a explicar el mismo reconocimiento, ni repitas decir/expresar lo que quieres decir. Entrega directamente la distinción u observación concreta, con frases simples, verbos concretos y una idea que pueda resumirse después de una lectura.',
+  unnatural_spanish: 'Reescribe desde cero con español conversacional, directo y elegante. Quita nominalizaciones, formulaciones de manual y frases que una persona no usaría al hablar con alguien que conoce.',
+  immediate_clarity: 'Reescribe para que se entienda en una sola lectura. Divide o simplifica las frases, elimina referencias vagas y no expliques una idea sencilla mediante varias capas abstractas.',
+  unclear_takeaway: 'Reescribe haciendo explícita una sola idea útil. Al terminar debe poder completarse “Lo que me llevo es que…” con una frase concreta.',
+  multiple_core_ideas: 'Reescribe conservando únicamente la contribución y el takeaway principales. Elimina enseñanzas laterales, consejos adyacentes y cambios de tema.',
+  weak_personalization: 'Reescribe desde la situación y el enfoque confirmados. El cuerpo debe responder a esta persona concreta y no ser intercambiable para miles de usuarios; no inventes detalles.',
+  context_not_grounded: 'Reescribe anclando la observación en los hechos y contexto confirmados. No copies mecánicamente el contexto ni inventes escenas, emociones o motivos.',
+  no_transferable_value: 'Reescribe para entregar una distinción, criterio, señal reconocible o paso concreto que la persona pueda llevarse. No uses motivación genérica ni una simple paráfrasis del problema.',
+  whatsapp_wall_of_text: 'Reescribe para WhatsApp. Mantén ritmo visual natural: si el cuerpo es largo, usa 2–5 bloques; no hagas una línea por frase ni un bloque denso.',
+  system_language_leak: 'Reescribe sin mencionar mecanismos, movimientos, señales observables, etapas, criterios canónicos ni ninguna arquitectura interna. Habla como NIA para la persona.',
+  semantic_redundancy: 'Reescribe con una contribución realmente nueva respecto de los mensajes previos. Conserva el movimiento, pero cambia la distinción o aplicación sin repetir la misma enseñanza.',
+  same_actionable_teaching_as_prior: 'Reescribe sin repetir la misma enseñanza accionable anterior. Mantén el movimiento psicológico server-authoritative y expresa un ángulo nuevo permitido.',
+  new_contribution_not_expressed: 'Reescribe para que el valor nuevo definido por el servidor aparezca claramente, sin cambiar su significado ni sustituirlo por una lección anterior.',
+  no_novel_contribution: 'Reescribe aportando una observación, distinción o aplicación nueva. No agregues otro movimiento: profundiza únicamente el movimiento autorizado.',
+  new_contribution_missing: 'Reescribe haciendo visible la contribución nueva y su utilidad concreta, preservando el movimiento y los hechos confirmados.',
+  expected_takeaway_missing: 'Reescribe para dejar una sola idea principal, concreta y recordable que corresponda al takeaway esperado.',
+};
+
+export function repairGuidanceForFailure(code: string) {
+  const exact = REPAIR_GUIDANCE[code];
+  if (exact) return exact;
+  const base = code.split(':', 1)[0];
+  return REPAIR_GUIDANCE[base] ?? 'Reescribe corrigiendo exclusivamente los fallos señalados. Conserva el movimiento psicológico, los hechos confirmados, la contribución nueva y el takeaway; no inventes ni rediseñes la intervención.';
+}
+
+export function repairGuidanceKeys(failures: string[]) {
+  return [...new Set(failures.map(code => {
+    if (REPAIR_GUIDANCE[code]) return code;
+    const base = code.split(':', 1)[0];
+    return REPAIR_GUIDANCE[base] ? base : 'unknown';
+  }))];
+}
+
+export function buildWriterRepairInstructions(failures: string[]) {
+  return failures.length ? failures.map(repairGuidanceForFailure) : [repairGuidanceForFailure('unknown_failure')];
+}
+
+function writerV2PromptWithRepair(input: WriterV2Input, repairReasons: string[] = [], previousRejectedMessage: string | null = null) {
   return JSON.stringify({
     confirmed_address_name: input.firstName,
     situation: input.situation,
@@ -146,6 +188,9 @@ export function writerV2Prompt(input: WriterV2Input, repairReasons: string[] = [
     recent_messages: input.recentMessages ?? [],
     allow_movement_revisit: input.allowMovementRevisit ?? false,
     repair_reasons: repairReasons,
+    repair_guidance: buildWriterRepairInstructions(repairReasons),
+    previous_rejected_message: previousRejectedMessage,
+    repair_contract: repairReasons.length ? 'Reescribe, no hagas un retoque superficial. Conserva canonical movement, confirmed facts, newContribution y expectedTakeaway; cambia únicamente la expresión defectuosa y no uses el texto rechazado como historia psicológica.' : null,
   });
 }
 
@@ -204,12 +249,12 @@ export function applySemanticFidelity(evaluation: WriterV2Evaluation, result: Se
   return { ...evaluation, approved: hardFailures.length === 0, hardFailures, semanticFailures, semanticJudge: result };
 }
 
-export async function generateWriterV2(input: WriterV2Input, options: { model: string; maxOutputTokens?: number; repairReasons?: string[] }) {
+export async function generateWriterV2(input: WriterV2Input, options: { model: string; maxOutputTokens?: number; repairReasons?: string[]; previousRejectedMessage?: string | null }) {
   const result = await requestWriterV2Json({
     model: options.model,
     maxOutputTokens: options.maxOutputTokens ?? 320,
     system: 'Escribe una única intervención diaria para esta persona concreta. confirmed_address_name es identidad confirmada y contexto de personalización, pero el saludo final será añadido por el Composer: no necesitas repetir el nombre dentro del cuerpo y, preferentemente, no lo repitas salvo que aporte de forma natural. La personalización del cuerpo debe venir de su situación y enfoque reales, no del vocativo. El servidor ya decidió el movimiento psicológico y la contribución nueva esperada: exprésalos, no los rediseñes. new_contribution es el valor que DEBE entregar este mensaje; expected_takeaway es la única idea útil que debería quedar en la cabeza. No sustituyas esos campos por aprendizajes anteriores ni adelantes otros movimientos. Trabaja solo con hechos confirmados y con el contexto reconocible de la persona. Prioriza claridad inmediata: una lectura, frases directas, verbos concretos, una distinción recordable y una conclusión fácil de resumir. Rechaza explicaciones circulares o abstractas que conviertan una observación simple en un párrafo de manual. Escribe para WhatsApp: un mensaje corto puede ser un bloque; si supera aproximadamente 220 caracteres, usa 2–5 párrafos con separación natural mediante líneas en blanco. No uses una línea por frase, bullets decorativos ni encabezados. No expliques la arquitectura, el movimiento, el mecanismo, la etapa ni ninguna taxonomía interna de NIA. Evita español rebuscado, burocrático, académico o de coach genérico. No inventes psicología, no diagnostiques, no hagas terapia ni promesas clínicas. No repitas movimientos anteriores. No uses la expresión "poco a poco". Devuelve únicamente JSON con la propiedad message.',
-    user: writerV2Prompt(input, options.repairReasons),
+    user: writerV2PromptWithRepair(input, options.repairReasons, options.previousRejectedMessage ?? null),
   });
   const value = result.value && typeof result.value === 'object' ? result.value as { message?: unknown } : {};
   const message = typeof value.message === 'string' ? value.message.trim() : '';
@@ -222,7 +267,7 @@ export async function generateWriterV2WithRepair(input: WriterV2Input, options: 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const previous = attempts.at(-1);
     const repairReasons = previous ? [...previous.evaluation.hardFailures, ...(previous.evaluation.movementExpression?.adjacentMovementDrift ? [`El texto adelantó ${previous.evaluation.movementExpression.dominantMovement}; conserva únicamente ${input.canonicalTargetMovement ?? input.psychologicalMove} y evita desarrollar ese movimiento vecino.`] : [])] : [];
-    const result = await generate(input, { model: options.model, maxOutputTokens: options.maxOutputTokens, repairReasons });
+    const result = await generate(input, { model: options.model, maxOutputTokens: options.maxOutputTokens, repairReasons, previousRejectedMessage: previous?.message ?? null });
     const evaluation = evaluateWriterV2(result.message, input);
     attempts.push({ message: result.message, evaluation });
     if (evaluation.approved) return { ...result, attempts, repaired: attempt === 1 };
