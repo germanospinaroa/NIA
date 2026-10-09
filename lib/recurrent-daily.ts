@@ -9,6 +9,7 @@ export type InterventionDepth = 'foundational' | 'developed' | 'advanced';
 
 export const DAILY_SELECTION_LADDER: InterventionMode[] = ['introduce', 'deepen', 'integrate', 'apply', 'anticipate', 'contrast', 'transfer', 'reinforce', 'evidence', 'reflect_or_observe'];
 export const MIN_APPROVED_BUFFER_DAYS = 3;
+export const MESSAGE_CONTRACT_VERSION = 'nia_daily_v3';
 
 export type MovementExposure = {
   canonicalMovement: string;
@@ -155,6 +156,7 @@ export function contextVersion(context: string, goal: string, editorial: {
   // This column is the content version of NEXT. Delivery-only settings such
   // as time, timezone and WhatsApp state intentionally stay out of it.
   return normalizedMessageHash(JSON.stringify({
+    messageContractVersion: MESSAGE_CONTRACT_VERSION,
     goal: goal.trim(),
     context: context.trim(),
     communicationPreference: editorial.communicationPreference ?? null,
@@ -166,7 +168,7 @@ export function contextVersion(context: string, goal: string, editorial: {
 
 /** Version used by rows created before editorial fields joined the contract. */
 export function legacyContextVersion(context: string, goal: string) {
-  return normalizedMessageHash(`${goal}\n${context}`);
+  return normalizedMessageHash(`${MESSAGE_CONTRACT_VERSION}\n${goal}\n${context}`);
 }
 
 export function interventionSignature(input: Pick<DailyInterventionPlan, 'canonicalMovement' | 'interventionMode' | 'angle' | 'depth' | 'contextUsed'>) {

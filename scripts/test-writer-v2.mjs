@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { applySemanticFidelity, evaluateWriterV2, generateWriterV2WithRepair, hasTransferableValue, writerV2Prompt } from '../lib/server/writer-v2.ts';
 
 const input = {
+  firstName: 'Juanita',
   situation: 'Cuando ya tienes una respuesta o criterio para una decisión y aun así pides varias opiniones por miedo a equivocarte.',
   desiredChange: 'Confiar más en mi criterio.',
   psychologicalMove: 'external_validation:set_reconsideration_threshold',
@@ -15,7 +16,7 @@ const input = {
 assert.match(writerV2Prompt(input), /psychological_move/);
 assert.match(writerV2Prompt({ ...input, canonicalTargetMovement: 'external_validation:notice_the_consulting_pattern', targetMovementGuidance: { target: 'external_validation:notice_the_consulting_pattern', purpose: 'Reconocer la secuencia.', inScope: ['primera respuesta'], outOfScope: ['information_vs_delegating_decision'] } }), /target_movement_guidance/);
 assert.equal(evaluateWriterV2('Confía en ti y recuerda que tú sabes qué es mejor para ti.', input).approved, false);
-assert.ok(evaluateWriterV2('Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para que reconsideres tu decisión.', input).approved);
+assert.ok(evaluateWriterV2('Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para que reconsideres tu decisión, Juanita.', input).approved);
 assert.equal(evaluateWriterV2('Tienes ansiedad y te autosaboteas; deja de consultar.', input).approved, false);
 assert.equal(hasTransferableValue('Para empezar, necesito saber qué dato falta. Convertir la incertidumbre en una pregunta concreta permite saber qué buscar.'), true);
 assert.equal(hasTransferableValue('Antes de consultar, anota: «Mi primera respuesta es…». Después compara qué información nueva apareció.'), true);
@@ -43,18 +44,18 @@ const profile2Input = { ...concreteQuestionInput, situation: 'Al empezar una tar
 assert.equal(evaluateWriterV2(profile2Repair, profile2Input).hardFailures.includes('movement_not_expressed'), false);
 assert.equal(evaluateWriterV2(profile2Repair, profile2Input).hardFailures.includes('adjacent_movement_drift'), false);
 
-const profile1Repair = 'Cuando recibes una oportunidad laboral, sueles tener una primera respuesta y aun así pedir varias opiniones. La distinción está entre consultar para obtener información que te falta y consultar para confirmar una respuesta que ya tienes. Antes de pedir otra opinión, puedes fijarte en qué duda concreta sigue abierta: eso ayuda a reconocer qué estás buscando en la consulta.';
+const profile1Repair = 'Cuando recibes una oportunidad laboral, sueles tener una primera respuesta y aun así pedir varias opiniones. La distinción está entre consultar para obtener información que te falta y consultar para confirmar una respuesta que ya tienes. Antes de pedir otra opinión, puedes fijarte en qué duda concreta sigue abierta: eso ayuda a reconocer qué estás buscando en la consulta, Juanita.';
 const profile1Result = evaluateWriterV2(profile1Repair, observeInput);
 assert.equal(profile1Result.movementExpression.targetExpressed, true);
 assert.equal(profile1Result.movementExpression.adjacentMovementDrift, true);
 assert.equal(profile1Result.movementExpression.dominantMovement, 'external_validation:information_vs_delegating_decision');
 
-const semanticRejected = applySemanticFidelity(profile1Result, { target_expressed: true, adjacent_drift: true, dominant_movement: 'external_validation:information_vs_delegating_decision', movement_value: true, novel_contribution: true, semantic_redundancy: false, reason: 'El texto desarrolla principalmente la distinción vecina.' });
+const semanticRejected = applySemanticFidelity(profile1Result, { target_expressed: true, adjacent_drift: true, dominant_movement: 'external_validation:information_vs_delegating_decision', movement_value: true, new_contribution_expressed: true, same_actionable_teaching_as_prior: false, novel_contribution: true, semantic_redundancy: false, personalized: true, grounded_in_user_context: true, immediate_clarity: true, natural_spanish: true, single_core_idea: true, whatsapp_readable: true, system_language_leak: false, cognitive_overload: false, clear_takeaway: true, reason: 'El texto desarrolla principalmente la distinción vecina.' });
 assert.equal(semanticRejected.approved, false);
 assert.ok(semanticRejected.hardFailures.includes('adjacent_movement_drift'));
 
 const profile1RecognitionInput = { ...observeInput, targetMovementGuidance: { target: observeInput.canonicalTargetMovement, purpose: 'Reconocer la secuencia.', inScope: ['primera respuesta propia', 'momento en que empieza a consultar'], outOfScope: ['information_vs_delegating_decision'], valueKind: 'recognition' } };
-const profile1RecognitionMessage = 'Cuando recibes una oportunidad laboral, ya tienes una primera respuesta antes de pedir varias opiniones. Hay dos momentos distintos: lo que tú piensas al recibirla y el momento en que empiezas a consultar. Para reconocer esa secuencia, puede servirte fijarte en ese paso: «Mi primera respuesta fue esta; después empecé a pedir opiniones». Por ahora, se trata de hacer visible ese orden, sin tener que cambiar cómo decides.';
+const profile1RecognitionMessage = 'Juanita, cuando recibes una oportunidad laboral, ya tienes una primera respuesta antes de pedir varias opiniones. Hay dos momentos distintos: lo que tú piensas al recibirla y el momento en que empiezas a consultar.\n\nPara reconocer esa secuencia, anota qué información nueva te falta antes de pedir otra opinión. Por ahora, se trata de hacer visible ese orden, sin tener que cambiar cómo decides.';
 const profile1RecognitionResult = evaluateWriterV2(profile1RecognitionMessage, profile1RecognitionInput);
 assert.equal(profile1RecognitionResult.approved, true);
 assert.equal(profile1RecognitionResult.movementValue?.valueKind, 'recognition');
@@ -72,7 +73,7 @@ const repaired = await generateWriterV2WithRepair(input, {
   model: 'fixture',
   generate: async (_input, options) => {
     calls += 1;
-    return { message: calls === 1 ? 'Confía en ti.' : 'Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para reconsiderar.', usage: {}, model: options.model, responseId: `fixture-${calls}` };
+    return { message: calls === 1 ? 'Confía en ti.' : 'Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para reconsiderar, Juanita.', usage: {}, model: options.model, responseId: `fixture-${calls}` };
   },
 });
 assert.equal(calls, 2);

@@ -137,6 +137,7 @@ export async function resolveWithWriterV2(input: {
 }): Promise<InterventionResult> {
   const { supabase, userId, contextKey, channel, idempotencyKey, execution, brief } = input;
   const writerInput = writerV2InputFromBrief(brief, input.reception);
+  if (!writerInput.firstName.trim()) throw new Error('personalization_identity_missing');
   const allCandidates: InterventionCandidate[] = [];
   let selected: InterventionCandidate | null = null;
   let totalInput = 0;
@@ -164,6 +165,7 @@ export async function resolveWithWriterV2(input: {
           const judgeStarted = Date.now();
           try {
             const judged = await judgeSemanticFidelity({
+              addressName: writerInput.firstName,
               confirmedContext: writerInput.situation,
               desiredChange: writerInput.desiredChange,
               receptionStage: writerInput.receptionStage,
@@ -198,7 +200,7 @@ export async function resolveWithWriterV2(input: {
         await recordExecutionStage(supabase, execution, 'critical_gates', { status: evaluation.approved ? 'completed' : 'failed', hard_failures: evaluation.hardFailures, warnings: evaluation.warnings, writer_attempts: attempt });
       }
       if (evaluation.approved) { selected = candidate; repairUsed = attempt > 1; break; }
-      await recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution?.executionId, executionRunId: execution?.executionId, metadata: { layer: 'writer_v2_critical_gates', reasons: evaluation.hardFailures, attempt } });
+      await recordEvent(supabase, { userId, eventType: 'candidate_rejected', entityType: 'execution_run', entityId: execution?.executionId, executionRunId: execution?.executionId, metadata: { layer: 'writer_v2_critical_gates', reasons: evaluation.hardFailures, contract_version: 'nia_daily_v3', attempt, name_present: evaluation.namePresent, paragraph_count: evaluation.paragraphCount, char_count: evaluation.charCount, clarity: evaluation.semanticJudge?.immediate_clarity ?? null, personalization: evaluation.semanticJudge?.personalized ?? null } });
       repairUsed = attempt === 2;
     } catch (error) {
       if (generationAttempt) await finishGenerationAttempt(supabase, generationAttempt.id, generationAttempt.startedAt, { status: 'failed', error });

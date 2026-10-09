@@ -4,6 +4,7 @@ import type { ReceptionStage, ReceptionTimeOfDay } from '@/lib/server/reception-
 export const SEMANTIC_FIDELITY_MODEL = 'gpt-6-luna';
 
 export type SemanticFidelityInput = {
+  addressName: string;
   confirmedContext: string;
   desiredChange: string;
   receptionStage: ReceptionStage;
@@ -31,6 +32,15 @@ export type SemanticFidelityResult = {
   same_actionable_teaching_as_prior: boolean;
   novel_contribution: boolean;
   semantic_redundancy: boolean;
+  personalized: boolean;
+  grounded_in_user_context: boolean;
+  immediate_clarity: boolean;
+  natural_spanish: boolean;
+  single_core_idea: boolean;
+  whatsapp_readable: boolean;
+  system_language_leak: boolean;
+  cognitive_overload: boolean;
+  clear_takeaway: boolean;
   reason: string;
 };
 
@@ -45,7 +55,7 @@ export type SemanticFidelityExecution = {
 const schema = {
   type: 'object',
   additionalProperties: false,
-  required: ['target_expressed', 'adjacent_drift', 'dominant_movement', 'movement_value', 'new_contribution_expressed', 'same_actionable_teaching_as_prior', 'novel_contribution', 'semantic_redundancy', 'reason'],
+  required: ['target_expressed', 'adjacent_drift', 'dominant_movement', 'movement_value', 'new_contribution_expressed', 'same_actionable_teaching_as_prior', 'novel_contribution', 'semantic_redundancy', 'personalized', 'grounded_in_user_context', 'immediate_clarity', 'natural_spanish', 'single_core_idea', 'whatsapp_readable', 'system_language_leak', 'cognitive_overload', 'clear_takeaway', 'reason'],
   properties: {
     target_expressed: { type: 'boolean' },
     adjacent_drift: { type: 'boolean' },
@@ -55,11 +65,20 @@ const schema = {
     same_actionable_teaching_as_prior: { type: 'boolean' },
     novel_contribution: { type: 'boolean' },
     semantic_redundancy: { type: 'boolean' },
+    personalized: { type: 'boolean' },
+    grounded_in_user_context: { type: 'boolean' },
+    immediate_clarity: { type: 'boolean' },
+    natural_spanish: { type: 'boolean' },
+    single_core_idea: { type: 'boolean' },
+    whatsapp_readable: { type: 'boolean' },
+    system_language_leak: { type: 'boolean' },
+    cognitive_overload: { type: 'boolean' },
+    clear_takeaway: { type: 'boolean' },
     reason: { type: 'string', minLength: 1, maxLength: 300 },
   },
 };
 
-const system = `Eres un juez semántico breve de NIA. Clasifica el significado del mensaje, no su redacción literal.
+const system = `Eres un juez semántico y editorial breve de NIA. Clasifica el significado y la experiencia de lectura del mensaje; no premies un texto solo porque sea técnicamente interpretable.
 target_expressed=true solo si el mensaje desarrolla funcionalmente el movimiento canónico indicado.
 adjacent_drift=true solo si otro movimiento se convierte en la enseñanza principal; mencionar una idea vecina no basta.
 movement_value=true según el valueKind: recognition reconoce una señal o secuencia concreta; distinction separa dos fenómenos; clarification vuelve nombrable una duda; criterion ofrece o construye una referencia para evaluar; action deja un paso ejecutable; practice permite ensayar; review permite revisar un hecho; evidence hace visible evidencia observable.
@@ -67,8 +86,15 @@ Para recognition, repetir los hechos del contexto con otras palabras no basta: d
 No exijas acción a recognition, distinction, clarification, review o evidence si ya entregan ese valor funcional.
 new_contribution_expressed=true solo si el mensaje entrega el newContribution requerido y expected_takeaway es reconocible sin sustituirlo por un aprendizaje anterior.
 same_actionable_teaching_as_prior=true si el mensaje entrega sustancialmente la misma enseñanza accionable que algún takeaway/contribution previo, aunque cambien palabras, angle, mode o signature.
-No diagnostiques ni inventes hechos. novel_contribution=true solo si añade una distinción, criterio, aplicación, práctica, conexión, transferencia, anticipación, evidencia o profundidad que no esté en los takeaways/contributions previos. semantic_redundancy=true si entrega sustancialmente la misma enseñanza sin una contribución nueva. Devuelve únicamente el JSON solicitado y una razón breve, sin cadena de pensamiento.`;
-
+No diagnostiques ni inventes hechos. novel_contribution=true solo si añade una distinción, criterio, aplicación, práctica, conexión, transferencia, anticipación, evidencia o profundidad que no esté en los takeaways/contributions previos. semantic_redundancy=true si entrega sustancialmente la misma enseñanza sin una contribución nueva.
+personalized=true solo si el mensaje usa de forma natural el nombre confirmado y se siente dirigido a esta persona, no si solo antepone un nombre a un texto genérico.
+grounded_in_user_context=true solo si contiene un anclaje reconocible al contexto confirmado sin inventar hechos.
+immediate_clarity=true solo si una persona entiende en una lectura qué le está diciendo NIA.
+single_core_idea=true solo si newContribution y expectedTakeaway forman una sola enseñanza central, no varias ideas compitiendo.
+natural_spanish=true solo si suena conversacional, directo y no traducido, burocrático, nominalizado o académico.
+whatsapp_readable=true si la longitud y los párrafos permiten leerlo cómodamente en móvil; cognitive_overload=true si exige sostener demasiadas ideas o subordinadas.
+clear_takeaway=true si la idea que queda puede resumirse naturalmente en una oración sencilla.
+system_language_leak=true si el lector percibe términos o explicaciones de frameworks internos como “movimiento psicológico” o “señal observable”. Devuelve únicamente el JSON solicitado y una razón breve, sin cadena de pensamiento.`;
 export function normalizeDominantMovement(raw: string, target: string, adjacentMovements: string[], message: string): string {
   const known = new Set([target, ...adjacentMovements]);
   if (known.has(raw)) return raw;
@@ -91,18 +117,28 @@ export function normalizeDominantMovement(raw: string, target: string, adjacentM
 function parseResult(value: unknown, target: string, adjacentMovements: string[], message: string): SemanticFidelityResult {
   if (!value || typeof value !== 'object') throw new Error('semantic_fidelity_schema_invalid');
   const row = value as Record<string, unknown>;
-  if (typeof row.target_expressed !== 'boolean' || typeof row.adjacent_drift !== 'boolean' || typeof row.dominant_movement !== 'string' || typeof row.movement_value !== 'boolean' || typeof row.new_contribution_expressed !== 'boolean' || typeof row.same_actionable_teaching_as_prior !== 'boolean' || typeof row.novel_contribution !== 'boolean' || typeof row.semantic_redundancy !== 'boolean' || typeof row.reason !== 'string' || !row.reason.trim()) {
+  const booleanFields = ['target_expressed', 'adjacent_drift', 'movement_value', 'new_contribution_expressed', 'same_actionable_teaching_as_prior', 'novel_contribution', 'semantic_redundancy', 'personalized', 'grounded_in_user_context', 'immediate_clarity', 'natural_spanish', 'single_core_idea', 'whatsapp_readable', 'system_language_leak', 'cognitive_overload', 'clear_takeaway'];
+  if (typeof row.dominant_movement !== 'string' || booleanFields.some(field => typeof row[field] !== 'boolean') || typeof row.reason !== 'string' || !row.reason.trim()) {
     throw new Error('semantic_fidelity_schema_invalid');
   }
   return {
-    target_expressed: row.target_expressed,
-    adjacent_drift: row.adjacent_drift,
+    target_expressed: row.target_expressed as boolean,
+    adjacent_drift: row.adjacent_drift as boolean,
     dominant_movement: normalizeDominantMovement(row.dominant_movement.trim() || target, target, adjacentMovements, message),
-    movement_value: row.movement_value,
-    new_contribution_expressed: row.new_contribution_expressed,
-    same_actionable_teaching_as_prior: row.same_actionable_teaching_as_prior,
-    novel_contribution: row.novel_contribution,
-    semantic_redundancy: row.semantic_redundancy,
+    movement_value: row.movement_value as boolean,
+    new_contribution_expressed: row.new_contribution_expressed as boolean,
+    same_actionable_teaching_as_prior: row.same_actionable_teaching_as_prior as boolean,
+    novel_contribution: row.novel_contribution as boolean,
+    semantic_redundancy: row.semantic_redundancy as boolean,
+    personalized: row.personalized as boolean,
+    grounded_in_user_context: row.grounded_in_user_context as boolean,
+    immediate_clarity: row.immediate_clarity as boolean,
+    natural_spanish: row.natural_spanish as boolean,
+    single_core_idea: row.single_core_idea as boolean,
+    whatsapp_readable: row.whatsapp_readable as boolean,
+    system_language_leak: row.system_language_leak as boolean,
+    cognitive_overload: row.cognitive_overload as boolean,
+    clear_takeaway: row.clear_takeaway as boolean,
     reason: row.reason.trim(),
   };
 }
@@ -117,7 +153,7 @@ export async function judgeSemanticFidelity(input: SemanticFidelityInput): Promi
     body: JSON.stringify({
       model: SEMANTIC_FIDELITY_MODEL,
       max_completion_tokens: 800,
-      messages: [
+        messages: [
         { role: 'system', content: system },
         { role: 'user', content: JSON.stringify({
           confirmed_context: input.confirmedContext,
@@ -125,6 +161,7 @@ export async function judgeSemanticFidelity(input: SemanticFidelityInput): Promi
           reception_stage: input.receptionStage,
           time_of_day: input.timeOfDay,
           canonical_target_movement: input.guidance.target,
+          confirmed_address_name: input.addressName,
           target_purpose: input.guidance.purpose,
           target_in_scope: input.guidance.inScope,
           target_out_of_scope: input.guidance.outOfScope,

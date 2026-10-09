@@ -4,6 +4,7 @@ import { calculateReceptionStage } from '../lib/server/reception-progression.ts'
 import { evaluateWriterV2, hasTransferableValue } from '../lib/server/writer-v2.ts';
 
 const input = {
+  firstName: 'Adriana',
   situation: 'revisar instrucciones de una tarea nueva',
   desiredChange: 'aclarar qué necesito para avanzar',
   psychologicalMove: 'uncertainty_clarification:name_the_concrete_question',

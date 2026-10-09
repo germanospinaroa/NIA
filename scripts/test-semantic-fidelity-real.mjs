@@ -6,7 +6,7 @@ const budgetUsd = 0.01;
 const prices = { input: 0.10, output: 0.50 };
 const context = 'Al recibir una oportunidad laboral, suele pedir varias opiniones aunque ya tenga una primera respuesta.';
 const desiredChange = 'Confiar más en mis decisiones laborales.';
-const base = { confirmedContext: context, desiredChange, receptionStage: 'tuning', timeOfDay: 'morning' };
+const base = { addressName: 'Juanita', confirmedContext: context, desiredChange, receptionStage: 'tuning', timeOfDay: 'morning' };
 const cases = [
   {
     id: 'A', target: 'uncertainty_clarification:name_the_concrete_question',

@@ -46,7 +46,7 @@ assert.equal(new Set(plans.map(plan => plan.expectedTakeaway)).size, 5, 'clean h
 assert.equal(plans.some(plan => plan.canonicalMovement.endsWith(':review_outcome_without_self_punishment')), false);
 assert.equal(plans.some(plan => /confirmed event|confirmed behavior|resultado confirmado/i.test(`${plan.newContribution} ${plan.expectedTakeaway}`)), false);
 
-const writerInput = { newContribution: plans[0].newContribution, expectedTakeaway: plans[0].expectedTakeaway, psychologicalMove: plans[0].canonicalMovement, situation: context, desiredChange: goal, confirmedFacts: [context], recentMovements: [], communicationPreference: 'adaptive', safetyConstraints: [], receptionStage: 'tuning', psychologicalInterventionsDelivered: 0, timeOfDay: 'morning', receptionInstructions: [], previousDeliveredMovement: null, previousDeliveredTakeaway: null, previousDeliveredMessage: null, continuityGuidance: [], recentMessages: [] };
+const writerInput = { firstName: 'Juanita', newContribution: plans[0].newContribution, expectedTakeaway: plans[0].expectedTakeaway, psychologicalMove: plans[0].canonicalMovement, situation: context, desiredChange: goal, confirmedFacts: [context], recentMovements: [], communicationPreference: 'adaptive', safetyConstraints: [], receptionStage: 'tuning', psychologicalInterventionsDelivered: 0, timeOfDay: 'morning', receptionInstructions: [], previousDeliveredMovement: null, previousDeliveredTakeaway: null, previousDeliveredMessage: null, continuityGuidance: [], recentMessages: [] };
 const writerPrompt = writerV2Prompt(writerInput);
 assert.match(writerPrompt, /new_contribution/);
 assert.match(writerPrompt, /expected_takeaway/);
@@ -60,6 +60,15 @@ const hardFailed = applySemanticFidelity({ approved: true, hardFailures: [], det
   same_actionable_teaching_as_prior: true,
   novel_contribution: false,
   semantic_redundancy: true,
+  personalized: true,
+  grounded_in_user_context: true,
+  immediate_clarity: true,
+  natural_spanish: true,
+  single_core_idea: true,
+  whatsapp_readable: true,
+  system_language_leak: false,
+  cognitive_overload: false,
+  clear_takeaway: true,
   reason: 'same teaching',
 });
 assert.equal(hardFailed.approved, false);
@@ -71,8 +80,8 @@ assert.ok(hardFailed.hardFailures.includes('semantic_redundancy'));
 const refillSource = fs.readFileSync(new URL('../lib/server/refill-approved-buffer.ts', import.meta.url), 'utf8');
 const judgeSource = fs.readFileSync(new URL('../lib/server/semantic-fidelity-judge.ts', import.meta.url), 'utf8');
 const harnessSource = fs.readFileSync(new URL('./test-prospective-buffer-real.mjs', import.meta.url), 'utf8');
-assert.match(refillSource, /newContribution: planned\.newContribution/);
-assert.match(refillSource, /planned\.semanticAudit/);
+assert.match(refillSource, /newContribution: nextPlan\.newContribution/);
+assert.match(refillSource, /nextPlan\.semanticAudit/);
 assert.match(refillSource, /priorContributions/);
 assert.match(judgeSource, /new_contribution_expressed/);
 assert.match(judgeSource, /same_actionable_teaching_as_prior/);

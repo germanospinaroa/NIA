@@ -3,7 +3,7 @@ import { buildBrief } from '@/lib/server/intervention';
 import { generateWriterV2, evaluateWriterV2, writerV2InputFromBrief, applySemanticFidelity } from '@/lib/server/writer-v2';
 import { judgeSemanticFidelity } from '@/lib/server/semantic-fidelity-judge';
 import { getMovementTargetGuidance } from '@/lib/movement-expression';
-import { contextVersion, legacyContextVersion, normalizedMessageHash, planDailyIntervention, projectedReceptionStage, type ApprovedBufferItem } from '@/lib/recurrent-daily';
+import { contextVersion, legacyContextVersion, MESSAGE_CONTRACT_VERSION, normalizedMessageHash, planDailyIntervention, projectedReceptionStage, type ApprovedBufferItem } from '@/lib/recurrent-daily';
 import { storeApprovedMessage } from '@/lib/server/approved-message-buffer';
 import { localDate, nextPsychologicalDeliveryDate } from '@/lib/server/whatsapp-schedule';
 import { chooseNextIntervention, type DailyDeliveryLifecycle } from '@/lib/server/next-intervention';
@@ -101,6 +101,23 @@ function estimatedJudgeCost(input = 0, output = 0) { return (input * 0.2 + outpu
 function emptyUsage() { return { writerInput: 0, writerOutput: 0, judgeInput: 0, judgeOutput: 0, estimatedCostUsd: 0 }; }
 function emptyCalls() { return { writer: 0, judge: 0, repairs: 0 }; }
 
+async function emitQualityEvent(options: { onEvent?: RefillOrchestrationOptions['onEvent'] }, userId: string, eventType: string, evaluation: ReturnType<typeof evaluateWriterV2>, attempt: number) {
+  await emitRefillEvent(options, {
+    userId,
+    eventType,
+    metadata: {
+      failure_codes: evaluation.hardFailures,
+      contract_version: MESSAGE_CONTRACT_VERSION,
+      attempt,
+      name_present: evaluation.namePresent,
+      paragraph_count: evaluation.paragraphCount,
+      char_count: evaluation.charCount,
+      clarity: evaluation.semanticJudge?.immediate_clarity ?? null,
+      personalization: evaluation.semanticJudge?.personalized ?? null,
+    },
+  });
+}
+
 type DbBufferRow = { id: string; intended_local_date: string; plan: ApprovedBufferItem['plan']; message: string; status: ApprovedBufferItem['status']; normalized_message_hash: string; intervention_signature: string; context_version: string; created_at: string };
 
 function rowToBufferItem(row: DbBufferRow): ApprovedBufferItem {
@@ -194,6 +211,10 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const active = (existing ?? []).filter(row => row.status === 'approved' || row.status === 'buffered').map(rowToBufferItem);
   const state = await dailyState(admin, userId, today);
   const { brief } = await buildBrief(admin, userId, 'intention');
+  if (!brief.firstName?.trim()) {
+    await options.onEvent?.({ userId, eventType: 'personalization_identity_missing', metadata: { reason: 'preferred_address_name_missing', intended_local_date: today } });
+    return { ...base, skipped: ['personalization_identity_missing'] };
+  }
   const currentVersion = contextVersion(brief.currentContext, brief.desiredChange, { communicationPreference: brief.communicationPreference, voiceStyle: brief.voiceStyle, contextDomain: brief.contextDomain, concepts: (profile.desired_change_concepts as string[] | null | undefined) });
   const legacyVersion = legacyContextVersion(brief.currentContext, brief.desiredChange);
   const compatibleVersions = new Set([currentVersion, ...(brief.communicationPreference === 'adaptive' && !brief.voiceStyle ? [legacyVersion] : [])]);
@@ -228,31 +249,35 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   base.usage.writerOutput += generated.usage?.completion_tokens ?? 0;
   base.usage.estimatedCostUsd = estimatedWriterCost(base.usage.writerInput, base.usage.writerOutput);
   let evaluation = evaluateWriterV2(generated.message, input);
-  let judged = await judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
+  if (!evaluation.approved) await emitQualityEvent(options, userId, 'writer_quality_rejected', evaluation, 1);
+  let judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
   base.calls.judge += 1;
   base.usage.judgeInput += judged.usage.prompt_tokens ?? 0;
   base.usage.judgeOutput += judged.usage.completion_tokens ?? 0;
   base.usage.estimatedCostUsd = estimatedWriterCost(base.usage.writerInput, base.usage.writerOutput) + estimatedJudgeCost(base.usage.judgeInput, base.usage.judgeOutput);
   evaluation = applySemanticFidelity(evaluation, judged.result);
+  if (!evaluation.approved) await emitQualityEvent(options, userId, 'writer_quality_rejected', evaluation, 1);
   if (!evaluation.approved && base.usage.estimatedCostUsd + 0.005 <= maxCostUsd) {
     base.calls.repairs += 1;
+    await emitRefillEvent(options, { userId, eventType: 'writer_repair_requested', metadata: { repair_reasons: evaluation.hardFailures, contract_version: MESSAGE_CONTRACT_VERSION, attempt: 2 } });
     generated = await generateWriterV2(input, { model: 'gpt-6.1-sol', maxOutputTokens: 240, repairReasons: evaluation.hardFailures });
     base.calls.writer += 1;
     base.usage.writerInput += generated.usage?.prompt_tokens ?? 0;
     base.usage.writerOutput += generated.usage?.completion_tokens ?? 0;
     evaluation = evaluateWriterV2(generated.message, input);
-    judged = await judgeSemanticFidelity({ confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
+    judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
     base.calls.judge += 1;
     base.usage.judgeInput += judged.usage.prompt_tokens ?? 0;
     base.usage.judgeOutput += judged.usage.completion_tokens ?? 0;
     base.usage.estimatedCostUsd = estimatedWriterCost(base.usage.writerInput, base.usage.writerOutput) + estimatedJudgeCost(base.usage.judgeInput, base.usage.judgeOutput);
     evaluation = applySemanticFidelity(evaluation, judged.result);
+    if (!evaluation.approved) await emitQualityEvent(options, userId, 'writer_quality_rejected', evaluation, 2);
   }
   if (!evaluation.approved) return { ...base, skipped: [`${targetDate}:${evaluation.hardFailures.join('|') || 'not_approved'}`] };
   nextPlan.semanticAudit = { target_expressed: judged.result.target_expressed, adjacent_drift: judged.result.adjacent_drift, movement_value: judged.result.movement_value, new_contribution_expressed: judged.result.new_contribution_expressed, same_actionable_teaching_as_prior: judged.result.same_actionable_teaching_as_prior, novel_contribution: judged.result.novel_contribution, semantic_redundancy: judged.result.semantic_redundancy };
   const item = { user_id: userId, intended_local_date: targetDate, plan: nextPlan, message: generated.message, status: 'buffered' as const, normalized_message_hash: normalizedMessageHash(generated.message), intervention_signature: nextPlan.interventionSignature, context_version: currentVersion };
   const storedRow = await storeApprovedMessage(admin, item);
-  await options.onEvent?.({ userId, eventType: 'next_intervention_prepared', metadata: { intended_local_date: targetDate, content_version: currentVersion, reused: false } });
+  await options.onEvent?.({ userId, eventType: 'next_intervention_prepared', metadata: { intended_local_date: targetDate, content_version: currentVersion, contract_version: MESSAGE_CONTRACT_VERSION, reused: false } });
   await options.onEvent?.({ userId, eventType: 'buffer_coverage_repaired', metadata: { required_local_date: targetDate, content_version: currentVersion } });
   return { ...base, created: [rowToBufferItem(storedRow)], skipped: ['next_intervention_prepared'] };
 }

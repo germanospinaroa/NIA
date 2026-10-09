@@ -27,7 +27,7 @@ assert.equal(/poco\s+a\s+poco/i.test(welcome), false);
 assert.match(fs.readFileSync(new URL('../lib/server/reception-welcome.ts', import.meta.url), 'utf8'), /ensureActivationWelcome/);
 assert.deepEqual(receptionInstructions('tuning').length > 0, true);
 
-const input = { situation: 'ya tienes un criterio y consultas varias opiniones', desiredChange: 'confiar más en tu criterio', psychologicalMove: 'define_decision_criterion', movementExplanation: 'define un criterio antes de consultar', confirmedFacts: ['ya tienes un criterio'], recentMovements: [], communicationPreference: null, safetyConstraints: [], receptionStage: 'tuning', psychologicalInterventionsDelivered: 0, timeOfDay: 'morning', receptionInstructions: ['entra suavemente'] };
+const input = { firstName: 'Adriana', situation: 'ya tienes un criterio y consultas varias opiniones', desiredChange: 'confiar más en tu criterio', psychologicalMove: 'define_decision_criterion', movementExplanation: 'define un criterio antes de consultar', confirmedFacts: ['ya tienes un criterio'], recentMovements: [], communicationPreference: null, safetyConstraints: [], receptionStage: 'tuning', psychologicalInterventionsDelivered: 0, timeOfDay: 'morning', receptionInstructions: ['entra suavemente'] };
 const prompt = writerV2Prompt(input);
 assert.match(prompt, /"reception_stage":"tuning"/);
 assert.match(prompt, /"time_of_day":"morning"/);
