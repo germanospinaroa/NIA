@@ -8,7 +8,7 @@ import { preferredAddressName } from '@/lib/profile-name';
 import { localDate } from '@/lib/server/whatsapp-schedule';
 import { claimDelivery, sendClaimedDelivery } from '@/lib/server/whatsapp-daily';
 import { loadEditorialMemory } from '@/lib/server/editorial-memory';
-import { recordAdminAudit, recordExecutionStage, startQaExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
+import { recordAdminAudit, recordEvent, recordExecutionStage, startQaExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
 import type { InterventionResult } from '@/lib/intervention-engine';
 
 export const maxDuration = 60;
@@ -18,6 +18,12 @@ function qaSlot(executionId: string) { return `qa:${executionId}`; }
 
 type QaStageStatus = 'PASS' | 'FAIL' | 'NOT REACHED' | 'SENT' | 'NOT SENT' | 'UNKNOWN';
 type QaStage = { stage: string; status: QaStageStatus; evidence: string[] };
+const DOWNSTREAM_STAGES = new Set(['Composer', 'Interaction', 'Delivery', 'Sender', 'Evolution', 'WhatsApp']);
+
+function databaseFailureDetails(error: unknown) {
+  const value = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+  return { code: typeof value.code === 'string' ? value.code : 'unknown_database_error', constraint: typeof value.constraint === 'string' ? value.constraint : null };
+}
 
 async function candidateSummariesForExecution(admin: ReturnType<typeof createAdminClient>, executionId: string, userId: string) {
   const { data } = await admin.from('intervention_candidates').select('id,topic,concept,angle,intervention_type,depth,blocks,candidate_text,audit_results,rejection_reason,editorial_signature').eq('user_id', userId).eq('execution_context', 'qa').order('created_at', { ascending: true }).limit(100);
@@ -46,7 +52,7 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
     admin.from('event_log').select('event_type,occurred_at,metadata').eq('execution_run_id', executionId).order('occurred_at', { ascending: true }),
     admin.from('generation_attempts').select('status,candidate_count,approved_candidate_count,rejection_count,provider,model,error_code,error_message').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
     admin.from('execution_provider_calls').select('operation,status,provider,model,error_code,error_message').eq('execution_run_id', executionId).order('created_at', { ascending: true }),
-    admin.from('interactions').select('id').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
+    admin.from('interactions').select('id,interaction_type').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
     admin.from('whatsapp_daily_deliveries').select('id,status,provider_message_id,last_error').eq('user_id', userId).eq('slot', qaSlot(executionId)).maybeSingle(),
     candidateSummariesForExecution(admin, executionId, userId),
   ]);
@@ -64,6 +70,9 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
   const hasEvent = (eventType: string) => (events ?? []).some(row => row.event_type === eventType);
   const stage = (name: string, status: QaStageStatus, evidence: string[] = []) => ({ stage: name, status, evidence });
   const psychologicalStage = stageResults.psychological_contract && typeof stageResults.psychological_contract === 'object' ? stageResults.psychological_contract as Record<string, unknown> : null;
+  const interventionStage = stageResults.intervention && typeof stageResults.intervention === 'object' ? stageResults.intervention as Record<string, unknown> : null;
+  const composerStage = stageResults.composer && typeof stageResults.composer === 'object' ? stageResults.composer as Record<string, unknown> : null;
+  const interactionStage = stageResults.interaction && typeof stageResults.interaction === 'object' ? stageResults.interaction as Record<string, unknown> : null;
   const stages: QaStage[] = [
     stage('Execution run', execution ? 'PASS' : 'FAIL', execution ? [`status=${execution.status}`, `execution_id=${execution.id}`] : []),
     stage('Brief', stageResults.brief ? 'PASS' : hasEvent('generation_started') ? 'PASS' : 'NOT REACHED', stageResults.brief ? ['recorded'] : hasEvent('generation_started') ? ['generation_started confirms brief completed'] : []),
@@ -73,16 +82,18 @@ async function qaTrace(admin: ReturnType<typeof createAdminClient>, executionId:
     stage('OpenAI', generationCall.some(row => row.status === 'success') ? 'PASS' : generationCall.length ? 'FAIL' : 'NOT REACHED', providerEvidence(generationCall)),
     stage('Candidates', evaluated > 0 ? 'PASS' : 'NOT REACHED', evaluated > 0 ? [`${evaluated} evaluated`] : []),
     stage('Gates', evaluated === 0 ? 'NOT REACHED' : approved > 0 ? 'PASS' : 'FAIL', evaluated > 0 ? [`${approved} approved`, `${Math.max(0, evaluated - approved)} rejected`, ...(rejectionReasons.length ? [`reasons=${rejectionReasons.join('|')}`] : [])] : []),
-    stage('Intervention', execution?.intervention_id ? 'PASS' : 'NOT REACHED', execution?.intervention_id ? [`intervention_id=${execution.intervention_id}`] : []),
-    stage('Composer', stageResults.composer ? 'PASS' : interactions ? 'PASS' : 'NOT REACHED', stageResults.composer ? ['recorded'] : interactions ? ['interaction exists after composer'] : []),
-    stage('Interaction', interactions ? 'PASS' : 'NOT REACHED', interactions ? [`interaction_id=${interactions.id}`] : []),
+    stage('Intervention', execution?.intervention_id || interventionStage ? 'PASS' : 'NOT REACHED', execution?.intervention_id ? [`intervention_id=${execution.intervention_id}`] : interventionStage ? ['recorded'] : []),
+    stage('Composer', composerStage?.status === 'completed' ? 'PASS' : composerStage?.status === 'failed' ? 'FAIL' : 'NOT REACHED', composerStage ? ['recorded'] : []),
+    stage('Interaction', interactionStage?.status === 'completed' && interactions ? 'PASS' : interactionStage?.status === 'failed' ? 'FAIL' : 'NOT REACHED', interactionStage ? [`status=${String(interactionStage.status)}`, ...(interactions?.id ? [`interaction_id=${interactions.id}`] : [])] : []),
     stage('Delivery', deliveries ? 'PASS' : 'NOT REACHED', deliveries ? [`delivery_id=${deliveries.id}`, `status=${deliveries.status}`] : []),
     stage('Sender', deliveries?.status === 'sent' ? 'PASS' : deliveries ? 'FAIL' : 'NOT REACHED', deliveries ? [`status=${deliveries.status}`] : []),
     stage('Evolution', deliveries?.status === 'sent' ? 'PASS' : deliveries ? 'FAIL' : 'NOT REACHED', deliveries?.status === 'sent' ? [`provider_message_id=${deliveries.provider_message_id ? 'present' : 'missing'}`] : deliveries?.last_error ? [String(deliveries.last_error)] : []),
     stage('WhatsApp', deliveries?.status === 'sent' ? 'SENT' : deliveries ? 'NOT SENT' : 'UNKNOWN', deliveries ? [`delivery_status=${deliveries.status}`] : []),
   ];
   const firstFailure = stages.find(item => item.status === 'FAIL');
-  return { execution_id: executionId, status: execution?.status ?? 'unknown', failure_code: execution?.failure_code ?? null, error: generationAttempt?.error_message ?? execution?.failure_message ?? null, candidate_count: execution?.candidate_count ?? evaluated, intervention_id: execution?.intervention_id ?? null, candidate_summaries: candidateSummaries, failure_stage: firstFailure?.stage ?? null, stages, provider_calls: providerEvidence(providerCalls ?? []) };
+  const editorialFailure = stages.find(item => !DOWNSTREAM_STAGES.has(item.stage) && item.status === 'FAIL');
+  const downstreamFailure = stages.find(item => DOWNSTREAM_STAGES.has(item.stage) && item.status === 'FAIL');
+  return { execution_id: executionId, status: execution?.status ?? 'unknown', failure_code: execution?.failure_code ?? null, error: generationAttempt?.error_message ?? execution?.failure_message ?? null, candidate_count: execution?.candidate_count ?? evaluated, intervention_id: execution?.intervention_id ?? null, candidate_summaries: candidateSummaries, editorial_status: editorialFailure ? 'failed' : execution?.intervention_id ? 'approved' : 'not_reached', downstream_status: downstreamFailure ? 'failed' : stages.some(item => DOWNSTREAM_STAGES.has(item.stage) && item.status === 'PASS') ? 'completed' : 'not_reached', failure_stage: firstFailure?.stage ?? null, stages, provider_calls: providerEvidence(providerCalls ?? []) };
 }
 
 function sanitizedGeneration(admin: ReturnType<typeof createAdminClient>, executionId: string) {
@@ -127,7 +138,7 @@ export async function POST(request: Request) {
   await recordAdminAudit(admin, { adminUserId: access.user.id, action: 'run_qa_daily_intervention', targetType: 'user', targetId: userId, metadata: { trigger: 'admin_qa' } });
 
   const [{ data: profile, error: profileError }, { data: connection, error: connectionError }] = await Promise.all([
-    admin.from('profiles').select('id,first_name,direction_key,timezone,message_frequency,message_time_1,message_time_2,whatsapp_enabled').eq('id', userId).maybeSingle(),
+    admin.from('profiles').select('id,first_name,preferred_name,direction_key,timezone,message_frequency,message_time_1,message_time_2,whatsapp_enabled').eq('id', userId).maybeSingle(),
     admin.from('whatsapp_connections').select('user_id,wa_id,status').eq('user_id', userId).eq('status', 'connected').maybeSingle(),
   ]);
   if (profileError || !profile) return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
@@ -190,8 +201,15 @@ export async function POST(request: Request) {
     const recentContents = (recent.data ?? []).filter(row => typeof row.slot !== 'string' || !row.slot.startsWith('qa:')).slice(0, 8).map(row => row.content).filter((value): value is string => typeof value === 'string');
     const content = composeNiaMessage({ content: result.intervention.text, firstName: preferredAddressName(profile), timezone: profile.timezone, userKey: userId, now, recentContents });
     await recordExecutionStage(admin, run.context, 'composer', { status: 'completed', content_length: content.length, shared_composer: true });
-    const { data: interaction, error: interactionError } = await admin.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content, local_date: date, slot }).select('id,content').single();
-    if (interactionError || !interaction) throw new Error('qa_interaction_save_failed');
+    const { data: interaction, error: interactionError } = await admin.from('interactions').insert({ user_id: userId, interaction_type: 'qa_daily_message', daily_unique_enforced: false, direction_key: profile.direction_key, content, local_date: date, slot }).select('id,content').single();
+    if (interactionError || !interaction) {
+      const details = databaseFailureDetails(interactionError);
+      await recordExecutionStage(admin, run.context, 'interaction', { status: 'failed', error_code: details.code, constraint: details.constraint });
+      await recordEvent(admin, { userId, eventType: 'qa_downstream_failed', executionRunId: run.context.executionId, metadata: { stage: 'interaction', error_code: details.code, constraint: details.constraint } });
+      const failure = new Error('qa_interaction_save_failed');
+      Object.assign(failure, { qaStage: 'interaction', postgresCode: details.code, constraint: details.constraint });
+      throw failure;
+    }
     await recordExecutionStage(admin, run.context, 'interaction', { status: 'completed', interaction_id: interaction.id });
     const claim = await claimDelivery(admin, { userId, interactionId: interaction.id, localDate: date, slot });
     if (!claim) throw new Error('qa_delivery_already_processed');
@@ -209,12 +227,17 @@ export async function POST(request: Request) {
     const trace = await qaTrace(admin, run.context.executionId, userId);
     return NextResponse.json({ status: 'success', editorial_status: editorialStatus, execution_run_id: run.context.executionId, generation, editorial, intervention_id: result.interventionId, delivery_id: claim.id, evolution: { accepted: true, provider_message_id_present: Boolean(delivery.providerMessageId) }, qa_trace: trace });
   } catch (error) {
-    await updateExecutionRun(admin, run.context, { status: 'failed', failure: error });
+    // Preserve the editorial intervention id when a later downstream stage fails.
+    // updateExecutionRun defaults omitted ids to null, which would otherwise make
+    // an interaction/delivery failure look like an editorial failure in QA.
+    const beforeFailure = await qaTrace(admin, run.context.executionId, userId);
+    await updateExecutionRun(admin, run.context, { status: 'failed', interventionId: beforeFailure.intervention_id, failure: error });
     const trace = await qaTrace(admin, run.context.executionId, userId);
     console.error('[admin-qa-daily-intervention] failed', { executionId: run.context.executionId, userId, reason: error instanceof Error ? error.message : 'unknown' });
+    const generation = { ...(await sanitizedGeneration(admin, run.context.executionId)), candidate_summaries: trace.candidate_summaries };
     const contract = preparedBrief?.psychologicalContract;
     const psychologicalContract = contract ? { situation: contract.situation, observable_pattern: contract.observable_pattern, user_direction: contract.user_direction, friction: contract.friction, mechanism_id: contract.mechanism_id, mechanism_confidence: contract.mechanism_confidence, intervention_purpose: contract.intervention_purpose, psychological_move: contract.psychological_move, expected_movement: contract.expected_movement, takeaway: contract.takeaway, why_now: contract.why_now, sufficient: contract.sufficient, risk_flags: contract.risk_flags } : null;
-    const failureStage = error instanceof Error && error.message === 'insufficient_intervention_basis' ? 'Psychological contract' : 'Editorial pipeline';
-    return NextResponse.json({ error: 'qa_execution_failed', execution_run_id: run.context.executionId, editorial_status: 'failed', editorial: preparedBrief?.editorialPlan ? { strategy: preparedBrief.editorialPlan.strategy, topic: preparedBrief.editorialPlan.recommended_topic, intervention_type: preparedBrief.editorialPlan.preferred_or_recommended_intervention_type, depth: preparedBrief.editorialPlan.recommended_depth } : null, psychological_contract: psychologicalContract, failure_stage: failureStage, qa_trace: trace }, { status: 500 });
+    const failureStage = trace.failure_stage ?? (error instanceof Error && error.message === 'insufficient_intervention_basis' ? 'Psychological contract' : 'Editorial pipeline');
+    return NextResponse.json({ error: 'qa_execution_failed', execution_run_id: run.context.executionId, editorial_status: trace.editorial_status === 'approved' ? 'approved' : 'failed', downstream_status: trace.downstream_status, generation, editorial: preparedBrief?.editorialPlan ? { strategy: preparedBrief.editorialPlan.strategy, topic: preparedBrief.editorialPlan.recommended_topic, intervention_type: preparedBrief.editorialPlan.preferred_or_recommended_intervention_type, depth: preparedBrief.editorialPlan.recommended_depth } : null, psychological_contract: psychologicalContract, failure_stage: failureStage, qa_trace: trace }, { status: 500 });
   }
 }

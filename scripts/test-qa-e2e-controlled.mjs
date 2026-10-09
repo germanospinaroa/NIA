@@ -129,8 +129,10 @@ const { claimDelivery, sendClaimedDelivery } = await import('../lib/server/whats
 const execution = await startExecutionRun(db, { userId, channel: 'whatsapp', triggerSource: 'controlled_e2e', idempotencyKey: `qa:${randomUUID()}`, executionContext: 'qa', concurrencyKey: `qa_active:${userId}` });
 const result = await resolveIntervention(db, userId, 'intention', 'whatsapp', execution.idempotencyKey, execution, { maxGenerationAttempts: 1, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${execution.executionId}`, localDate: '2026-10-04' });
 const composed = composeNiaMessage({ content: result.intervention.text, firstName: 'Ana', timezone: 'America/Bogota', userKey: userId, now });
-const interaction = (await db.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', content: composed, local_date: '2026-10-04', slot: `qa:${execution.executionId}` }).select('*').single()).data;
+const interaction = (await db.from('interactions').insert({ user_id: userId, interaction_type: 'qa_daily_message', daily_unique_enforced: false, content: composed, local_date: '2026-10-04', slot: `qa:${execution.executionId}` }).select('*').single()).data;
 assert.ok(interaction?.id, 'interaction was persisted');
+assert.equal(interaction.interaction_type, 'qa_daily_message');
+assert.equal(interaction.daily_unique_enforced, false);
 const claim = await claimDelivery(db, { userId, interactionId: interaction.id, localDate: '2026-10-04', slot: `qa:${execution.executionId}` });
 assert.ok(claim, 'delivery was claimed');
 const sent = await sendClaimedDelivery(db, { ...claim, userId, interactionId: interaction.id, localDate: '2026-10-04', slot: `qa:${execution.executionId}` }, '573001234567', composed);

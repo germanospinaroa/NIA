@@ -36,7 +36,7 @@ assert.match(intervention, /if \(execution\?\.executionContext === 'qa'\) throw 
 assert.match(intervention, /if \(execution\?\.executionContext === 'qa'\) \{/);
 assert.doesNotMatch(route, /createSyntheticDownstreamFixture/);
 assert.match(route, /candidateSummariesForExecution/);
-assert.match(route, /updateExecutionRun\(admin, run\.context, \{ status: 'failed', failure: error \}\)/);
+assert.match(route, /updateExecutionRun\(admin, run\.context, \{ status: 'failed', interventionId: beforeFailure\.intervention_id, failure: error \}\)/);
 assert.match(route, /slot = qaSlot\(run\.context\.executionId\)/);
 assert.match(route, /eq\('slot', qaSlot\(executionId\)\)/);
 assert.match(route, /eq\('execution_run_id', executionId\)/);

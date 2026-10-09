@@ -42,7 +42,7 @@ try {
   const recentContents = (recent.data ?? []).filter(row => typeof row.slot !== 'string' || !row.slot.startsWith('qa:')).slice(0, 8).map(row => row.content).filter(value => typeof value === 'string');
   const content = composeNiaMessage({ content: result.intervention.text, firstName: profile.first_name, timezone: profile.timezone, userKey: userId, now: new Date(), recentContents });
   await recordExecutionStage(db, execution, 'composer', { status: 'completed', shared_composer: true, content_length: content.length });
-  const { data: interaction, error: interactionError } = await db.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content, local_date: localDate, slot: `qa:${execution.executionId}` }).select('id').single();
+  const { data: interaction, error: interactionError } = await db.from('interactions').insert({ user_id: userId, interaction_type: 'qa_daily_message', daily_unique_enforced: false, direction_key: profile.direction_key, content, local_date: localDate, slot: `qa:${execution.executionId}` }).select('id').single();
   if (interactionError || !interaction) throw new Error('provider_acceptance_interaction_save_failed');
   await recordExecutionStage(db, execution, 'interaction', { status: 'completed', interaction_id: interaction.id });
 

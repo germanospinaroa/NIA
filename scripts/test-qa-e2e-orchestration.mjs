@@ -17,5 +17,8 @@ assert.match(intervention, /execution_context: options\?\.executionContext/);
 assert.match(memory, /execution_context.*qa/);
 assert.doesNotMatch(route, /synthetic_qa/);
 assert.doesNotMatch(route, /not_editorial_approval/);
+assert.match(route, /interaction_type: 'qa_daily_message'/);
+assert.match(route, /daily_unique_enforced: false/);
+assert.doesNotMatch(route, /interaction_type: 'daily_message'/);
 
 console.log('QA E2E orchestration tests: PASS');

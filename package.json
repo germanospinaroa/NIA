@@ -64,6 +64,7 @@
     "test:admin-qa-control": "node scripts/test-admin-qa-control.mjs",
     "test:qa-e2e-orchestration": "node scripts/test-qa-e2e-orchestration.mjs",
     "test:qa-execution-isolation": "node scripts/test-qa-execution-isolation.mjs",
+    "test:qa-interaction-isolation": "node scripts/test-qa-interaction-isolation.mjs",
     "test:qa-e2e-controlled": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-qa-e2e-controlled.mjs",
     "test:qa-provider-acceptance": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-qa-provider-acceptance.mjs",
     "compare:writer-v2-real": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/compare-writer-v2-real.mjs",
