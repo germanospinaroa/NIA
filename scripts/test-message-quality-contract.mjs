@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { evaluateWriterV2, containsAddressName, writerV2InputFromBrief, writerV2Prompt } from '../lib/server/writer-v2.ts';
+import { evaluateFinalNiaMessage } from '../lib/server/message-composer.ts';
 import { contextVersion, MESSAGE_CONTRACT_VERSION } from '../lib/recurrent-daily.ts';
 
 const input = {
@@ -32,9 +33,9 @@ const goodMessage = 'Juanita, cuando tienes una decisión importante delante, pu
 
 const bad = evaluateWriterV2(badIncident, input);
 assert.equal(bad.approved, false);
-assert.ok(bad.hardFailures.includes('missing_personal_name'));
 assert.ok(bad.hardFailures.includes('whatsapp_wall_of_text'));
 assert.ok(bad.hardFailures.includes('system_language_leak'));
+assert.ok(bad.hardFailures.includes('circular_abstract_explanation'));
 
 const good = evaluateWriterV2(goodMessage, input);
 assert.equal(good.approved, true, good.hardFailures.join(','));
@@ -44,6 +45,11 @@ assert.equal(containsAddressName('Esto pasa mañana.', 'Ana'), false);
 assert.equal(evaluateWriterV2('Ana, confía en ti. Tú sabes qué hacer.', { ...input, firstName: 'Ana' }).approved, false);
 assert.ok(evaluateWriterV2('Ana, confía en ti. Tú sabes qué hacer.', { ...input, firstName: 'Ana' }).hardFailures.includes('no_transferable_value'));
 assert.ok(evaluateWriterV2('Juanita, ' + 'a'.repeat(440), input).hardFailures.includes('whatsapp_wall_of_text'));
+const bodyWithoutName = 'Cuando tienes una decisión importante delante, puede que ya tengas una primera respuesta y aun así busques otra opinión.\n\nLa próxima vez, separa una pregunta: ¿qué información me falta de verdad? Si no falta ningún dato, quizá estás pidiendo permiso para sostener tu decisión.';
+assert.equal(evaluateWriterV2(bodyWithoutName, input).approved, true);
+assert.equal(evaluateFinalNiaMessage(`Buenas noches, Juanita.\n\n${bodyWithoutName}`, { firstName: 'Juanita' }).approved, true);
+assert.ok(evaluateFinalNiaMessage('Buenas noches, Juanita.\n\nJuanita, mira esto.', { firstName: 'Juanita' }).hardFailures.includes('repeated_personal_name'));
+assert.ok(evaluateFinalNiaMessage('Buenas noches, Juanita.\n\nUn mensaje sin saludo.', { firstName: 'Ana' }).hardFailures.includes('missing_personal_name'));
 
 const brief = { firstName: 'Juanita', desiredChange: input.desiredChange, currentContext: input.situation, relevantSituations: [], dailyPlan: { canonicalMovement: input.canonicalTargetMovement, newContribution: input.newContribution, expectedTakeaway: input.expectedTakeaway }, psychologicalProgression: { next_recommended_movement: input.canonicalTargetMovement, completed_movements: [], recent_movements: [], continuity: { previousDeliveredMovement: null, previousDeliveredTakeaway: null, previousDeliveredMessage: null, continuityGuidance: [] } }, interventionBlueprint: null, psychologicalContract: null, recentInterventions: [] };
 const propagated = writerV2InputFromBrief(brief);
@@ -51,7 +57,7 @@ assert.equal(propagated.firstName, 'Juanita');
 assert.match(writerV2Prompt(propagated), /confirmed_address_name/);
 assert.match(writerV2Prompt(propagated), /Juanita/);
 assert.equal(contextVersion('contexto', 'objetivo', { communicationPreference: 'adaptive' }) === contextVersion('contexto', 'objetivo', { communicationPreference: 'adaptive' }), true);
-assert.equal(MESSAGE_CONTRACT_VERSION, 'nia_daily_v3');
+assert.equal(MESSAGE_CONTRACT_VERSION, 'nia_daily_v4');
 
 const daily = fs.readFileSync('lib/server/daily-message.ts', 'utf8');
 const whatsapp = fs.readFileSync('lib/server/whatsapp-daily.ts', 'utf8');

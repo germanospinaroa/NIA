@@ -3,6 +3,8 @@ import { intentionLabel, invalidIntention, validCustomIntention } from '@/lib/in
 import { localDate } from '@/lib/server/whatsapp-schedule';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { BUFFER_DEPENDENCY_NOT_DELIVERED, consumeApprovedMessage, loadApprovedMessageForDate, releaseConsumedMessage } from '@/lib/server/approved-message-buffer';
+import { composeNiaMessage, evaluateFinalNiaMessage } from '@/lib/server/message-composer';
+import { preferredAddressName } from '@/lib/profile-name';
 
 type DbClient = SupabaseClient;
 
@@ -31,7 +33,13 @@ export async function getOrCreateDailyInteraction(supabase: DbClient, userId: st
   if (buffered) {
     const consumed = await consumeApprovedMessage(supabase, buffered);
     if (!consumed) throw new Error('daily_unavailable');
-    const { data: bufferedInteraction, error: bufferedError } = await supabase.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content: buffered.message, local_date: date, slot }).select('*').single();
+    const content = composeNiaMessage({ content: buffered.message, firstName: preferredAddressName(profile), timezone: profile.timezone, userKey: userId, now });
+    const finalEvaluation = evaluateFinalNiaMessage(content, { firstName: preferredAddressName(profile) });
+    if (!finalEvaluation.approved) {
+      await releaseConsumedMessage(supabase, buffered);
+      throw new Error(`final_message_contract_failed:${finalEvaluation.hardFailures.join('|')}`);
+    }
+    const { data: bufferedInteraction, error: bufferedError } = await supabase.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content, local_date: date, slot }).select('*').single();
     if (!bufferedError && bufferedInteraction) return { interaction: bufferedInteraction as Record<string, unknown>, localDate: date, created: true, kind: 'intervention' };
     const { data: winner } = await supabase.from('interactions').select('*').eq('user_id', userId).eq('interaction_type', 'daily_message').eq('local_date', date).limit(1).maybeSingle();
     if (winner) return { interaction: winner as Record<string, unknown>, localDate: date, created: false, kind: 'intervention' };

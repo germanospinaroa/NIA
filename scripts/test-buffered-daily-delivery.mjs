@@ -5,12 +5,14 @@ const dailySource = fs.readFileSync(new URL('../lib/server/daily-message.ts', im
 const migration = fs.readFileSync(new URL('../supabase/migrations/20261005200000_one_daily_intervention.sql', import.meta.url), 'utf8');
 const whatsappSource = fs.readFileSync(new URL('../lib/server/whatsapp-daily.ts', import.meta.url), 'utf8');
 
-assert.doesNotMatch(dailySource, /resolveIntervention|startExecutionRun|updateExecutionRun|composeNiaMessage|dailyIdempotencyKey|generateWriter|judge/i);
+assert.doesNotMatch(dailySource, /resolveIntervention|startExecutionRun|updateExecutionRun|dailyIdempotencyKey|generateWriter|judge/i);
+assert.match(dailySource, /composeNiaMessage/);
+assert.match(dailySource, /evaluateFinalNiaMessage/);
 assert.match(dailySource, /loadApprovedMessageForDate/);
 assert.match(dailySource, /consumeApprovedMessage/);
 assert.match(dailySource, /buffer_underflow/);
 assert.match(dailySource, /approved_buffer_underflow/);
-assert.match(dailySource, /content: buffered\.message/);
+assert.match(dailySource, /content,/);
 assert.match(dailySource, /interaction_type: 'daily_message'/);
 assert.match(dailySource, /eq\('local_date', date\)/);
 assert.match(whatsappSource, /for \(const due of slots\.slice\(0, 1\)\)/);

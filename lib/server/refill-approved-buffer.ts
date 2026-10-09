@@ -8,6 +8,7 @@ import { storeApprovedMessage } from '@/lib/server/approved-message-buffer';
 import { localDate, nextPsychologicalDeliveryDate } from '@/lib/server/whatsapp-schedule';
 import { chooseNextIntervention, type DailyDeliveryLifecycle } from '@/lib/server/next-intervention';
 import { startIdempotentExecutionRun, updateExecutionRun } from '@/lib/server/operational-observability';
+import { timeOfDayForLocalTime } from '@/lib/server/message-composer';
 
 /** Product model: delivered history plus one future NEXT. */
 export const TARGET_FUTURE_INTERVENTIONS = 1;
@@ -242,7 +243,8 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   const guidance = getMovementTargetGuidance(nextPlan.canonicalMovement);
   if (!guidance) return { ...base, skipped: [`${targetDate}:missing_movement_guidance`] };
   const projectedStage = nextPlan.projectedReceptionStage ?? projectedReceptionStage(deliveredExposures.length, 0);
-  const input = writerV2InputFromBrief({ ...brief, dailyPlan: nextPlan }, { receptionStage: projectedStage, psychologicalInterventionsDelivered: deliveredExposures.length, timeOfDay: 'morning', receptionInstructions: [] });
+  const scheduledTimeOfDay = timeOfDayForLocalTime(profile.message_time_1);
+  const input = writerV2InputFromBrief({ ...brief, dailyPlan: nextPlan }, { receptionStage: projectedStage, psychologicalInterventionsDelivered: deliveredExposures.length, timeOfDay: scheduledTimeOfDay, receptionInstructions: [] });
   let generated = await generateWriterV2(input, { model: 'gpt-6.1-sol', maxOutputTokens: 240 });
   base.calls.writer += 1;
   base.usage.writerInput += generated.usage?.prompt_tokens ?? 0;
@@ -250,7 +252,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   base.usage.estimatedCostUsd = estimatedWriterCost(base.usage.writerInput, base.usage.writerOutput);
   let evaluation = evaluateWriterV2(generated.message, input);
   if (!evaluation.approved) await emitQualityEvent(options, userId, 'writer_quality_rejected', evaluation, 1);
-  let judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
+  let judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: scheduledTimeOfDay, guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
   base.calls.judge += 1;
   base.usage.judgeInput += judged.usage.prompt_tokens ?? 0;
   base.usage.judgeOutput += judged.usage.completion_tokens ?? 0;
@@ -265,7 +267,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     base.usage.writerInput += generated.usage?.prompt_tokens ?? 0;
     base.usage.writerOutput += generated.usage?.completion_tokens ?? 0;
     evaluation = evaluateWriterV2(generated.message, input);
-    judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: 'morning', guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
+    judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: scheduledTimeOfDay, guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
     base.calls.judge += 1;
     base.usage.judgeInput += judged.usage.prompt_tokens ?? 0;
     base.usage.judgeOutput += judged.usage.completion_tokens ?? 0;

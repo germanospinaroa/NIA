@@ -53,6 +53,7 @@ const inventedPsychology = /\b(eres insegura|tienes ansiedad|tienes un trauma|te
 const emptyClosing = /(?:nos leemos mañana|descansa[,.]? mañana seguimos|aquí estaré|recuerda que)[.! ]*$/i;
 const forbiddenLanguage = /poco\s+a\s+poco/i;
 const internalSystemLanguage = /\b(?:movimiento\s+psicol[oó]gico|señal\s+observable|movimiento\s+esperado|contribuci[oó]n\s+nueva|etapa\s+de\s+recepci[oó]n|criterio\s+can[oó]nico|evidencia\s+del\s+movimiento)\b/i;
+const circularAbstractExplanation = /(?:ubicar|localizar|reconocer|identificar)\s+(?:(?:ese|el|la)\s+)?(?:detalle|momento|señal|instante)\b[^.]{0,180}(?:permite|ayuda a|sirve para)\s+(?:ubicar|localizar|reconocer|identificar)|(?:decir|expresar)\s+lo\s+(?:que|realmente)\s+quieres[^.]{0,120}(?:decir|expresar)/i;
 const words = (value: string) => new Set(value.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-záéíóúñü]{4,}/gi) ?? []);
 
 function normalizedTokens(value: string) {
@@ -107,7 +108,7 @@ export function writerV2InputFromBrief(brief: InterventionBrief, reception?: Par
     safetyConstraints: ['No inventar hechos, emociones, motivos ni diagnósticos.', 'No hacer terapia, coaching genérico ni promesas clínicas.', 'No sustituir la decisión de la persona.', 'No uses la expresión prohibida "poco a poco".'],
     receptionStage: reception?.receptionStage ?? 'established',
     psychologicalInterventionsDelivered: reception?.psychologicalInterventionsDelivered ?? 0,
-    timeOfDay: reception?.timeOfDay ?? 'evening',
+    timeOfDay: reception?.timeOfDay ?? 'night',
     receptionInstructions: reception?.receptionInstructions ?? [],
     previousDeliveredMovement: progression?.continuity.previousDeliveredMovement ?? null,
     previousDeliveredTakeaway: progression?.continuity.previousDeliveredTakeaway ?? null,
@@ -157,9 +158,9 @@ export function evaluateWriterV2(message: string, input: WriterV2Input): WriterV
   const charCount = value.length;
   if (!value) hardFailures.push('empty_message');
   if (!input.firstName?.trim()) hardFailures.push('personalization_identity_missing');
-  else if (!namePresent) hardFailures.push('missing_personal_name');
   if (forbiddenLanguage.test(value)) hardFailures.push('forbidden_language:poco_a_poco');
   if (internalSystemLanguage.test(value)) hardFailures.push('system_language_leak');
+  if (circularAbstractExplanation.test(value)) hardFailures.push('circular_abstract_explanation');
   if (genericOnly.test(value)) hardFailures.push('generic_no_value');
   if (value && !hasTransferableValue(value)) hardFailures.push('no_transferable_value');
   if (inventedPsychology.test(value)) hardFailures.push('invented_psychology');
@@ -207,7 +208,7 @@ export async function generateWriterV2(input: WriterV2Input, options: { model: s
   const result = await requestWriterV2Json({
     model: options.model,
     maxOutputTokens: options.maxOutputTokens ?? 320,
-    system: 'Escribe una única intervención diaria final para la persona nombrada en confirmed_address_name. Usa su nombre de manera natural al menos una vez, sin convertirlo en una plantilla ni ponerlo siempre al principio. El servidor ya decidió el movimiento psicológico y la contribución nueva esperada: exprésalos, no los rediseñes. new_contribution es el valor que DEBE entregar este mensaje; expected_takeaway es la única idea útil que debería quedar en la cabeza. No sustituyas esos campos por aprendizajes anteriores ni adelantes otros movimientos. Trabaja solo con hechos confirmados y con el contexto reconocible de la persona. Prioriza claridad inmediata, verbos concretos y una conclusión fácil de resumir. Escribe para WhatsApp: un mensaje corto puede ser un bloque; si supera aproximadamente 220 caracteres, usa 2–5 párrafos con separación natural mediante líneas en blanco. No uses una línea por frase, bullets decorativos ni encabezados. No expliques la arquitectura, el movimiento, el mecanismo, la etapa ni ninguna taxonomía interna de NIA. Evita español rebuscado, burocrático, académico o de coach genérico. No inventes psicología, no diagnostiques, no hagas terapia ni promesas clínicas. No repitas movimientos anteriores. No uses la expresión "poco a poco". Devuelve únicamente JSON con la propiedad message.',
+    system: 'Escribe una única intervención diaria para esta persona concreta. confirmed_address_name es identidad confirmada y contexto de personalización, pero el saludo final será añadido por el Composer: no necesitas repetir el nombre dentro del cuerpo y, preferentemente, no lo repitas salvo que aporte de forma natural. La personalización del cuerpo debe venir de su situación y enfoque reales, no del vocativo. El servidor ya decidió el movimiento psicológico y la contribución nueva esperada: exprésalos, no los rediseñes. new_contribution es el valor que DEBE entregar este mensaje; expected_takeaway es la única idea útil que debería quedar en la cabeza. No sustituyas esos campos por aprendizajes anteriores ni adelantes otros movimientos. Trabaja solo con hechos confirmados y con el contexto reconocible de la persona. Prioriza claridad inmediata: una lectura, frases directas, verbos concretos, una distinción recordable y una conclusión fácil de resumir. Rechaza explicaciones circulares o abstractas que conviertan una observación simple en un párrafo de manual. Escribe para WhatsApp: un mensaje corto puede ser un bloque; si supera aproximadamente 220 caracteres, usa 2–5 párrafos con separación natural mediante líneas en blanco. No uses una línea por frase, bullets decorativos ni encabezados. No expliques la arquitectura, el movimiento, el mecanismo, la etapa ni ninguna taxonomía interna de NIA. Evita español rebuscado, burocrático, académico o de coach genérico. No inventes psicología, no diagnostiques, no hagas terapia ni promesas clínicas. No repitas movimientos anteriores. No uses la expresión "poco a poco". Devuelve únicamente JSON con la propiedad message.',
     user: writerV2Prompt(input, options.repairReasons),
   });
   const value = result.value && typeof result.value === 'object' ? result.value as { message?: unknown } : {};

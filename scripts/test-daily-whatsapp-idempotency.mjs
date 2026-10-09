@@ -26,7 +26,8 @@ const dailySource = fs.readFileSync(new URL('../lib/server/daily-message.ts', im
 const migration = fs.readFileSync(new URL('../supabase/migrations/20261003060000_daily_interactions_by_slot.sql', import.meta.url), 'utf8');
 assert.match(dailySource, /releaseConsumedMessage/);
 assert.match(dailySource, /approved_buffer_underflow/);
-assert.doesNotMatch(dailySource, /resolveIntervention|startExecutionRun|composeNiaMessage/);
+assert.match(dailySource, /composeNiaMessage/);
+assert.match(dailySource, /evaluateFinalNiaMessage/);
 const bufferSource = fs.readFileSync(new URL('../lib/server/approved-message-buffer.ts', import.meta.url), 'utf8');
 assert.match(bufferSource, /export async function releaseConsumedMessage/);
 assert.match(dailySource, /local_date: date, slot/);

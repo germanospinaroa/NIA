@@ -9,7 +9,7 @@ export type InterventionDepth = 'foundational' | 'developed' | 'advanced';
 
 export const DAILY_SELECTION_LADDER: InterventionMode[] = ['introduce', 'deepen', 'integrate', 'apply', 'anticipate', 'contrast', 'transfer', 'reinforce', 'evidence', 'reflect_or_observe'];
 export const MIN_APPROVED_BUFFER_DAYS = 3;
-export const MESSAGE_CONTRACT_VERSION = 'nia_daily_v3';
+export const MESSAGE_CONTRACT_VERSION = 'nia_daily_v4';
 
 export type MovementExposure = {
   canonicalMovement: string;

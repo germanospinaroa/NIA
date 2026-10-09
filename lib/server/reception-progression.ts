@@ -1,7 +1,7 @@
 import { NIA_APP_URL } from '@/lib/app-url';
 
 export type ReceptionStage = 'welcome' | 'tuning' | 'building' | 'established';
-export type ReceptionTimeOfDay = 'morning' | 'afternoon' | 'evening';
+export type ReceptionTimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 export type ReceptionSnapshot = { stage: ReceptionStage; welcomeDelivered: boolean; psychologicalInterventionsDelivered: number; timeOfDay: ReceptionTimeOfDay; receptionInstructions: string[] };
 export const WELCOME_INTERACTION_TYPE = 'nia_welcome' as const;
 
@@ -48,7 +48,7 @@ export function receptionTimeOfDay(now = new Date(), timezone?: string | null): 
   }
   if (hour >= 5 && hour < 12) return 'morning';
   if (hour >= 12 && hour < 19) return 'afternoon';
-  return 'evening';
+  return 'night';
 }
 
 export function receptionInstructions(stage: ReceptionStage): string[] {

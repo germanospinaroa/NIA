@@ -87,13 +87,13 @@ No exijas acción a recognition, distinction, clarification, review o evidence s
 new_contribution_expressed=true solo si el mensaje entrega el newContribution requerido y expected_takeaway es reconocible sin sustituirlo por un aprendizaje anterior.
 same_actionable_teaching_as_prior=true si el mensaje entrega sustancialmente la misma enseñanza accionable que algún takeaway/contribution previo, aunque cambien palabras, angle, mode o signature.
 No diagnostiques ni inventes hechos. novel_contribution=true solo si añade una distinción, criterio, aplicación, práctica, conexión, transferencia, anticipación, evidencia o profundidad que no esté en los takeaways/contributions previos. semantic_redundancy=true si entrega sustancialmente la misma enseñanza sin una contribución nueva.
-personalized=true solo si el mensaje usa de forma natural el nombre confirmado y se siente dirigido a esta persona, no si solo antepone un nombre a un texto genérico.
+personalized=true no depende de que el nombre aparezca en el cuerpo: el Composer añade el saludo final. Evalúa si el cuerpo usa el contexto y enfoque particulares de la persona, si no sería intercambiable para miles de usuarios y si no inventa hechos.
 grounded_in_user_context=true solo si contiene un anclaje reconocible al contexto confirmado sin inventar hechos.
-immediate_clarity=true solo si una persona entiende en una lectura qué le está diciendo NIA.
+immediate_clarity=true solo si una persona entiende inmediatamente, sin releer, qué le está diciendo NIA. Devuelve false ante cadenas de abstracciones, referencias vagas como “ese detalle” o “ese momento”, explicaciones circulares o una idea simple expresada con demasiadas palabras.
 single_core_idea=true solo si newContribution y expectedTakeaway forman una sola enseñanza central, no varias ideas compitiendo.
-natural_spanish=true solo si suena conversacional, directo y no traducido, burocrático, nominalizado o académico.
+natural_spanish=true solo si una persona usaría probablemente esas frases en una conversación personal: rechaza nominalizaciones, formulaciones de manual, explicaciones excesivas y repeticiones conceptuales como decir lo que quieres / expresar lo que realmente quieres decir.
 whatsapp_readable=true si la longitud y los párrafos permiten leerlo cómodamente en móvil; cognitive_overload=true si exige sostener demasiadas ideas o subordinadas.
-clear_takeaway=true si la idea que queda puede resumirse naturalmente en una oración sencilla.
+clear_takeaway=true solo si, después de una lectura, la persona puede completar “Lo que me llevo es que…” con una idea concreta, diferenciada y útil; no basta con reconstruir un resumen después de analizar el texto.
 system_language_leak=true si el lector percibe términos o explicaciones de frameworks internos como “movimiento psicológico” o “señal observable”. Devuelve únicamente el JSON solicitado y una razón breve, sin cadena de pensamiento.`;
 export function normalizeDominantMovement(raw: string, target: string, adjacentMovements: string[], message: string): string {
   const known = new Set([target, ...adjacentMovements]);

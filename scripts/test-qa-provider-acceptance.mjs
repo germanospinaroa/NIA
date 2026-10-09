@@ -10,11 +10,12 @@ const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' 
 const { createAdminClient } = await import('../lib/supabase/admin.ts');
 const { buildBrief, resolveIntervention } = await import('../lib/server/intervention.ts');
 const { startQaExecutionRun, recordExecutionStage, updateExecutionRun } = await import('../lib/server/operational-observability.ts');
-const { composeNiaMessage } = await import('../lib/server/message-composer.ts');
+const { composeNiaMessage, evaluateFinalNiaMessage, timeOfDayForLocalTime } = await import('../lib/server/message-composer.ts');
+const { preferredAddressName } = await import('../lib/profile-name.ts');
 const { claimDelivery, sendClaimedDelivery } = await import('../lib/server/whatsapp-daily.ts');
 
 const db = createAdminClient();
-const { data: profile, error: profileError } = await db.from('profiles').select('id,first_name,timezone,direction_key,whatsapp_enabled').eq('id', userId).single();
+const { data: profile, error: profileError } = await db.from('profiles').select('id,first_name,preferred_name,timezone,message_time_1,direction_key,whatsapp_enabled').eq('id', userId).single();
 if (profileError || !profile) throw new Error('provider_acceptance_profile_unavailable');
 const { data: connection, error: connectionError } = await db.from('whatsapp_connections').select('user_id,wa_id,status,provider').eq('user_id', userId).eq('status', 'connected').maybeSingle();
 if (connectionError || !connection?.wa_id || connection.provider !== 'evolution') throw new Error('provider_acceptance_evolution_not_connected');
@@ -34,13 +35,16 @@ try {
   await recordExecutionStage(db, execution, 'planner', { status: 'completed', strategy: brief.editorialPlan?.strategy ?? null, topic: brief.editorialPlan?.recommended_topic ?? null });
   await recordExecutionStage(db, execution, 'psychological_contract', { status: 'completed', sufficient: true, mechanism_id: brief.psychologicalContract?.mechanism_id, psychological_move: brief.psychologicalContract?.psychological_move, expected_movement: brief.psychologicalContract?.expected_movement });
 
-  const result = await resolveIntervention(db, userId, 'intention', 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${execution.executionId}`, localDate, writerVersion: 'v2' });
+  const result = await resolveIntervention(db, userId, 'intention', 'whatsapp', idempotencyKey, execution, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', slot: `qa:${execution.executionId}`, localDate, writerVersion: 'v2', timeOfDay: timeOfDayForLocalTime(profile.message_time_1) });
   assert.ok(result.interventionId, 'intervention must be persisted');
   await recordExecutionStage(db, execution, 'intervention', { status: 'completed', intervention_id: result.interventionId });
 
   const recent = await db.from('interactions').select('content,slot').eq('user_id', userId).order('created_at', { ascending: false }).limit(16);
   const recentContents = (recent.data ?? []).filter(row => typeof row.slot !== 'string' || !row.slot.startsWith('qa:')).slice(0, 8).map(row => row.content).filter(value => typeof value === 'string');
-  const content = composeNiaMessage({ content: result.intervention.text, firstName: profile.first_name, timezone: profile.timezone, userKey: userId, now: new Date(), recentContents });
+  const firstName = preferredAddressName(profile);
+  const content = composeNiaMessage({ content: result.intervention.text, firstName, timezone: profile.timezone, userKey: userId, now: new Date(), recentContents });
+  const finalEvaluation = evaluateFinalNiaMessage(content, { firstName });
+  assert.equal(finalEvaluation.approved, true, `final message contract failed: ${finalEvaluation.hardFailures.join('|')}`);
   await recordExecutionStage(db, execution, 'composer', { status: 'completed', shared_composer: true, content_length: content.length });
   const { data: interaction, error: interactionError } = await db.from('interactions').insert({ user_id: userId, interaction_type: 'qa_daily_message', daily_unique_enforced: false, direction_key: profile.direction_key, content, local_date: localDate, slot: `qa:${execution.executionId}` }).select('id').single();
   if (interactionError || !interaction) throw new Error('provider_acceptance_interaction_save_failed');

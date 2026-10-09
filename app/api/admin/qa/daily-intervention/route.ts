@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/server/admin-access';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { buildBrief } from '@/lib/server/intervention';
 import { resolveIntervention } from '@/lib/server/intervention';
-import { composeNiaMessage } from '@/lib/server/message-composer';
+import { composeNiaMessage, evaluateFinalNiaMessage, timeOfDayForLocalTime } from '@/lib/server/message-composer';
 import { preferredAddressName } from '@/lib/profile-name';
 import { localDate } from '@/lib/server/whatsapp-schedule';
 import { claimDelivery, sendClaimedDelivery } from '@/lib/server/whatsapp-daily';
@@ -188,7 +188,7 @@ export async function POST(request: Request) {
     let result: InterventionResult;
     const editorialStatus = 'approved' as const;
     try {
-      result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', writerVersion: 'v2' });
+      result = await resolveIntervention(admin, userId, 'intention', 'whatsapp', idempotencyKey, run.context, { maxGenerationAttempts: 2, disableTechnicalGenerationRetry: true, executionContext: 'qa', writerVersion: 'v2', timeOfDay: timeOfDayForLocalTime(profile.message_time_1) });
     } catch (error) {
       if (error instanceof Error && ['no_approved_intervention', 'no_approved_intervention_after_repair'].includes(error.message)) {
         const trace = await qaTrace(admin, run.context.executionId, userId);
@@ -200,6 +200,13 @@ export async function POST(request: Request) {
     const recent = await admin.from('interactions').select('content,slot').eq('user_id', userId).order('created_at', { ascending: false }).limit(16);
     const recentContents = (recent.data ?? []).filter(row => typeof row.slot !== 'string' || !row.slot.startsWith('qa:')).slice(0, 8).map(row => row.content).filter((value): value is string => typeof value === 'string');
     const content = composeNiaMessage({ content: result.intervention.text, firstName: preferredAddressName(profile), timezone: profile.timezone, userKey: userId, now, recentContents });
+    const finalEvaluation = evaluateFinalNiaMessage(content, { firstName: preferredAddressName(profile) });
+    await recordExecutionStage(admin, run.context, 'final_message', { status: finalEvaluation.approved ? 'completed' : 'failed', hard_failures: finalEvaluation.hardFailures, name_present: finalEvaluation.namePresent, greeting_valid: finalEvaluation.greetingValid, repeated_name: finalEvaluation.repeatedName, paragraph_count: finalEvaluation.paragraphCount, char_count: finalEvaluation.charCount, newline_count: finalEvaluation.newlineCount });
+    if (!finalEvaluation.approved) {
+      const failure = new Error(`final_message_contract_failed:${finalEvaluation.hardFailures.join('|')}`);
+      Object.assign(failure, { qaStage: 'final_message', finalEvaluation });
+      throw failure;
+    }
     await recordExecutionStage(admin, run.context, 'composer', { status: 'completed', content_length: content.length, shared_composer: true });
     const { data: interaction, error: interactionError } = await admin.from('interactions').insert({ user_id: userId, interaction_type: 'qa_daily_message', daily_unique_enforced: false, direction_key: profile.direction_key, content, local_date: date, slot }).select('id,content').single();
     if (interactionError || !interaction) {

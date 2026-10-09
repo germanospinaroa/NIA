@@ -17,7 +17,7 @@ assert.equal(calculateReceptionStage({ welcomeDelivered: true, psychologicalInte
 assert.equal(calculateReceptionStage({ welcomeDelivered: true, psychologicalInterventionsDelivered: 0 }), calculateReceptionStage({ welcomeDelivered: true, psychologicalInterventionsDelivered: 0 }));
 assert.equal(receptionTimeOfDay(utc('2026-10-03T13:00:00Z'), bogota), 'morning');
 assert.equal(receptionTimeOfDay(utc('2026-10-03T18:00:00Z'), bogota), 'afternoon');
-assert.equal(receptionTimeOfDay(utc('2026-10-04T01:00:00Z'), bogota), 'evening');
+assert.equal(receptionTimeOfDay(utc('2026-10-04T01:00:00Z'), bogota), 'night');
 const welcome = buildWelcomeMessage('Adriana', utc('2026-10-03T13:00:00Z'), bogota);
 assert.match(welcome, /^Buenos días, Adriana\. Soy NIA\./);
 assert.match(welcome, /Desde hoy voy a acompañarte una vez al día/);

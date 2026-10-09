@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { closingFor, composeNiaMessage, greetingFor, timeOfDay } from '../lib/server/message-composer.ts';
+import { closingFor, composeNiaMessage, evaluateFinalNiaMessage, greetingFor, timeOfDay, timeOfDayForLocalTime } from '../lib/server/message-composer.ts';
 
 const bogota = 'America/Bogota';
 const utc = (value) => new Date(value);
@@ -23,4 +23,7 @@ const nextClosing = closingFor(content, utc('2026-10-04T13:00:00.000Z'), bogota,
 assert.notEqual(nextClosing, closing);
 assert.equal(first.includes('Laura'), false);
 assert.equal(first.split(/\s+/).length < 220, true);
+assert.equal(evaluateFinalNiaMessage(first, { firstName: 'Adriana' }).approved, true);
+assert.equal(timeOfDayForLocalTime('08:00'), 'morning');
+assert.equal(timeOfDayForLocalTime('20:00'), 'night');
 console.log('message composer tests: PASS');
