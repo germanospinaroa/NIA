@@ -1,4 +1,4 @@
-import { CANONICAL_MECHANISM_FAMILIES, canonicalMovementPathForMechanism, validateCanonicalMovementContract } from './movement-expression.ts';
+import { CANONICAL_MECHANISM_FAMILIES, canonicalMovementPathForMechanism, getCanonicalMovementSemantics, getMovementTargetGuidance, validateCanonicalMovementContract } from './movement-expression.ts';
 
 export type MechanismEvidenceLevel = 'evidence-informed' | 'product-heuristic';
 
@@ -24,6 +24,7 @@ export type PsychologicalInterventionContract = {
   user_direction: string;
   friction: string;
   mechanism_id: string;
+  canonical_movement?: string;
   mechanism_confidence: 'high' | 'medium' | 'low';
   intervention_purpose: string;
   psychological_move: string;
@@ -79,6 +80,8 @@ function chooseMechanism(context: string, direction: string) {
 
 function movementDescription(mechanismId: string, preferredMovement?: string | null) {
   const key = preferredMovement?.trim() ?? '';
+  const canonical = getCanonicalMovementSemantics(key);
+  if (canonical && canonical.canonicalMovement.startsWith(`${CANONICAL_MECHANISM_FAMILIES[mechanismId] ?? ''}:`)) return canonical.psychologicalMove;
   const labels: Record<string, string> = {
     'external_validation:notice_the_consulting_pattern': 'observar cuándo empiezas a buscar otra opinión antes de decidir',
     'external_validation:information_vs_delegating_decision': 'distinguir la información que aporta una opinión de entregar la decisión',
@@ -120,6 +123,7 @@ export function formulatePsychologicalIntervention(input: { currentContext: stri
   const mechanism = chooseMechanism(situation, input.desiredChange);
   const sufficient = Boolean(situation && observable && mechanism);
   const mechanismId = mechanism?.id ?? 'context_clarification';
+  const canonicalSemantics = getCanonicalMovementSemantics(input.preferredMovement);
   const movement = sufficient ? movementDescription(mechanismId, input.preferredMovement) : 'precisar la situación antes de intervenir';
   return {
     situation,
@@ -127,6 +131,7 @@ export function formulatePsychologicalIntervention(input: { currentContext: stri
     user_direction: input.desiredChange.trim(),
     friction: sufficient ? `La situación muestra ${observable.toLowerCase()}, pero todavía puede confundirse el siguiente paso.` : 'No hay un patrón observable suficiente para justificar una intervención concreta.',
     mechanism_id: mechanismId,
+    canonical_movement: canonicalSemantics?.canonicalMovement,
     mechanism_confidence: sufficient ? (mechanism?.id === 'context_clarification' ? 'low' : 'medium') : 'low',
     intervention_purpose: sufficient ? `Ayudar a ${movement}.` : 'Obtener el dato concreto que falta antes de intervenir.',
     psychological_move: sufficient ? movement : 'precisar la situación antes de intervenir',
@@ -137,6 +142,51 @@ export function formulatePsychologicalIntervention(input: { currentContext: stri
     risk_flags: sufficient ? (mechanism?.risk_flags ?? []) : ['insufficient_observable_pattern'],
     sufficient,
   };
+}
+
+function normalizedContractText(value: string | null | undefined) {
+  return (value ?? '').toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function hasAdjacentPhaseLeak(canonicalMovement: string, value: string | null | undefined) {
+  const text = normalizedContractText(value);
+  if (!text) return false;
+  const adjacentByMovement: Record<string, RegExp[]> = {
+    'situational_preparation:notice_the_trigger': [/preparar una respuesta/, /ensayar/, /practicar/, /revisar que ocurrio/],
+    'situational_preparation:prepare_an_alternative_response': [/practicar la respuesta/, /ensayar/, /revisar que ocurrio/],
+    'situational_preparation:practice_the_response_in_context': [/revisar que ocurrio/],
+  };
+  return (adjacentByMovement[canonicalMovement] ?? []).some(pattern => pattern.test(text));
+}
+
+export type MovementContractConsistencyInput = {
+  mechanismId: string;
+  canonicalMovement: string;
+  psychologicalMove?: string | null;
+  expectedMovement?: string | null;
+  interventionPurpose?: string | null;
+  blueprintMovement?: string | null;
+  blueprintExpectedMovement?: string | null;
+  newContribution?: string | null;
+  expectedTakeaway?: string | null;
+  guidanceTarget?: string | null;
+};
+
+export function validateMovementContractConsistency(input: MovementContractConsistencyInput) {
+  const errors: string[] = [];
+  const semantics = getCanonicalMovementSemantics(input.canonicalMovement);
+  const guidance = getMovementTargetGuidance(input.canonicalMovement);
+  if (!semantics || !guidance) return ['missing_canonical_movement_semantics'];
+  if (input.guidanceTarget !== input.canonicalMovement) errors.push('target_movement_guidance_mismatch');
+  if (input.canonicalMovement.split(':', 1)[0] !== (CANONICAL_MECHANISM_FAMILIES[input.mechanismId] ?? '')) errors.push('mechanism_family_mismatch');
+  if (normalizedContractText(input.psychologicalMove) !== normalizedContractText(semantics.psychologicalMove)) errors.push('psychological_move_mismatch');
+  if (normalizedContractText(input.interventionPurpose) !== normalizedContractText(semantics.interventionPurpose)) errors.push('intervention_purpose_mismatch');
+  if (normalizedContractText(input.expectedMovement) !== normalizedContractText(semantics.expectedMovement)) errors.push('expected_movement_mismatch');
+  if (input.blueprintMovement !== input.canonicalMovement) errors.push('blueprint_movement_mismatch');
+  if (normalizedContractText(input.blueprintExpectedMovement) !== normalizedContractText(semantics.expectedMovement)) errors.push('blueprint_expected_movement_mismatch');
+  if (hasAdjacentPhaseLeak(input.canonicalMovement, input.newContribution)) errors.push('new_contribution_adjacent_phase_leak');
+  if (hasAdjacentPhaseLeak(input.canonicalMovement, input.expectedTakeaway)) errors.push('expected_takeaway_adjacent_phase_leak');
+  return errors;
 }
 
 export function validatePsychologicalMechanismMovementContract() {

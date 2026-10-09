@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PSYCHOLOGICAL_MOVEMENT_PATHS, movementKey, type PsychologicalMovementRecord } from './psychological-progression.ts';
-import { canonicalMovementPathForMechanism } from './movement-expression.ts';
+import { assessMovementEvidence, canonicalMovementPathForMechanism } from './movement-expression.ts';
 import { getMovementTargetGuidance } from './movement-expression.ts';
 
 export const INTERVENTION_MODES = ['introduce', 'deepen', 'apply', 'contrast', 'anticipate', 'reinforce', 'integrate', 'transfer', 'evidence', 'reflect_or_observe'] as const;
@@ -225,6 +225,21 @@ function angleFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: 
 }
 
 function contributionFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
+  if (guidance?.target === 'situational_preparation:notice_the_trigger') {
+    const contributionByMode: Record<InterventionMode, string> = {
+      introduce: 'Reconocer la situación concreta en la que entra en juego la intención.',
+      deepen: 'Distinguir la situación concreta en la que empieza a importar lo que quieres decir.',
+      apply: 'Observar esa situación concreta sin tener que preparar todavía una respuesta.',
+      contrast: 'Distinguir la situación concreta de la respuesta que vendrá después.',
+      anticipate: 'Reconocer cuándo vuelve a aparecer esa situación concreta.',
+      reinforce: 'Comprobar en qué situación concreta vuelve a aparecer esa intención.',
+      integrate: 'Conectar esa situación concreta con la intención que ya elegiste.',
+      transfer: 'Reconocer una situación parecida en la que también entra en juego esa intención.',
+      evidence: 'Registrar una situación concreta en la que aparece esa intención.',
+      reflect_or_observe: 'Revisar qué situación concreta hizo visible esa intención.',
+    };
+    return contributionByMode[mode];
+  }
   const scopes = guidance?.inScope ?? [];
   const scope = scopes[count % (scopes.length || 1)] ?? 'la señal concreta del movimiento';
   const contributionByMode: Record<InterventionMode, string> = {
@@ -243,6 +258,21 @@ function contributionFor(guidance: ReturnType<typeof getMovementTargetGuidance>,
 }
 
 function expectedTakeawayFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
+  if (guidance?.target === 'situational_preparation:notice_the_trigger') {
+    const takeawayByMode: Record<InterventionMode, string> = {
+      introduce: 'Puedo reconocer la situación concreta en la que entra en juego mi intención.',
+      deepen: 'Puedo distinguir cuándo esa situación empieza a pedir una respuesta.',
+      apply: 'Puedo observar esa situación sin tener que responder todavía.',
+      contrast: 'Puedo distinguir la situación de la respuesta que viene después.',
+      anticipate: 'Puedo reconocer cuándo vuelve a aparecer esa situación concreta.',
+      reinforce: 'Puedo comprobar en qué situación vuelve a aparecer mi intención.',
+      integrate: 'Puedo conectar esa situación con la intención que ya elegí.',
+      transfer: 'Puedo reconocer una situación parecida donde también entra en juego mi intención.',
+      evidence: 'Puedo registrar una situación concreta en la que aparece mi intención.',
+      reflect_or_observe: 'Puedo revisar qué situación hizo visible mi intención.',
+    };
+    return takeawayByMode[mode];
+  }
   const scopes = guidance?.inScope ?? [];
   const scope = scopes[count % (scopes.length || 1)] ?? 'la señal concreta';
   const takeawayByMode: Record<InterventionMode, string> = {
@@ -269,9 +299,8 @@ function prospectiveEligibility(key: string, history: PsychologicalMovementRecor
   if (!guidance) return { eligibility: 'eligible_now' as const, conditionalOnBufferItemId: null, reason: null as string | null };
   const completed = history.map(movementKey).filter((value): value is string => Boolean(value));
   const requirements = guidance.evidenceRequirements;
-  if (requirements.includes('base_context') && evidence.filter(Boolean).length === 0) return { eligibility: 'not_eligible' as const, conditionalOnBufferItemId: null, reason: 'missing_base_context' };
-  if (requirements.includes('confirmed_event') && !evidence.some(value => /\b(tom[eé]|tom[oó]|decid[ií]|decid[ií]a|decidieron|resultado|sali[oó]|ocurri[oó]|pas[oó]|despu[eé]s|desde entonces|esperaba|termin[oó])\b/i.test(value))) return { eligibility: 'not_eligible' as const, conditionalOnBufferItemId: null, reason: 'missing_confirmed_event' };
-  if (requirements.includes('confirmed_behavior') && !evidence.some(value => /(suele|hace|hizo|tom[eé]|decid[ií]|pudo|pude|logr[oó]|actu[oó]|complet[oó]|avanz[oó]|primera respuesta|ya tiene|ya tienes|ya tenga|tenga)/i.test(value))) return { eligibility: 'not_eligible' as const, conditionalOnBufferItemId: null, reason: 'missing_confirmed_behavior' };
+  const evidenceAssessment = assessMovementEvidence(key, evidence);
+  if (!evidenceAssessment.sufficient) return { eligibility: 'not_eligible' as const, conditionalOnBufferItemId: null, reason: evidenceAssessment.reason ?? 'movement_evidence_insufficient' };
   if (guidance.buildsOn && !completed.includes(guidance.buildsOn)) {
     const predecessor = prospective.find(item => item.canonicalMovement === guidance.buildsOn);
     if (!predecessor) return { eligibility: 'not_eligible' as const, conditionalOnBufferItemId: null, reason: `requires:${guidance.buildsOn}` };

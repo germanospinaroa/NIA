@@ -10,9 +10,10 @@ import { hasInterventionValue } from '@/lib/intervention-quality';
 import { buildEditorialMemory, loadEditorialMemory } from '@/lib/server/editorial-memory';
 import { planEditorial } from '@/lib/server/editorial-planner';
 import type { EditorialSignature } from '@/lib/editorial-contract';
-import { formulatePsychologicalIntervention } from '@/lib/psychological-contract';
+import { formulatePsychologicalIntervention, validateMovementContractConsistency } from '@/lib/psychological-contract';
 import { derivePsychologicalProgression, movementKey } from '@/lib/psychological-progression';
 import { buildInterventionBlueprint } from '@/lib/intervention-blueprint';
+import { getMovementTargetGuidance } from '@/lib/movement-expression';
 import { resolveWithWriterV2 } from '@/lib/server/writer-v2-intervention';
 import { getReceptionSnapshot } from '@/lib/server/reception-progression';
 import { planDailyIntervention, interventionSignature as dailyInterventionSignature, normalizedMessageHash, type InterventionDepth, type InterventionMode, type MovementExposure } from '@/lib/recurrent-daily';
@@ -169,9 +170,45 @@ export async function buildBrief(supabase: DbClient, userId: string, contextKey:
   appliedBrief.movementExposures = movementExposures;
   const dailyPlan = planDailyIntervention({ goal: desiredChange, context: activeContext, confirmedEvidence: appliedBrief.confirmedEvidence, mechanismId: appliedBrief.psychologicalContract?.mechanism_id ?? 'context_clarification', history: progressionHistory, exposures: movementExposures, recentTakeaways: activeRows.slice(0, 10).map(row => row.editorial_take).filter((value): value is string => Boolean(value)) });
   appliedBrief.dailyPlan = dailyPlan.selected;
+  appliedBrief.psychologicalContract = formulatePsychologicalIntervention({
+    currentContext: activeContext,
+    desiredChange,
+    relevantSituations: appliedBrief.relevantSituations,
+    recurringPatterns: appliedBrief.recurringPatterns,
+    learningSignals: effectiveSignals,
+    preferredMovement: dailyPlan.selected.canonicalMovement,
+  });
   appliedBrief.editorialPlan = planEditorial({ desiredChange, currentContext: activeContext, communicationPreference: appliedBrief.communicationPreference, memory: editorialMemory, relevantTopics, feedbackGoal: appliedBrief.feedbackGoal, rejectedPatterns: appliedBrief.rejectedPatterns, psychologicalProgression: appliedBrief.psychologicalProgression });
   appliedBrief.interventionBlueprint = buildInterventionBlueprint(appliedBrief);
   appliedBrief.sema = appliedBrief.interventionBlueprint?.sema ?? null;
+  const movementContractErrors = validateMovementContractConsistency({
+    mechanismId: appliedBrief.psychologicalContract.mechanism_id,
+    canonicalMovement: dailyPlan.selected.canonicalMovement,
+    psychologicalMove: appliedBrief.psychologicalContract.psychological_move,
+    expectedMovement: appliedBrief.psychologicalContract.expected_movement,
+    interventionPurpose: appliedBrief.psychologicalContract.intervention_purpose,
+    blueprintMovement: appliedBrief.interventionBlueprint?.movement,
+    blueprintExpectedMovement: appliedBrief.interventionBlueprint?.expected_movement,
+    newContribution: dailyPlan.selected.newContribution,
+    expectedTakeaway: dailyPlan.selected.expectedTakeaway,
+    guidanceTarget: appliedBrief.interventionBlueprint?.sema.movement,
+  });
+  if (movementContractErrors.length) {
+    await recordEvent(supabase, {
+      userId,
+      eventType: 'movement_contract_inconsistent',
+      entityType: 'execution_run',
+      entityId: slot?.startsWith('qa:') ? slot.slice(3) : undefined,
+      metadata: {
+        mechanism_id: appliedBrief.psychologicalContract.mechanism_id,
+        canonical_movement: dailyPlan.selected.canonicalMovement,
+        conflicting_fields: movementContractErrors,
+        evidence_requirements: getMovementTargetGuidance(dailyPlan.selected.canonicalMovement)?.evidenceRequirements ?? [],
+        evidence_available: ['current_context', ...(appliedBrief.relevantSituations?.length ? ['relevant_situations'] : [])],
+      },
+    }).catch(() => undefined);
+    throw new Error(`movement_contract_inconsistent:${movementContractErrors.join(',')}`);
+  }
   const calibration = calibrationProfile;
   const recalibratedRecently = calibration?.status === 'resolved' && (calibration.reason === 'context_changed' || calibration.reason === 'desired_change_changed') && typeof calibration.resolved_at === 'string' && Date.now() - new Date(calibration.resolved_at).getTime() < 24 * 60 * 60 * 1000;
   if (recalibratedRecently) appliedBrief.generationConstraints = [...new Set([...(appliedBrief.generationConstraints ?? []), 'Este contexto u objetivo acaba de ser confirmado. Prioriza el dato nuevo y evita repetir el concepto, ángulo o estructura de intervenciones anteriores.'])];

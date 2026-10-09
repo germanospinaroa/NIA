@@ -16,6 +16,20 @@ export type MovementTargetGuidance = {
   conditional: boolean;
 };
 
+export type CanonicalMovementSemantics = {
+  canonicalMovement: string;
+  psychologicalMove: string;
+  interventionPurpose: string;
+  expectedMovement: string;
+};
+
+export type MovementEvidenceAssessment = {
+  sufficient: boolean;
+  reason: string | null;
+  requirements: MovementEvidenceRequirement[];
+  available: string[];
+};
+
 export type MovementValueKind = 'recognition' | 'distinction' | 'clarification' | 'criterion' | 'action' | 'practice' | 'review' | 'evidence';
 export type MovementEvidenceRequirement = 'base_context' | 'delivered_learning' | 'confirmed_event' | 'confirmed_behavior';
 
@@ -80,7 +94,7 @@ const contracts: Record<string, ExpressionContract> = {
   'decision_criteria:set_reconsideration_threshold': contract([/dato.*(cambiar|reconsiderar)|tendr[ií]a que cambiar|para reconsiderar|condici[oó]n.*(revisar|cambiar)/i]),
   'decision_criteria:decide_with_sufficient_information': contract([/informaci[oó]n suficiente|decidir.*(sin|aunque).*certeza|suficiente.*decidir/i]),
   'decision_criteria:review_outcome_without_self_punishment': contract([/despu[eé]s.*(decisi[oó]n|resultado)|qu[eé] ocurri[oó]|revisar.*(sin|evitando).*culpa/i]),
-  'situational_preparation:notice_the_trigger': contract([/cuando.*ocurre|se[ñn]al|notar.*momento|disparador|f[ií]jate.*cuando/i]),
+  'situational_preparation:notice_the_trigger': contract([/cuando.*(ocurre|tienes.*decisi[oó]n|aparece)|se[ñn]al|notar.*(situaci[oó]n|momento)|disparador|f[ií]jate.*cuando/i]),
   'situational_preparation:prepare_an_alternative_response': contract([/si.*entonces|respuesta alternativa|puedes decir|prepara.*respuesta|en lugar de.*puedes/i]),
   'situational_preparation:practice_the_response_in_context': contract([/practica|ensaya|repite.*frase|probar.*respuesta/i]),
   'situational_preparation:review_what_happened': contract([/qu[eé] pas[oó]|despu[eé]s.*ocurri[oó]|revisa.*respuesta|mira.*que ocurri[oó]/i]),
@@ -100,7 +114,7 @@ const guidance = (valueKind: MovementValueKind, purpose: string, inScope: string
 const guidanceByMovement: Record<string, MovementTargetGuidance> = {
   'external_validation:notice_the_consulting_pattern': guidance('recognition', 'Reconocer la secuencia entre tener una primera respuesta y empezar a pedir opiniones.', ['primera respuesta propia', 'momento en que empieza a consultar', 'hacer visible la secuencia'], ['information_vs_delegating_decision', 'define_decision_criterion', 'set_reconsideration_threshold', 'decide_with_sufficient_information', 'review_outcome_without_self_punishment']),
   'external_validation:information_vs_delegating_decision': guidance('distinction', 'Distinguir escuchar información de entregar el cierre de la decisión.', ['qué información aporta una opinión', 'la opinión no decide por la persona', 'separar consulta y decisión'], ['define_decision_criterion', 'set_reconsideration_threshold', 'decide_with_sufficient_information']),
-  'external_validation:define_decision_criterion': guidance('criterion', 'Hacer explícitas las condiciones propias con las que se evaluará una opción.', ['criterios o condiciones propias', 'qué tendría que cumplir una opción', 'evaluar lo que se escucha con esas condiciones'], ['set_reconsideration_threshold', 'decide_with_sufficient_information', 'review_outcome_without_self_punishment']),
+  'external_validation:define_decision_criterion': guidance('criterion', 'Definir qué condiciones tendría que cumplir una opción para que la elijas.', ['criterios o condiciones propias', 'qué tendría que cumplir una opción', 'evaluar lo que se escucha con esas condiciones'], ['set_reconsideration_threshold', 'decide_with_sufficient_information', 'review_outcome_without_self_punishment']),
   'external_validation:set_reconsideration_threshold': guidance('criterion', 'Definir qué dato concreto justificaría revisar una decisión.', ['dato que cambiaría la decisión', 'condición para reconsiderar', 'separar una razón nueva de la incomodidad'], ['decide_with_sufficient_information', 'review_outcome_without_self_punishment']),
   'external_validation:decide_with_sufficient_information': guidance('criterion', 'Reconocer cuándo existe información suficiente para decidir sin exigir certeza total.', ['información disponible', 'umbral suficiente para decidir', 'incertidumbre que puede permanecer'], ['review_outcome_without_self_punishment', 'build_evidence_of_own_capacity']),
   'external_validation:review_outcome_without_self_punishment': guidance('review', 'Revisar qué ocurrió después de decidir sin convertir el resultado en una evaluación total de la persona.', ['hechos posteriores', 'qué funcionó o qué se aprendió', 'revisión sin castigo'], ['build_evidence_of_own_capacity']),
@@ -113,7 +127,7 @@ const guidanceByMovement: Record<string, MovementTargetGuidance> = {
   'decision_criteria:set_reconsideration_threshold': guidance('criterion', 'Definir la condición que justificaría reconsiderar una decisión.', ['dato o condición de cambio', 'cuándo revisar', 'umbral explícito'], ['decide_with_sufficient_information', 'review_outcome_without_self_punishment']),
   'decision_criteria:decide_with_sufficient_information': guidance('criterion', 'Decidir cuando el criterio y la información disponible sean suficientes.', ['base disponible', 'suficiencia práctica', 'decidir sin certeza absoluta'], ['review_outcome_without_self_punishment']),
   'decision_criteria:review_outcome_without_self_punishment': guidance('review', 'Revisar el resultado concreto de una decisión sin castigarse.', ['qué ocurrió', 'qué se puede aprender', 'resultado sin juicio global'], []),
-  'situational_preparation:notice_the_trigger': guidance('recognition', 'Reconocer la señal concreta que anuncia una situación habitual.', ['señal observable', 'momento en que aparece', 'qué ocurre justo antes'], ['prepare_an_alternative_response', 'practice_the_response_in_context']),
+  'situational_preparation:notice_the_trigger': guidance('recognition', 'Reconocer la situación concreta en la que tu intención entra en juego.', ['situación concreta', 'momento en que aparece la decisión', 'relación entre intención y situación'], ['prepare_an_alternative_response', 'practice_the_response_in_context']),
   'situational_preparation:prepare_an_alternative_response': guidance('practice', 'Preparar una respuesta alternativa para una situación futura conocida.', ['si ocurre X, responder Y', 'frase o conducta alternativa', 'situación futura concreta'], ['practice_the_response_in_context', 'review_what_happened']),
   'situational_preparation:practice_the_response_in_context': guidance('practice', 'Ensayar la respuesta elegida dentro de la situación concreta.', ['practicar la frase o conducta', 'ensayo situado', 'cómo responder en contexto'], ['review_what_happened']),
   'situational_preparation:review_what_happened': guidance('review', 'Revisar qué ocurrió al intentar la respuesta preparada.', ['hechos posteriores', 'qué respuesta apareció', 'qué ajustar después'], []),
@@ -238,6 +252,34 @@ export function getMovementTargetGuidance(canonicalTargetMovement: string | null
   const target = canonicalTargetMovement?.trim();
   if (!target) return null;
   return guidanceByMovement[target] ?? null;
+}
+
+export function assessMovementEvidence(target: string, evidence: string[]): MovementEvidenceAssessment {
+  const guidance = getMovementTargetGuidance(target);
+  const available = evidence.filter(Boolean);
+  if (!guidance) return { sufficient: false, reason: 'movement_evidence_insufficient', requirements: [], available };
+  const requirements = guidance.evidenceRequirements;
+  if (requirements.includes('base_context') && available.length === 0) return { sufficient: false, reason: 'missing_base_context', requirements, available };
+  if (requirements.includes('confirmed_event') && !available.some(value => /\b(tom[eé]|tom[oó]|decid[ií]|decid[ií]a|decidieron|resultado|sali[oó]|ocurri[oó]|pas[oó]|despu[eé]s|desde entonces|esperaba|termin[oó])\b/i.test(value))) return { sufficient: false, reason: 'missing_confirmed_event', requirements, available };
+  if (requirements.includes('confirmed_behavior') && !available.some(value => /(suele|hace|hizo|tom[eé]|decid[ií]|pudo|pude|logr[oó]|actu[oó]|complet[oó]|avanz[oó]|primera respuesta|ya tiene|ya tienes|ya tenga|tenga)/i.test(value))) return { sufficient: false, reason: 'missing_confirmed_behavior', requirements, available };
+  return { sufficient: true, reason: null, requirements, available };
+}
+
+function lowerFirst(value: string) {
+  const withoutTerminalPunctuation = value.replace(/[.!?]+$/u, '');
+  return withoutTerminalPunctuation ? withoutTerminalPunctuation[0].toLocaleLowerCase('es') + withoutTerminalPunctuation.slice(1) : withoutTerminalPunctuation;
+}
+
+export function getCanonicalMovementSemantics(canonicalTargetMovement: string | null | undefined): CanonicalMovementSemantics | null {
+  const guidance = getMovementTargetGuidance(canonicalTargetMovement);
+  if (!guidance) return null;
+  const psychologicalMove = lowerFirst(guidance.purpose);
+  return {
+    canonicalMovement: guidance.target,
+    psychologicalMove,
+    interventionPurpose: `Ayudar a ${psychologicalMove}.`,
+    expectedMovement: `Después de leerlo, la persona podrá ${psychologicalMove}.`,
+  };
 }
 
 export function allMovementTargetGuidance() {

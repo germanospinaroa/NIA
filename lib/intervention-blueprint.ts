@@ -1,4 +1,5 @@
 import type { InterventionBrief, InterventionCandidate } from './intervention-engine.ts';
+import { getCanonicalMovementSemantics } from './movement-expression.ts';
 
 export const canonicalBlueprintTypes = [
   'espejo_contextual', 'reencuadre', 'distincion', 'pregunta_precision',
@@ -56,6 +57,8 @@ export function buildInterventionBlueprint(brief: InterventionBrief): Interventi
   if (!contract?.sufficient || !contract.situation || !contract.user_direction) return null;
   const signal = firstSignal(brief);
   const movement = targetMovement(brief);
+  const movementSemantics = getCanonicalMovementSemantics(movement);
+  if (!movementSemantics) return null;
   const mechanism = contract.mechanism_id;
   const isDecisionCriterion = movement.includes('define_decision_criterion') || /criterio.*decidir|condici[oó]n.*decidir|criterio propio/i.test(movement);
   const isThreshold = movement.includes('set_reconsideration_threshold') || /umbral|reconsiderar|cambiar.*decisi[oó]n/i.test(movement);
@@ -70,11 +73,7 @@ export function buildInterventionBlueprint(brief: InterventionBrief): Interventi
     : isThreshold
       ? 'Escribe qué dato concreto tendría que aparecer para que reconsideres la decisión.'
       : null;
-  const expected = isDecisionCriterion
-    ? 'Podrá escuchar opiniones sin convertir su cantidad en sustituto de su propio criterio.'
-    : isThreshold
-      ? 'Podrá distinguir una razón nueva para revisar de la incomodidad de decidir.'
-      : contract.expected_movement;
+  const expected = movementSemantics.expectedMovement;
   const sema: SemaContract = {
     signal,
     direction_link: `Esta situación se conecta con la dirección: ${brief.desiredChange}.`,
