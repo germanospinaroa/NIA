@@ -31,6 +31,20 @@ assert.equal(hasTransferableValue('Separa «Esto sí está indicado» de «Esto 
 assert.equal(hasTransferableValue('Sueles dudar y pedir opiniones antes de decidir.'), false);
 assert.equal(hasTransferableValue('Confía en ti y recuerda que todo estará bien.'), false);
 assert.equal(hasTransferableValue('Observa cómo te sientes.'), false);
+const nonLiteralDistinction = 'Cuando tienes que tomar una decisión importante, comparar las opciones y decir lo que quieres son dos cosas distintas. La decisión empieza a pedir tu postura cuando la pregunta ya no es solo «¿qué opciones hay?», sino «¿cuál quiero elegir yo?». Ese cambio marca el momento en que lo que tú quieres necesita entrar en la conversación.';
+const nonLiteralEvaluation = evaluateWriterV2(nonLiteralDistinction, input);
+assert.equal(nonLiteralEvaluation.deterministicHardFailures.includes('no_transferable_value'), false);
+assert.equal(nonLiteralEvaluation.semanticJudge, undefined);
+assert.ok(nonLiteralEvaluation.warnings.includes('possible_no_transferable_value'));
+const recognitionWithoutMagicWords = 'La señal es notar cuándo dejas de comparar y empiezas a buscar tu propia elección.';
+assert.equal(evaluateWriterV2(recognitionWithoutMagicWords, input).deterministicHardFailures.includes('no_transferable_value'), false);
+const secondRealCandidate = 'Ante una decisión importante, puedes seguir viendo ventajas en varias opciones y, aun así, tener una preferencia. La señal es notar que una opción te convence más, aunque todavía no tengas todos los motivos claros. Ahí la decisión ya pide tu postura: no solo qué ofrece cada opción, sino qué quieres tú. Reconocer esa preferencia no significa que la decisión esté tomada.';
+assert.equal(evaluateWriterV2(secondRealCandidate, input).deterministicHardFailures.includes('no_transferable_value'), false);
+assert.ok(evaluateWriterV2('Confía en ti.', input).hardFailures.includes('generic_no_value'));
+assert.ok(evaluateWriterV2('Observa cómo te sientes.', input).hardFailures.includes('generic_no_value'));
+const semanticValueFailure = applySemanticFidelity(nonLiteralEvaluation, { target_expressed: true, adjacent_drift: false, dominant_movement: null, movement_value: false, new_contribution_expressed: true, same_actionable_teaching_as_prior: false, novel_contribution: true, semantic_redundancy: false, personalized: true, grounded_in_user_context: true, immediate_clarity: true, natural_spanish: true, single_core_idea: true, whatsapp_readable: true, system_language_leak: false, cognitive_overload: false, clear_takeaway: true, reason: 'Sin valor transferible.' });
+assert.ok(semanticValueFailure.semanticFailures.includes('no_transferable_value'));
+assert.ok(semanticValueFailure.hardFailures.includes('no_transferable_value'));
 assert.equal(evaluateWriterV2('Cuando ya tienes un criterio y consultas varias opiniones, anota qué dato concreto tendría que aparecer para reconsiderar.', { ...input, recentMovements: [input.psychologicalMove] }).approved, false);
 
 assert.ok(evaluateWriterV2('Ubicar ese momento permite reconocer el momento concreto en que aparece la oportunidad de decir lo que quieres.', input).hardFailures.includes('circular_abstract_explanation'));
@@ -95,7 +109,7 @@ assert.equal(calls, 2);
 assert.equal(repaired.repaired, true);
 assert.equal(repaired.attempts.length, 2);
 assert.equal(repaired.attempts.at(-1).evaluation.approved, true);
-assert.ok(repairOptions.repairReasons.includes('no_transferable_value'));
+assert.ok(repairOptions.repairReasons.includes('generic_no_value'));
 assert.equal(repairOptions.previousRejectedMessage, 'Confía en ti.');
 
 calls = 0;

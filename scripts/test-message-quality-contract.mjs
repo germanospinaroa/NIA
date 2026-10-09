@@ -43,7 +43,7 @@ assert.equal(good.namePresent, true);
 assert.equal(good.paragraphCount, 2);
 assert.equal(containsAddressName('Esto pasa mañana.', 'Ana'), false);
 assert.equal(evaluateWriterV2('Ana, confía en ti. Tú sabes qué hacer.', { ...input, firstName: 'Ana' }).approved, false);
-assert.ok(evaluateWriterV2('Ana, confía en ti. Tú sabes qué hacer.', { ...input, firstName: 'Ana' }).hardFailures.includes('no_transferable_value'));
+assert.ok(evaluateWriterV2('Ana, confía en ti. Tú sabes qué hacer.', { ...input, firstName: 'Ana' }).hardFailures.includes('generic_no_value'));
 assert.ok(evaluateWriterV2('Juanita, ' + 'a'.repeat(440), input).hardFailures.includes('whatsapp_wall_of_text'));
 const bodyWithoutName = 'Cuando tienes una decisión importante delante, puede que ya tengas una primera respuesta y aun así busques otra opinión.\n\nLa próxima vez, separa una pregunta: ¿qué información me falta de verdad? Si no falta ningún dato, quizá estás pidiendo permiso para sostener tu decisión.';
 assert.equal(evaluateWriterV2(bodyWithoutName, input).approved, true);

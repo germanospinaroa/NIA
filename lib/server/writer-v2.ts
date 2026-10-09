@@ -72,10 +72,9 @@ export function whatsappParagraphCount(message: string) {
 }
 
 /**
- * Deterministic value check for Writer V2. It looks for a usable relation
- * (distinction, criterion, concrete observation or application), not for one
- * magic verb. Metadata is server-authoritative, so the message is evaluated
- * from its own transferable content.
+ * Conservative diagnostic signal only. It can recognize some obvious forms
+ * of value, but a lexical miss is not evidence that a Spanish paraphrase has
+ * no transferable value. Semantic Fidelity Judge owns that decision.
  */
 export function hasTransferableValue(message: string) {
   const value = message.trim().toLocaleLowerCase('es');
@@ -86,6 +85,19 @@ export function hasTransferableValue(message: string) {
   const usableQuestion = /¿[^?]{10,}\?/u.test(value) && !/¿c[oó]mo te sientes\??/i.test(value);
   const appliedAction = /(?:antes de|después de|la próxima vez|cuando vuelva a ocurrir|para empezar|puedes usar|puedes separar|puedes comparar|puedes revisar|puedes nombrar)/i.test(value) && value.split(/\s+/).length >= 12;
   return (distinction || criterion || concreteObservation || usableQuestion) && (appliedAction || distinction || criterion || concreteObservation);
+}
+
+/**
+ * Deterministic protection for only unmistakably empty/generic short copy.
+ * Semantic value belongs to Semantic Fidelity Judge; a lexical miss is not
+ * evidence that a longer Spanish paraphrase has no transferable value.
+ */
+function hasExtremeGenericity(message: string) {
+  const value = message.trim();
+  const tokenCount = normalizedTokens(value).length;
+  if (!value || tokenCount > 12) return false;
+  const concreteOperation = /(?:no es lo mismo|distinguir|separar|la diferencia|entre\s+.{3,}\s+y\s+.{3,}|anota|escribe|pregunta|qué dato|qué información|si .* entonces|puedes comparar|puedes revisar|puedes nombrar|puedes reconocer)/i;
+  return !concreteOperation.test(value);
 }
 
 export function writerV2InputFromBrief(brief: InterventionBrief, reception?: Partial<Pick<WriterV2Input, 'receptionStage' | 'psychologicalInterventionsDelivered' | 'timeOfDay' | 'receptionInstructions'>>): WriterV2Input {
@@ -206,8 +218,8 @@ export function evaluateWriterV2(message: string, input: WriterV2Input): WriterV
   if (forbiddenLanguage.test(value)) hardFailures.push('forbidden_language:poco_a_poco');
   if (internalSystemLanguage.test(value)) hardFailures.push('system_language_leak');
   if (circularAbstractExplanation.test(value)) hardFailures.push('circular_abstract_explanation');
-  if (genericOnly.test(value)) hardFailures.push('generic_no_value');
-  if (value && !hasTransferableValue(value)) hardFailures.push('no_transferable_value');
+  if (genericOnly.test(value) || hasExtremeGenericity(value)) hardFailures.push('generic_no_value');
+  if (value && !hasTransferableValue(value)) warnings.push('possible_no_transferable_value');
   if (inventedPsychology.test(value)) hardFailures.push('invented_psychology');
   if (value.length > 1400) hardFailures.push('message_too_long');
   if ((value.length > 220 && !value.includes('\n\n')) || value.split(/\n\s*\n/).some(paragraph => paragraph.trim().length > 450)) hardFailures.push('whatsapp_wall_of_text');
