@@ -227,16 +227,16 @@ function angleFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: 
 function contributionFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
   if (guidance?.target === 'situational_preparation:notice_the_trigger') {
     const contributionByMode: Record<InterventionMode, string> = {
-      introduce: 'Reconocer la situación concreta en la que entra en juego la intención.',
-      deepen: 'Distinguir la situación concreta en la que empieza a importar lo que quieres decir.',
-      apply: 'Observar esa situación concreta sin tener que preparar todavía una respuesta.',
-      contrast: 'Distinguir la situación concreta de la respuesta que vendrá después.',
-      anticipate: 'Reconocer cuándo vuelve a aparecer esa situación concreta.',
-      reinforce: 'Comprobar en qué situación concreta vuelve a aparecer esa intención.',
-      integrate: 'Conectar esa situación concreta con la intención que ya elegiste.',
-      transfer: 'Reconocer una situación parecida en la que también entra en juego esa intención.',
-      evidence: 'Registrar una situación concreta en la que aparece esa intención.',
-      reflect_or_observe: 'Revisar qué situación concreta hizo visible esa intención.',
+      introduce: 'Distinguir entre considerar las opciones y expresar qué quieres.',
+      deepen: 'Reconocer cuándo una decisión deja de ser solo opciones y empieza a pedir tu postura.',
+      apply: 'Observar cuándo aparece tu postura sin tener que preparar todavía una respuesta.',
+      contrast: 'Distinguir tu postura de la respuesta que vendrá después.',
+      anticipate: 'Reconocer cuándo vuelve a aparecer el paso de considerar opciones a expresar tu postura.',
+      reinforce: 'Comprobar en qué decisión vuelve a aparecer tu postura.',
+      integrate: 'Conectar ese paso entre opciones y postura con la intención que ya elegiste.',
+      transfer: 'Reconocer una decisión parecida en la que también necesitas expresar tu postura.',
+      evidence: 'Registrar una decisión concreta en la que aparece tu postura.',
+      reflect_or_observe: 'Revisar en qué decisión se hizo visible tu postura.',
     };
     return contributionByMode[mode];
   }
@@ -260,16 +260,16 @@ function contributionFor(guidance: ReturnType<typeof getMovementTargetGuidance>,
 function expectedTakeawayFor(guidance: ReturnType<typeof getMovementTargetGuidance>, mode: InterventionMode, count: number) {
   if (guidance?.target === 'situational_preparation:notice_the_trigger') {
     const takeawayByMode: Record<InterventionMode, string> = {
-      introduce: 'Puedo reconocer la situación concreta en la que entra en juego mi intención.',
-      deepen: 'Puedo distinguir cuándo esa situación empieza a pedir una respuesta.',
-      apply: 'Puedo observar esa situación sin tener que responder todavía.',
-      contrast: 'Puedo distinguir la situación de la respuesta que viene después.',
-      anticipate: 'Puedo reconocer cuándo vuelve a aparecer esa situación concreta.',
-      reinforce: 'Puedo comprobar en qué situación vuelve a aparecer mi intención.',
-      integrate: 'Puedo conectar esa situación con la intención que ya elegí.',
-      transfer: 'Puedo reconocer una situación parecida donde también entra en juego mi intención.',
-      evidence: 'Puedo registrar una situación concreta en la que aparece mi intención.',
-      reflect_or_observe: 'Puedo revisar qué situación hizo visible mi intención.',
+      introduce: 'Puedo distinguir entre considerar las opciones y expresar qué quiero.',
+      deepen: 'Puedo reconocer cuándo una decisión empieza a pedir mi postura.',
+      apply: 'Puedo observar cuándo aparece mi postura sin responder todavía.',
+      contrast: 'Puedo distinguir mi postura de la respuesta que viene después.',
+      anticipate: 'Puedo reconocer cuándo vuelve a aparecer ese paso.',
+      reinforce: 'Puedo comprobar en qué decisión vuelve a aparecer mi postura.',
+      integrate: 'Puedo conectar ese paso con la intención que ya elegí.',
+      transfer: 'Puedo reconocer una decisión parecida en la que necesito expresar mi postura.',
+      evidence: 'Puedo registrar una decisión concreta en la que aparece mi postura.',
+      reflect_or_observe: 'Puedo revisar en qué decisión se hizo visible mi postura.',
     };
     return takeawayByMode[mode];
   }

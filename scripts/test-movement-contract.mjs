@@ -29,7 +29,7 @@ const juanitaContract = formulatePsychologicalIntervention({
 });
 assert.equal(juanitaContract.mechanism_id, 'intention_retrieval');
 assert.equal(juanitaContract.canonical_movement, 'situational_preparation:notice_the_trigger');
-assert.match(juanitaContract.psychological_move, /situaci[oó]n concreta.*intenci[oó]n/i);
+assert.match(juanitaContract.psychological_move, /considerar opciones.*expresar/i);
 assert.doesNotMatch(juanitaContract.expected_movement, /preparar una respuesta/i);
 
 const juanitaPlan = planDailyIntervention({
@@ -42,7 +42,7 @@ const juanitaPlan = planDailyIntervention({
 }).selected;
 assert.equal(juanitaPlan.canonicalMovement, 'situational_preparation:notice_the_trigger');
 assert.doesNotMatch(`${juanitaPlan.newContribution} ${juanitaPlan.expectedTakeaway}`, /alrededor de|preparar una respuesta|qué se acaba de decir/i);
-assert.match(juanitaPlan.newContribution, /situaci[oó]n concreta/i);
+assert.match(juanitaPlan.newContribution, /considerar las opciones.*expresar/i);
 assert.equal(assessMovementEvidence('situational_preparation:notice_the_trigger', ['Cuando tengo que tomar una decisión importante.']).sufficient, true);
 assert.equal(assessMovementEvidence('situational_preparation:review_what_happened', ['Cuando tengo que tomar una decisión importante.']).reason, 'missing_confirmed_event');
 
