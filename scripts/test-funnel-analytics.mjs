@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const funnel = fs.readFileSync('lib/funnel.ts', 'utf8');
+const route = fs.readFileSync('app/api/funnel/events/route.ts', 'utf8');
+const migration = fs.readFileSync('supabase/migrations/20261010120000_funnel_events.sql', 'utf8');
+const plans = fs.readFileSync('app/descubre/planes/page.tsx', 'utf8');
+assert.match(funnel, /nia_funnel_session_id/);
+assert.match(funnel, /randomUUID/);
+assert.match(funnel, /sessionStorage\.setItem\(sessionKey/);
+assert.match(funnel, /sendBeacon/);
+assert.match(funnel, /keepalive: true/);
+assert.match(funnel, /funnel_version: 'short_v1'/);
+assert.match(funnel, /screen_key/);
+assert.doesNotMatch(funnel, /preferredName.*payload|payload.*preferredName/);
+assert.match(route, /EVENT_NAMES/);
+assert.match(route, /createAdminClient\(\)/);
+assert.match(route, /session_id/);
+assert.match(route, /return NextResponse\.json\(\{ accepted: false \}, \{ status: 202 \}\)/);
+assert.match(migration, /create table if not exists public\.funnel_events/);
+assert.match(migration, /alter table public\.funnel_events enable row level security/);
+assert.match(migration, /revoke all on public\.funnel_events from anon, authenticated/);
+assert.match(migration, /session_id uuid not null/);
+assert.match(plans, /trackFunnel\('plans_viewed'/);
+console.log('funnel analytics tests: PASS');

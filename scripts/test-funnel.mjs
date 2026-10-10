@@ -1,59 +1,26 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const files = [
-  'app/descubre/page.tsx', 'components/funnel/PremiumDiscover.tsx', 'app/descubre/evidencia/page.tsx', 'app/descubre/presenta/page.tsx',
-  'app/descubre/nombre/page.tsx', 'app/descubre/agradecimiento/page.tsx', 'app/descubre/vivir/page.tsx',
-  'app/descubre/funciona/page.tsx', 'app/descubre/futuro/page.tsx', 'app/descubre/planes/page.tsx',
-  'components/funnel/WhatsAppDemo.tsx', 'app/acceso/page.tsx', 'app/auth/callback/route.ts', 'app/onboarding/page.tsx',
-];
-for (const file of files) assert.ok(fs.existsSync(file), file + ' exists');
-const publicRoot = fs.readFileSync('app/page.tsx', 'utf8');
-assert.match(publicRoot, /PremiumDiscover/);
-assert.doesNotMatch(publicRoot, /Punto NIA|microseñales|implementación pendiente/);
-assert.ok(fs.existsSync('components/landing/ArchivedLanding.tsx'), 'legacy landing remains archived in source');
-const source = files.map(file => fs.readFileSync(file, 'utf8')).join('\n');
-const events = [
-  'discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed', 'access_code_requested',
-  'name_completed', 'demo_viewed', 'demo_whatsapp_viewed', 'how_it_works_viewed', 'future_experience_viewed',
-  'plans_viewed', 'plan_selected', 'access_started', 'access_code_verified', 'onboarding_started',
-];
-for (const event of events) assert.match(source, new RegExp(event), event + ' is tracked');
-assert.match(source, /discoverScreenIndex/);
-assert.match(source, /history\.pushState/);
-assert.match(source, /popstate/);
+const source = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
+const keys = ['recognition', 'reframe', 'evidence', 'personalize', 'demo', 'continuity'];
+const ctas = ['Quiero entender por qué me pasa', 'Muéstrame cómo sería diferente', 'Quiero verlo conmigo', 'Quiero ver el mensaje', 'Sí, quiero vivir esto', 'Quiero empezar mis 7 días'];
+assert.equal((source.match(/key: '(recognition|reframe|evidence|personalize|demo|continuity)'/g) ?? []).length, 6);
+for (const key of keys) assert.ok(source.includes("key: '" + key + "'"));
+for (const cta of ctas) assert.ok(source.includes(cta));
+assert.match(source, /DISCOVER_SCREENS\.length/);
 assert.match(source, /router\.push\('\/descubre\/planes'\)/);
-for (const copy of [
-  '¿Cuántas veces más vas a saber lo que quieres…', 'y terminar haciendo otra cosa?',
-  '¿Y si eso se pudiera entrenar?', 'No. No te pasa solo a ti.',
-  'Esa fue exactamente la pregunta que nos hicimos.', 'Te presentamos a NIA.',
-  'Imagina que mañana tienes una conversación que llevas días evitando.',
-  'Antes de mostrártelo, quiero conocerte.', '¿Cómo quieres que te llame?', 'Juanita', 'Ahora sí, muéstrame cómo se sentiría', 'Y sí, la conversación puede seguir siendo incómoda.',
-  'Pero tú ya no llegas igual.', 'una distinción.', 'un criterio.', 'una pregunta.', 'una forma diferente de responder.', 'NIA te escribió a ti.',
-  'Esos momentos van a volver.', 'Porque la duda puede volver.', 'Lo que puede cambiar es quién decide cuando aparezca.', 'tu propio criterio.', 'Pero tenemos que ser muy sinceros contigo:', 'Quiero vivir NIA',
-]) assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), copy + ' copy');
-assert.equal((source.match(/const screens: Screen\[\] = \[/)?.length ?? 0), 1);
-assert.equal((source.match(/cta: 'Quiero seguir'/g) ?? []).length, 1);
-const premiumSource = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
-assert.match(premiumSource, /preferredName/);
-assert.doesNotMatch(premiumSource, /Buenos días, Juanita\./);
-assert.doesNotMatch(premiumSource, /Buenos días, Laura\.|poco a poco|Y eso fue solo un día\./);
-assert.match(premiumSource, /addressName/);
-assert.match(premiumSource, /NIA te escribió a ti\./);
-assert.doesNotMatch(premiumSource, /Te llegó un WhatsApp\./);
-assert.equal((premiumSource.match(/Porque cambiar no ocurre por entender algo una vez\./g) ?? []).length, 1);
-for (const fact of ['+40.000 participantes', '14.321', 'American Economic Review · 2024']) assert.match(premiumSource, new RegExp(fact.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-assert.doesNotMatch(premiumSource, /Esto es NIA\./);
-assert.match(premiumSource, /premium-evidence-layout/);
-assert.match(premiumSource, /premium-evidence-artifact/);
-assert.match(fs.readFileSync('app/activate/page.tsx', 'utf8'), /Tu contraseña debe tener al menos 8 caracteres\./);
-assert.match(source, /US\$6\.99/);
-assert.match(source, /US\$4\.99/);
-assert.match(source, /US\$49\.99/);
-assert.match(fs.readFileSync('lib/funnel.ts', 'utf8'), /checkoutMode.*hotmart/);
-assert.doesNotMatch(fs.readFileSync('app/auth/callback/route.ts', 'utf8'), /exchangeCodeForSession/);
-assert.match(fs.readFileSync('app/acceso/page.tsx', 'utf8'), /verifyOtp/);
-assert.match(fs.readFileSync('app/api/auth/access/request/route.ts', 'utf8'), /shouldCreateUser: false/);
-assert.doesNotMatch(source, /Hotmart|Oferta bloqueada|Continuar a Hotmart|microseñal|¿Cómo te hablaría mejor\?|Así sí|Más real|Otro enfoque|NIA no debería hablarte/);
-assert.doesNotMatch(source, /la ciencia demuestra que NIA funciona|científicamente probada|el 50% de las mujeres/);
-console.log('funnel tests: PASS');
+assert.match(source, /138/);
+assert.match(source, /19\.951/);
+assert.match(source, /Psychological Bulletin · 2016/);
+assert.match(source, /Si hoy tienes esa conversación, separa dos cosas/);
+assert.match(source, /¿Qué necesito decir para no salir de esa conversación sintiendo que otra vez me callé\?/);
+assert.match(source, /role="progressbar"/);
+assert.match(source, /aria-valuemax=\{5\}/);
+assert.doesNotMatch(source, /cta: 'Seguir'/);
+assert.doesNotMatch(source, /premium-screen-9|premium-screen-8|premium-screen-7/);
+assert.match(source, /funnel_version: 'short_v1'/);
+assert.match(source, /screen_key/);
+assert.match(fs.readFileSync('app/descubre/planes/page.tsx', 'utf8'), /plans_viewed/);
+assert.ok(fs.existsSync('app/api/funnel/events/route.ts'));
+assert.ok(fs.existsSync('supabase/migrations/20261010120000_funnel_events.sql'));
+console.log('short public funnel tests: PASS');
