@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const source = fs.readFileSync('components/funnel/TestimonialsCarousel.tsx', 'utf8');
+const premium = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
+const styles = fs.readFileSync('app/globals.css', 'utf8');
+assert.match(source, /TESTIMONIAL_ASSETS/);
+assert.match(source, /12_000/);
+assert.match(source, /20_000/);
+assert.match(source, /IntersectionObserver/);
+assert.match(source, /prefers-reduced-motion/);
+assert.match(source, /Testimonio anterior/);
+assert.match(source, /Siguiente testimonio/);
+assert.match(source, /clientX/);
+assert.match(styles, /touch-action: pan-y/);
+assert.match(premium, /key: 'testimonials'/);
+assert.match(premium, /TestimonialsCarousel/);
+assert.match(styles, /premium-screen\.is-testimonials/);
+assert.match(styles, /premium-testimonial-frame/);
+assert.match(styles, /object-fit: contain/);
+assert.doesNotMatch(premium, /key: 'continuity'/);
+console.log('testimonials carousel tests: PASS');

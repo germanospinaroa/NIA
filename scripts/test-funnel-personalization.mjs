@@ -14,5 +14,7 @@ assert.match(source, /placeholder="Juanita"/);
 assert.doesNotMatch(source, /value="Juanita"/);
 assert.match(source, /displayName \? .*imagina/);
 assert.match(source, /Buenos días, \$\{name\}/);
+assert.match(source, /Por eso creamos NIA/);
+assert.match(source, /¿Cómo quieres que te llame\?/);
 assert.doesNotMatch(source, /Yo soy NIA|Antes de mostrártelo, quiero conocerte/);
 console.log('funnel personalization tests: PASS');

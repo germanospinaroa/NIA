@@ -1,14 +1,14 @@
--- Read-only funnel report for the public short funnel.
+-- Read-only report for the active public funnel version.
 -- Use DISTINCT session_id + screen_key so reloads and revisits do not inflate reach.
 with reached as (
   select distinct session_id, screen_key, screen_index
   from public.funnel_events
-  where funnel_version = 'short_v1'
+  where funnel_version = 'short_v2'
     and event_name = 'discover_screen_viewed'
   union
   select distinct session_id, 'plans', 7
   from public.funnel_events
-  where funnel_version = 'short_v1'
+  where funnel_version = 'short_v2'
     and event_name in ('plans_viewed', 'pricing_viewed')
 ), stages as (
   select * from (values
@@ -17,7 +17,7 @@ with reached as (
     (3, 'evidence'),
     (4, 'personalize'),
     (5, 'demo'),
-    (6, 'continuity'),
+    (6, 'testimonials'),
     (7, 'plans')
   ) as s(stage_index, stage_key)
 )

@@ -8,7 +8,7 @@ assert.match(premium, /window\.scrollTo\(\{ top: 0, left: 0, behavior: 'auto' \}
 assert.match(styles, /\.premium-progress[^\{]*\{[^}]*width:/s);
 assert.match(styles, /\.premium-screen\.is-recognition/);
 assert.match(styles, /\.premium-screen\.is-demo/);
-assert.match(styles, /\.premium-screen\.is-continuity/);
+assert.match(styles, /\.premium-screen\.is-testimonials/);
 assert.match(styles, /env\(safe-area-inset-bottom\)/);
 assert.doesNotMatch(styles, /\.premium-screen-9|\.premium-screen-8|\.premium-screen-7/);
 assert.doesNotMatch(premium, /smooth/);

@@ -6,7 +6,7 @@ export type DiscoverContext = 'opinion' | 'conversation' | 'limit';
 export type DiscoverFeedback = 'serves' | 'different' | 'not_me';
 export type FunnelTiming = 'morning' | 'midday' | 'afternoon' | 'night';
 export type CommunicationPreference = 'idea' | 'practical' | 'structured' | 'adaptive';
-export type DiscoverScreenKey = 'recognition' | 'reframe' | 'evidence' | 'personalize' | 'demo' | 'continuity';
+export type DiscoverScreenKey = 'recognition' | 'reframe' | 'evidence' | 'personalize' | 'demo' | 'testimonials';
 export type RecognitionContext = 'decision_doubt';
 export type OnboardingSituationChoice = 'doubt' | 'firm' | 'source_dependent';
 export type OnboardingFollowupChoice = 'new_information' | 'only_doubt' | 'unsure' | 'yes' | 'no' | 'think' | 'decision_changed' | 'confidence_changed';
@@ -96,12 +96,12 @@ export function trackFunnel(name: string, properties: Record<string, string | nu
     sessionId = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
   const publicPath = window.location.pathname === '/' || window.location.pathname === '/descubre' || window.location.pathname === '/descubre/planes';
-  const event = { name, properties: { funnel_version: 'short_v1', ...properties }, timestamp: new Date().toISOString(), path: window.location.pathname, session_id: sessionId };
+  const event = { name, properties: { funnel_version: 'short_v2', ...properties }, timestamp: new Date().toISOString(), path: window.location.pathname, session_id: sessionId };
   const w = window as Window & { __niaFunnelEvents?: unknown[] };
   (w.__niaFunnelEvents ??= []).push(event);
   window.dispatchEvent(new CustomEvent('nia:funnel', { detail: event }));
   if (!publicPath || !publicEvents.has(name)) return;
-  const payload = { session_id: sessionId, event_name: name, funnel_version: 'short_v1', screen_index: typeof properties.screen === 'number' ? properties.screen : null, screen_key: typeof properties.screen_key === 'string' ? properties.screen_key : null, pathname: window.location.pathname, referrer: document.referrer.slice(0, 500) || null, utm_source: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 120) ?? null, utm_medium: new URLSearchParams(window.location.search).get('utm_medium')?.slice(0, 120) ?? null, utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign')?.slice(0, 120) ?? null };
+  const payload = { session_id: sessionId, event_name: name, funnel_version: 'short_v2', screen_index: typeof properties.screen === 'number' ? properties.screen : null, screen_key: typeof properties.screen_key === 'string' ? properties.screen_key : null, pathname: window.location.pathname, referrer: document.referrer.slice(0, 500) || null, utm_source: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 120) ?? null, utm_medium: new URLSearchParams(window.location.search).get('utm_medium')?.slice(0, 120) ?? null, utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign')?.slice(0, 120) ?? null };
   try {
     const body = JSON.stringify(payload);
     if (navigator.sendBeacon) { navigator.sendBeacon('/api/funnel/events', new Blob([body], { type: 'application/json' })); }

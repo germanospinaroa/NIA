@@ -23,6 +23,7 @@
     "test:legal-pages": "node scripts/test-legal-pages.mjs",
     "test:funnel-finish": "node scripts/test-funnel-finish.mjs",
     "test:funnel-analytics": "node scripts/test-funnel-analytics.mjs",
+    "test:testimonials-carousel": "node scripts/test-testimonials-carousel.mjs",
     "test:discover-recognition": "node scripts/test-discover-recognition.mjs",
     "test:onboarding-timing": "node scripts/test-onboarding-timing.mjs",
     "test:onboarding-finalization": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-onboarding-finalization.mjs",

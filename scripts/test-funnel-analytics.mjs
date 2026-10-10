@@ -10,7 +10,7 @@ assert.match(funnel, /randomUUID/);
 assert.match(funnel, /sessionStorage\.setItem\(sessionKey/);
 assert.match(funnel, /sendBeacon/);
 assert.match(funnel, /keepalive: true/);
-assert.match(funnel, /funnel_version: 'short_v1'/);
+assert.match(funnel, /funnel_version: 'short_v2'/);
 assert.match(funnel, /screen_key/);
 assert.doesNotMatch(funnel, /preferredName.*payload|payload.*preferredName/);
 assert.match(route, /EVENT_NAMES/);
@@ -22,4 +22,7 @@ assert.match(migration, /alter table public\.funnel_events enable row level secu
 assert.match(migration, /revoke all on public\.funnel_events from anon, authenticated/);
 assert.match(migration, /session_id uuid not null/);
 assert.match(plans, /trackFunnel\('plans_viewed'/);
+assert.match(route, /short_v2/);
+assert.match(route, /testimonials/);
+assert.ok(fs.existsSync('supabase/migrations/20261010173000_funnel_events_short_v2.sql'));
 console.log('funnel analytics tests: PASS');
