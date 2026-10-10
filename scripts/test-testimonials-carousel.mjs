@@ -5,6 +5,8 @@ const source = fs.readFileSync('components/funnel/TestimonialsCarousel.tsx', 'ut
 const premium = fs.readFileSync('components/funnel/PremiumDiscover.tsx', 'utf8');
 const styles = fs.readFileSync('app/globals.css', 'utf8');
 assert.match(source, /TESTIMONIAL_ASSETS/);
+assert.match(source, /test-05-independent\.png/);
+assert.equal((source.match(/test-0[1-6]-[a-z-]+\.png/g) ?? []).length, 6);
 assert.match(source, /12_000/);
 assert.match(source, /20_000/);
 assert.match(source, /IntersectionObserver/);

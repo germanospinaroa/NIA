@@ -9,6 +9,7 @@ export const TESTIMONIAL_ASSETS = [
   { src: '/images/nia/testimonials/test-02-conversation.png', alt: 'Mensaje sobre separar lo que necesita expresar de la reacción de su jefe.' },
   { src: '/images/nia/testimonials/test-04-meeting.png', alt: 'Mensaje sobre llegar a una reunión después de dejar de darle vueltas.' },
   { src: '/images/nia/testimonials/test-03-knowing.png', alt: 'Mensaje sobre descubrir que muchas veces ya sabía lo que quería.' },
+  { src: '/images/nia/testimonials/test-05-independent.png', alt: 'Mensaje sobre recibir una idea concreta y decidir por sí misma qué hacer.' },
   { src: '/images/nia/testimonials/test-06-continuity.png', alt: 'Mensaje sobre notar un hilo entre los días de trabajo con NIA.' },
 ] as const;
 
