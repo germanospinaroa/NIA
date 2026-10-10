@@ -575,7 +575,7 @@ main:has(#funnel-email) .funnel-error, main:has(#access-code) .funnel-error { pa
 .premium-screen.is-personalize .premium-copy { max-width: 720px; }
 .premium-screen.is-evidence h1 { max-width: 13ch; }
 .premium-screen.is-personalize h1 { max-width: 12ch; }
-.premium-screen.is-testimonials h1 { max-width: 17ch; }
+.premium-screen.is-testimonials h1 { max-width: 15ch; font-size: clamp(46px, 5.6vw, 80px); }
 .premium-screen.is-personalize .premium-presentation-name { margin-top: 26px; }
 .premium-presentation-copy { display: grid; gap: 11px; max-width: 630px; }
 .premium-presentation-copy p { margin: 0; color: color-mix(in oklab, currentColor 84%, transparent); font-size: clamp(15px, 1.5vw, 18px); line-height: 1.4; }
