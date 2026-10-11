@@ -65,12 +65,12 @@ export function timeOfDayForLocalTime(value: string | null | undefined): Message
   return 'night';
 }
 
-export function greetingFor(firstName: string | null | undefined, now = new Date(), timezone?: string | null, userKey = '') {
+export function greetingFor(firstName: string | null | undefined, now = new Date(), timezone?: string | null) {
   const period = timeOfDay(now, timezone);
   const label = period === 'morning' ? 'Buenos días' : period === 'afternoon' ? 'Buenas tardes' : 'Buenas noches';
   const name = typeof firstName === 'string' ? firstName.trim() : '';
   if (!name) return `${label}.`;
-  return hash(`${userKey}:${now.toISOString().slice(0, 10)}`) % 2 === 0 ? `Hola, ${name}. ${label}.` : `${label}, ${name}.`;
+  return `${label}, ${name}.`;
 }
 
 function isActionable(content: string) {
@@ -96,7 +96,7 @@ export function recentClosings(contents: string[]) {
 
 export function composeNiaMessage(input: { content: string; firstName?: string | null; timezone?: string | null; userKey?: string; now?: Date; recentContents?: string[]; closing?: string | null }) {
   const now = input.now ?? new Date();
-  const greeting = greetingFor(input.firstName, now, input.timezone, input.userKey);
+  const greeting = greetingFor(input.firstName, now, input.timezone);
   const closing = input.closing?.trim() || null;
   return closing ? `${greeting}\n\n${input.content.trim()}\n\n${closing}` : `${greeting}\n\n${input.content.trim()}`;
 }
@@ -119,12 +119,14 @@ export function evaluateFinalNiaMessage(message: string, input: { firstName?: st
   const firstParagraph = paragraphs[0] ?? '';
   const namePattern = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const greetingValid = Boolean(namePattern) && new RegExp(`^(?:Hola,\\s+${namePattern}\\.|Buenos días,\\s+${namePattern}\\.|Buenas tardes,\\s+${namePattern}\\.|Buenas noches,\\s+${namePattern}\\.)`, 'i').test(firstParagraph);
+  const doubleGreeting = Boolean(namePattern) && new RegExp(`^Hola,\\s+${namePattern}\\.\\s+(?:Buenos días|Buenas tardes|Buenas noches)\\.$`, 'i').test(firstParagraph);
   const namePresent = containsName(value, name);
   const bodyParagraphs = paragraphs.slice(1);
   const repeatedName = bodyParagraphs.some(paragraph => new RegExp(`^${namePattern}(?:\\s*[,.:!-])`, 'i').test(paragraph)) || (namePresent && normalizedTokens(value).filter(token => normalizedTokens(name).includes(token)).length > normalizedTokens(name).length + 1);
   const hardFailures: string[] = [];
   if (!namePresent) hardFailures.push('missing_personal_name');
   if (!greetingValid) hardFailures.push('invalid_greeting');
+  if (doubleGreeting) hardFailures.push('double_greeting');
   if (repeatedName) hardFailures.push('repeated_personal_name');
   if (!value || /\r|\n{3,}|(^|\n)\s+$/.test(message)) hardFailures.push('invalid_whitespace');
   if ((value.length > 220 && !value.includes('\n\n')) || paragraphs.some(paragraph => paragraph.length > 450)) hardFailures.push('whatsapp_wall_of_text');
