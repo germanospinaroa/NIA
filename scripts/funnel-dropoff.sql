@@ -3,18 +3,18 @@
 with reached as (
   select distinct session_id, screen_key, screen_index
   from public.funnel_events
-  where funnel_version = 'short_v2'
+  where funnel_version = 'emotional_v1'
     and event_name = 'discover_screen_viewed'
   union
   select distinct session_id, 'plans', 7
   from public.funnel_events
-  where funnel_version = 'short_v2'
+  where funnel_version = 'emotional_v1'
     and event_name in ('plans_viewed', 'pricing_viewed')
 ), stages as (
   select * from (values
     (1, 'recognition'),
-    (2, 'reframe'),
-    (3, 'evidence'),
+    (2, 'pattern'),
+    (3, 'desire'),
     (4, 'personalize'),
     (5, 'demo'),
     (6, 'testimonials'),

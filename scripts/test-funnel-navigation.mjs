@@ -16,6 +16,8 @@ assert.match(premium, /history\.pushState/);
 assert.match(premium, /window\.addEventListener\('popstate'/);
 assert.match(premium, /DISCOVER_SCREENS\.length/);
 assert.match(premium, /testimonials/);
+assert.match(premium, /PUBLIC_DISCOVER_FUNNEL_VERSION/);
+assert.match(premium, /discoverFunnelVersion/);
 assert.doesNotMatch(premium, /window\.location.*preferredName/);
 assert.match(frame, /resetDiscoverProgress/);
 console.log('funnel navigation tests: PASS');
