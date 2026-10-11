@@ -99,6 +99,8 @@
     "test:schedule-async": "node scripts/test-schedule-async.mjs",
     "test:one-next-delivery": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-one-next-delivery.mjs",
     "test:one-next-migration": "node scripts/test-one-next-migration.mjs",
+    "test:next-message-health": "node scripts/test-next-message-health.mjs",
+    "test:30-day-message-lifecycle": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-30-day-message-lifecycle.mjs",
     "test:message-quality-contract": "node --experimental-strip-types scripts/test-message-quality-contract.mjs",
     "test:final-message-contract": "node --experimental-strip-types scripts/test-message-composer.mjs"
   },

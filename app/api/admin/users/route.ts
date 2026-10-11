@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authDirectory, parseAdminPeriod, parseLimit, parseOffset } from '@/lib/server/admin-data';
 import { recordAdminAudit } from '@/lib/server/operational-observability';
 import { aggregateUserCosts, type CostCall, type CallCostRow } from '@/lib/server/cost-ledger';
+import { buildNextMessageHealthSummary } from '@/lib/server/next-message-health';
 
 export async function GET(request: Request) {
   const access = await requireAdmin();
@@ -33,6 +34,7 @@ export async function GET(request: Request) {
   const providerRows = providerCalls ?? [];
   const costResult = providerRows.length ? await admin.from('provider_call_costs').select('*').in('provider_call_id', providerRows.map(row => row.id)) : { data: [], error: null };
   const costRows = costResult.data ?? [];
+  const health = await buildNextMessageHealthSummary(admin, ids);
   const profileMap = new Map((profiles ?? []).map(row => [row.id, row]));
   const subscriptionMap = new Map((subscriptions ?? []).map(row => [row.user_id, row]));
   const rows = users.map(user => {
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
     const userCostRows = costRows.filter(row => userCalls.some(call => call.id === row.provider_call_id));
     const userCost = costResult.error || (userCalls.length > 0 && userCostRows.length < userCalls.length) ? { status: 'NOT AVAILABLE', reason: 'Hay llamadas de proveedor sin costo calculado todavía.' } : { status: 'available', ...aggregateUserCosts(userCalls as CostCall[], userCostRows as CallCostRow[]) };
     const lastActivity = [...userInterventions.map(row => row.created_at), ...userEvents.map(row => row.occurred_at)].sort().at(-1) ?? null;
-    return { ...user, profile: profileMap.get(user.id) ?? null, last_activity: lastActivity, interventions: userInterventions.length, feedback: userFeedback.length, active: Boolean(lastActivity && lastActivity >= period.from), subscription: subscriptionMap.get(user.id) ?? null, whatsapp: 'NOT AVAILABLE', cost: userCost };
+    return { ...user, profile: profileMap.get(user.id) ?? null, last_activity: lastActivity, interventions: userInterventions.length, feedback: userFeedback.length, active: Boolean(lastActivity && lastActivity >= period.from), subscription: subscriptionMap.get(user.id) ?? null, whatsapp: 'NOT AVAILABLE', cost: userCost, next_message_health: health.get(user.id) ?? null };
   }).sort((a, b) => String(b.last_activity ?? '').localeCompare(String(a.last_activity ?? '')));
   return NextResponse.json({ data: rows.slice(offset, offset + limit), pagination: { limit, offset, total: rows.length }, period });
 }

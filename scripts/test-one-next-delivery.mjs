@@ -17,6 +17,9 @@ assert.equal(readyTodayAtTick.invalidateIds.length, 0);
 // Refill first / daily second and daily first / refill second are both safe.
 const afterSent = chooseNextIntervention({ today: '2026-10-08', schedule, now, alreadyDeliveredToday: true, dailyInteractionToday: true, dailyDelivery: 'sent', currentContentVersion: versionA, activeRows: [row('02', '2026-10-09')], preparationDate: '2026-10-09' });
 assert.equal(afterSent.action, 'preserve');
+const sentWithoutNext = chooseNextIntervention({ today: '2026-10-09', schedule, now, alreadyDeliveredToday: true, dailyInteractionToday: true, dailyDelivery: 'sent', currentContentVersion: versionA, activeRows: [], preparationDate: '2026-10-10' });
+assert.equal(sentWithoutNext.action, 'prepare');
+assert.equal(sentWithoutNext.targetLocalDate, '2026-10-10');
 const pending = chooseNextIntervention({ today: '2026-10-08', schedule, now, alreadyDeliveredToday: false, dailyInteractionToday: true, dailyDelivery: 'pending', currentContentVersion: versionA, activeRows: [], preparationDate: '2026-10-08' });
 assert.equal(pending.action, 'wait_for_delivery');
 const failed = chooseNextIntervention({ today: '2026-10-08', schedule, now, alreadyDeliveredToday: false, dailyInteractionToday: true, dailyDelivery: 'failed', currentContentVersion: versionA, activeRows: [], preparationDate: '2026-10-08' });

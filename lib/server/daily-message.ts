@@ -39,7 +39,7 @@ export async function getOrCreateDailyInteraction(supabase: DbClient, userId: st
       await releaseConsumedMessage(supabase, buffered);
       throw new Error(`final_message_contract_failed:${finalEvaluation.hardFailures.join('|')}`);
     }
-    const { data: bufferedInteraction, error: bufferedError } = await supabase.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content, local_date: date, slot }).select('*').single();
+    const { data: bufferedInteraction, error: bufferedError } = await supabase.from('interactions').insert({ user_id: userId, interaction_type: 'daily_message', direction_key: profile.direction_key, content, local_date: date, slot, source_buffer_id: buffered.id }).select('*').single();
     if (!bufferedError && bufferedInteraction) return { interaction: bufferedInteraction as Record<string, unknown>, localDate: date, created: true, kind: 'intervention' };
     const { data: winner } = await supabase.from('interactions').select('*').eq('user_id', userId).eq('interaction_type', 'daily_message').eq('local_date', date).limit(1).maybeSingle();
     if (winner) return { interaction: winner as Record<string, unknown>, localDate: date, created: false, kind: 'intervention' };
@@ -47,7 +47,7 @@ export async function getOrCreateDailyInteraction(supabase: DbClient, userId: st
     throw new Error('daily_unavailable');
   }
   try {
-    await recordEvent(supabase, { userId, eventType: 'buffer_underflow', entityType: 'daily_delivery', entityId: date, metadata: { user: userId, localDate: date, channel } });
+    await recordEvent(supabase, { userId, eventType: 'buffer_underflow', entityType: 'daily_delivery', metadata: { local_date: date, channel, reason: 'approved_buffer_underflow' } });
   } catch {
     // Underflow must remain deterministic even if observability is unavailable.
   }

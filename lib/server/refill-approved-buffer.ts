@@ -43,6 +43,8 @@ export type RefillResult = {
   calls: { writer: number; judge: number; repairs: number };
   usage: { writerInput: number; writerOutput: number; judgeInput: number; judgeOutput: number; estimatedCostUsd: number };
   usageRecords: { model: string; purpose: 'writer' | 'judge'; intendedLocalDate: string; attempt: number; inputTokens: number; outputTokens: number; estimatedCostUsd: number }[];
+  preserved: ApprovedBufferItem[];
+  rescheduled: ApprovedBufferItem[];
 };
 
 type RefillOrchestrationOptions = {
@@ -82,15 +84,18 @@ export async function orchestrateRefillUsers(candidates: RefillOrchestrationCand
       const result = await refill(candidate.userId, { minBufferDays, targetBufferDays, maxCostUsd: Math.min(perUserMaxCostUsd, remainingBudget), requiredLocalDate: candidate.requiredLocalDate, refillStartDate: candidate.refillStartDate, onEvent: options.onEvent });
       const cost = Number(result.usage.estimatedCostUsd || 0);
       estimatedCostUsd += cost;
-      const bufferAfter = result.created.length ? 1 : Math.min(1, candidate.bufferBefore);
+      const preserved = result.preserved ?? [];
+      const rescheduled = result.rescheduled ?? [];
+      const bufferAfter = result.created.length || preserved.length || rescheduled.length ? 1 : Math.min(1, candidate.bufferBefore);
       const repaired = Boolean(candidate.requiredLocalDate && result.created.some(item => item.intendedLocalDate === candidate.requiredLocalDate));
-      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'refill_completed', metadata: { buffer_before: candidate.bufferBefore, buffer_after: bufferAfter, created: result.created.length, priority, estimated_cost_usd: cost } });
+      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'refill_completed', metadata: { buffer_before: candidate.bufferBefore, buffer_after: bufferAfter, created: result.created.length, preserved: preserved.length, rescheduled: rescheduled.length, priority, estimated_cost_usd: cost } });
       if (repaired) await emitRefillEvent(options, { userId: candidate.userId, eventType: 'buffer_coverage_repaired', metadata: { required_local_date: candidate.requiredLocalDate, buffer_before: candidate.bufferBefore, buffer_after: bufferAfter } });
-      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'schedule_reconciled', metadata: { required_local_date: candidate.requiredLocalDate ?? null, buffer_after: bufferAfter, created: result.created.length } });
+      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'schedule_reconciled', metadata: { required_local_date: candidate.requiredLocalDate ?? null, buffer_after: bufferAfter, created: result.created.length, preserved: preserved.length, rescheduled: rescheduled.length } });
       users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter, created: result.created.length, skipped: result.skipped, failureReason: null, estimatedCostUsd: cost, priority });
     } catch (error) {
       const failureReason = error instanceof Error ? error.message : 'refill_failed';
       await emitRefillEvent(options, { userId: candidate.userId, eventType: 'refill_failed', metadata: { buffer_before: candidate.bufferBefore, priority, reason: failureReason } });
+      await emitRefillEvent(options, { userId: candidate.userId, eventType: 'next_message_not_ready', metadata: { expected_local_date: candidate.requiredLocalDate ?? null, reason: failureReason, priority } });
       users.push({ userId: candidate.userId, bufferBefore: candidate.bufferBefore, bufferAfter: candidate.bufferBefore, created: 0, skipped: [], failureReason, estimatedCostUsd: 0, priority });
     }
   }
@@ -165,7 +170,7 @@ async function refillWithProductionClaim(admin: SupabaseClient, userId: string, 
     executionContext: 'production',
     concurrencyKey: 'approved-buffer-next',
   });
-  if (!claim.created) return { userId, minBufferDays: MIN_BUFFER_DAYS, targetBufferDays: TARGET_FUTURE_INTERVENTIONS, created: [], skipped: ['refill_in_progress'], calls: emptyCalls(), usage: emptyUsage(), usageRecords: [] } satisfies RefillResult;
+  if (!claim.created) return { userId, minBufferDays: MIN_BUFFER_DAYS, targetBufferDays: TARGET_FUTURE_INTERVENTIONS, created: [], preserved: [], rescheduled: [], skipped: ['refill_in_progress'], calls: emptyCalls(), usage: emptyUsage(), usageRecords: [] } satisfies RefillResult;
   try {
     const result = await refillApprovedBuffer(admin, userId, options);
     await updateExecutionRun(admin, claim.context, { status: result.created.length ? 'approved' : 'no_approved_intervention', stageResults: { next: { created: result.created.length, skipped: result.skipped } } });
@@ -203,7 +208,7 @@ export async function refillEligibleProductionUsers(admin: SupabaseClient, optio
 export async function refillApprovedBuffer(admin: SupabaseClient, userId: string, options: { now?: Date; minBufferDays?: number; targetBufferDays?: number; maxCostUsd?: number; firstIntendedLocalDate?: string; requiredLocalDate?: string; refillStartDate?: string; fillFromFirstIntendedDate?: boolean; onUsage?: (record: RefillResult['usageRecords'][number]) => void | Promise<void>; onEvent?: RefillOrchestrationOptions['onEvent'] } = {}): Promise<RefillResult> {
   const now = options.now ?? new Date();
   const maxCostUsd = options.maxCostUsd ?? Number(process.env.REFILL_MAX_COST_USD || DEFAULT_MAX_COST_USD);
-  const base = { userId, minBufferDays: MIN_BUFFER_DAYS, targetBufferDays: TARGET_FUTURE_INTERVENTIONS, created: [] as ApprovedBufferItem[], skipped: [] as string[], calls: emptyCalls(), usage: emptyUsage(), usageRecords: [] as RefillResult['usageRecords'] };
+  const base = { userId, minBufferDays: MIN_BUFFER_DAYS, targetBufferDays: TARGET_FUTURE_INTERVENTIONS, created: [] as ApprovedBufferItem[], preserved: [] as ApprovedBufferItem[], rescheduled: [] as ApprovedBufferItem[], skipped: [] as string[], calls: emptyCalls(), usage: emptyUsage(), usageRecords: [] as RefillResult['usageRecords'] };
   const { data: profile, error: profileError } = await admin.from('profiles').select('*').eq('id', userId).single();
   if (profileError || !profile) throw new Error('refill_profile_unavailable');
   const today = localDate(profile.timezone, now);
@@ -232,7 +237,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     const kept = active.find(row => row.id === decision.keepId);
     if (!kept) return { ...base, skipped: ['next_reconciliation_retry'] };
     const row = decision.action === 'reschedule' && decision.targetLocalDate && kept.intendedLocalDate !== decision.targetLocalDate ? await rescheduleRow(admin, userId, decision.keepId, decision.targetLocalDate) : kept;
-    return { ...base, skipped: [decision.action === 'reschedule' ? 'next_intervention_rescheduled' : 'next_intervention_valid'], created: [row] };
+    return { ...base, skipped: [decision.action === 'reschedule' ? 'next_intervention_rescheduled' : 'next_intervention_valid'], [decision.action === 'reschedule' ? 'rescheduled' : 'preserved']: [row] };
   }
   const targetDate = decision.targetLocalDate ?? preparationDate;
   if (!targetDate) return { ...base, skipped: ['next_intervention_not_due'] };
@@ -253,6 +258,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
   let evaluation = evaluateWriterV2(generated.message, input);
   if (!evaluation.approved) await emitQualityEvent(options, userId, 'writer_quality_rejected', evaluation, 1);
   let judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: scheduledTimeOfDay, guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
+  if (judged.technicalRetries) await emitRefillEvent(options, { userId, eventType: 'generation_technical_retry', metadata: { purpose: 'semantic_judge', retries: judged.technicalRetries, contract_version: MESSAGE_CONTRACT_VERSION } });
   base.calls.judge += 1;
   base.usage.judgeInput += judged.usage.prompt_tokens ?? 0;
   base.usage.judgeOutput += judged.usage.completion_tokens ?? 0;
@@ -269,6 +275,7 @@ export async function refillApprovedBuffer(admin: SupabaseClient, userId: string
     base.usage.writerOutput += generated.usage?.completion_tokens ?? 0;
     evaluation = evaluateWriterV2(generated.message, input);
     judged = await judgeSemanticFidelity({ addressName: brief.firstName, confirmedContext: brief.currentContext, desiredChange: brief.desiredChange, receptionStage: projectedStage, timeOfDay: scheduledTimeOfDay, guidance, adjacentMovements: guidance.outOfScope, interventionMode: nextPlan.interventionMode, angle: nextPlan.angle, depth: nextPlan.depth, newContribution: nextPlan.newContribution, expectedTakeaway: nextPlan.expectedTakeaway, previousDeliveredTakeaway: brief.psychologicalProgression?.continuity.previousDeliveredTakeaway, recentTakeaways: brief.recentEditorialTakes ?? [], priorContributions: deliveredExposures.flatMap(item => [item.newContribution, item.expectedTakeaway, item.takeaway]).filter((value): value is string => Boolean(value)), relatedSignatures: [], message: generated.message });
+    if (judged.technicalRetries) await emitRefillEvent(options, { userId, eventType: 'generation_technical_retry', metadata: { purpose: 'semantic_judge', retries: judged.technicalRetries, contract_version: MESSAGE_CONTRACT_VERSION, writer_attempt: 2 } });
     base.calls.judge += 1;
     base.usage.judgeInput += judged.usage.prompt_tokens ?? 0;
     base.usage.judgeOutput += judged.usage.completion_tokens ?? 0;

@@ -59,10 +59,6 @@ export function chooseNextIntervention(input: {
     return { action: 'reschedule', targetLocalDate, keepId: keep.id, invalidateIds, reason: 'schedule_only_change' };
   }
 
-  if (input.dailyInteractionToday) {
-    return { action: 'wait_for_delivery', targetLocalDate: null, keepId: null, invalidateIds, reason: 'daily_interaction_present' };
-  }
-
   const nextTarget = input.alreadyDeliveredToday ? addLocalDays(input.today, 1) : targetLocalDate;
   return { action: ordered.length ? 'invalidate_and_prepare' : 'prepare', targetLocalDate: nextTarget, keepId: null, invalidateIds: ordered.map(row => row.id), reason: ordered.length ? 'next_content_stale' : 'next_missing' };
 }

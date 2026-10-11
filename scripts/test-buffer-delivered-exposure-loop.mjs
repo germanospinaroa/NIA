@@ -79,7 +79,7 @@ function adminFor({ bufferRows, interactions, deliveries }) {
   } };
 }
 
-const sentInteraction = { id: 'interaction-d1', user_id: userId, local_date: '2026-10-01', content: d1Plan.message, interaction_type: 'daily_message' };
+const sentInteraction = { id: 'interaction-d1', user_id: userId, local_date: '2026-10-01', content: `Buenos días, Ana.\n\n${d1Plan.message}`, source_buffer_id: 'buffer-d1', interaction_type: 'daily_message' };
 const sentDelivery = { interaction_id: 'interaction-d1', user_id: userId, status: 'sent', sent_at: '2026-10-01T10:00:00.000Z' };
 const successful = await loadDeliveredBufferExposures(adminFor({ bufferRows: buffers, interactions: [sentInteraction], deliveries: [sentDelivery] }), userId);
 assert.equal(successful.length, 1);
@@ -150,7 +150,7 @@ const projected = [0, 1, 2, 3, 4, 5, 29].map(scheduled => projectedReceptionStag
 assert.deepEqual(projected, ['tuning', 'tuning', 'building', 'building', 'building', 'established', 'established']);
 const refillSource = fs.readFileSync(new URL('../lib/server/refill-approved-buffer.ts', import.meta.url), 'utf8');
 assert.doesNotMatch(refillSource, /receptionStage:\s*'established'/);
-assert.match(refillSource, /const projectedStage = planned\.projectedReceptionStage/);
+assert.match(refillSource, /const projectedStage = nextPlan\.projectedReceptionStage/);
 assert.match(refillSource, /receptionStage: projectedStage/);
 assert.match(refillSource, /judgeSemanticFidelity\(\{[^}]*receptionStage: projectedStage/s);
 

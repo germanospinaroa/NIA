@@ -84,7 +84,16 @@ export async function releaseConsumedMessage(admin: SupabaseClient, row: BufferR
 
 export async function storeApprovedMessage(admin: SupabaseClient, input: Omit<BufferRow, 'id' | 'created_at'>) {
   const { data, error } = await admin.from('approved_intervention_buffer').insert(input).select('*').single();
-  if (error) throw new Error('approved_buffer_store_failed');
+  if (error) {
+    if (error.code === '23505') {
+      const constraint = String((error as { details?: string; hint?: string }).details ?? '') + ' ' + String((error as { hint?: string }).hint ?? '');
+      if (constraint.includes('approved_intervention_buffer_active_signature_key')) throw new Error('approved_buffer_duplicate_signature');
+      if (constraint.includes('approved_intervention_buffer_active_message_hash_key')) throw new Error('approved_buffer_duplicate_hash');
+      if (constraint.includes('approved_intervention_buffer_active_user_date_key')) throw new Error('approved_buffer_date_conflict');
+      if (constraint.includes('approved_intervention_buffer_one_active_next')) throw new Error('approved_buffer_one_next_conflict');
+    }
+    throw new Error(error.code === '23505' ? 'approved_buffer_store_failed:unique_violation' : 'approved_buffer_store_failed');
+  }
   return data as BufferRow;
 }
 
@@ -135,9 +144,9 @@ export async function loadDeliveredBufferExposures(admin: SupabaseClient, userId
   const rows = (consumed ?? []) as BufferRow[];
   if (!rows.length) return [];
   const dates = [...new Set(rows.map(row => row.intended_local_date))];
-  const { data: interactions, error: interactionError } = await admin.from('interactions').select('id,local_date,content').eq('user_id', userId).eq('interaction_type', 'daily_message').in('local_date', dates);
+  const { data: interactions, error: interactionError } = await admin.from('interactions').select('id,local_date,source_buffer_id').eq('user_id', userId).eq('interaction_type', 'daily_message').in('local_date', dates);
   if (interactionError) throw new Error('approved_buffer_interaction_lookup_failed');
-  const matching = (interactions ?? []).filter(interaction => rows.some(row => row.intended_local_date === interaction.local_date && row.message === interaction.content));
+  const matching = (interactions ?? []).filter(interaction => typeof interaction.source_buffer_id === 'string' && rows.some(row => row.id === interaction.source_buffer_id));
   if (!matching.length) return [];
   const interactionIds = matching.map(interaction => interaction.id).filter(Boolean);
   const { data: deliveries, error: deliveryError } = await admin.from('whatsapp_daily_deliveries').select('interaction_id,sent_at').eq('user_id', userId).eq('status', 'sent').in('interaction_id', interactionIds);
@@ -148,7 +157,7 @@ export async function loadDeliveredBufferExposures(admin: SupabaseClient, userId
   for (const interaction of matching) {
     const sentAt = deliveryByInteraction.get(interaction.id);
     if (!sentAt) continue;
-    const row = rows.find(candidate => candidate.intended_local_date === interaction.local_date && candidate.message === interaction.content);
+    const row = rows.find(candidate => candidate.id === interaction.source_buffer_id);
     if (row && !seenRows.has(row.id)) {
       seenRows.add(row.id);
       exposures.push(bufferMovementExposure(row, sentAt));

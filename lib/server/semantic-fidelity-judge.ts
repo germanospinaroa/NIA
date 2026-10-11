@@ -2,6 +2,8 @@ import { evaluateMovementExpression, type MovementTargetGuidance } from '@/lib/m
 import type { ReceptionStage, ReceptionTimeOfDay } from '@/lib/server/reception-progression';
 
 export const SEMANTIC_FIDELITY_MODEL = 'gpt-6-luna';
+export const SEMANTIC_FIDELITY_MAX_COMPLETION_TOKENS = 1400;
+export const SEMANTIC_FIDELITY_MAX_TECHNICAL_RETRIES = 2;
 
 export type SemanticFidelityInput = {
   addressName: string;
@@ -50,6 +52,7 @@ export type SemanticFidelityExecution = {
   responseId: string | null;
   model: string;
   latencyMs: number;
+  technicalRetries: number;
 };
 
 const schema = {
@@ -147,12 +150,18 @@ export async function judgeSemanticFidelity(input: SemanticFidelityInput): Promi
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error('semantic_fidelity_judge_not_configured');
   const started = Date.now();
-  const response = await fetch(process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: SEMANTIC_FIDELITY_MODEL,
-      max_completion_tokens: 800,
+  let technicalRetries = 0;
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= SEMANTIC_FIDELITY_MAX_TECHNICAL_RETRIES; attempt += 1) {
+    try {
+      const response = await fetch(process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: SEMANTIC_FIDELITY_MODEL,
+          // Reasoning-capable models spend completion budget before emitting
+          // visible JSON. This is a transport budget, not a quality shortcut.
+          max_completion_tokens: SEMANTIC_FIDELITY_MAX_COMPLETION_TOKENS,
         messages: [
         { role: 'system', content: system },
         { role: 'user', content: JSON.stringify({
@@ -179,17 +188,25 @@ export async function judgeSemanticFidelity(input: SemanticFidelityInput): Promi
           message: input.message,
         }) },
       ],
-      response_format: { type: 'json_schema', json_schema: { name: 'nia_semantic_fidelity', strict: true, schema } },
-    }),
-    signal: AbortSignal.timeout(45_000),
-  });
-  const payload = await response.json().catch(() => ({})) as { id?: unknown; model?: unknown; choices?: Array<{ finish_reason?: unknown; message?: { content?: unknown; refusal?: unknown } }>; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } };
-  if (!response.ok) throw new Error(`semantic_fidelity_http_${response.status}`);
-  const content = payload.choices?.[0]?.message?.content;
-  if (typeof content !== 'string' || !content.trim()) {
-    const choice = payload.choices?.[0];
-    throw new Error(`semantic_fidelity_empty_response:${String(choice?.finish_reason ?? 'unknown')}:${typeof choice?.message?.refusal === 'string' ? choice.message.refusal.slice(0, 120) : 'no_refusal'}`);
+          response_format: { type: 'json_schema', json_schema: { name: 'nia_semantic_fidelity', strict: true, schema } },
+        }),
+        signal: AbortSignal.timeout(60_000),
+      });
+      const payload = await response.json().catch(() => ({})) as { id?: unknown; model?: unknown; choices?: Array<{ finish_reason?: unknown; message?: { content?: unknown; refusal?: unknown } }>; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } };
+      if (!response.ok) throw new Error(`semantic_fidelity_http_${response.status}`);
+      const content = payload.choices?.[0]?.message?.content;
+      if (typeof content !== 'string' || !content.trim()) {
+        const choice = payload.choices?.[0];
+        throw new Error(`semantic_fidelity_empty_response:${String(choice?.finish_reason ?? 'unknown')}:${typeof choice?.message?.refusal === 'string' ? choice.message.refusal.slice(0, 120) : 'no_refusal'}`);
+      }
+      const result = parseResult(JSON.parse(content), input.guidance.target, input.adjacentMovements, input.message);
+      return { result, usage: payload.usage ?? {}, responseId: typeof payload.id === 'string' ? payload.id : null, model: typeof payload.model === 'string' ? payload.model : SEMANTIC_FIDELITY_MODEL, latencyMs: Date.now() - started, technicalRetries };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('semantic_fidelity_unknown_failure');
+      const retryable = /semantic_fidelity_empty_response:length|semantic_fidelity_http_(408|409|425|429|500|502|503|504)|aborted|timeout/i.test(lastError.message);
+      if (!retryable || attempt >= SEMANTIC_FIDELITY_MAX_TECHNICAL_RETRIES) throw lastError;
+      technicalRetries += 1;
+    }
   }
-  const result = parseResult(JSON.parse(content), input.guidance.target, input.adjacentMovements, input.message);
-  return { result, usage: payload.usage ?? {}, responseId: typeof payload.id === 'string' ? payload.id : null, model: typeof payload.model === 'string' ? payload.model : SEMANTIC_FIDELITY_MODEL, latencyMs: Date.now() - started };
+  throw lastError ?? new Error('semantic_fidelity_unknown_failure');
 }
