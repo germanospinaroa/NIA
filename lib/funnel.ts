@@ -1,3 +1,5 @@
+import { readMarketingAttribution } from '@/lib/marketing-attribution';
+
 export type FunnelFeedback = 'as_is' | 'grounded' | 'different';
 export type FunnelPlan = 'monthly' | 'annual';
 export type DemoChoice = 'new_information' | 'doubt' | 'unsure';
@@ -7,7 +9,7 @@ export type DiscoverFeedback = 'serves' | 'different' | 'not_me';
 export type FunnelTiming = 'morning' | 'midday' | 'afternoon' | 'night';
 export type CommunicationPreference = 'idea' | 'practical' | 'structured' | 'adaptive';
 export type DiscoverScreenKey = 'recognition' | 'pattern' | 'desire' | 'personalize' | 'demo' | 'testimonials';
-export const PUBLIC_FUNNEL_VERSION = 'emotional_v1' as const;
+export const PUBLIC_FUNNEL_VERSION = 'emotional_v2' as const;
 export type RecognitionContext = 'decision_doubt';
 export type OnboardingSituationChoice = 'doubt' | 'firm' | 'source_dependent';
 export type OnboardingFollowupChoice = 'new_information' | 'only_doubt' | 'unsure' | 'yes' | 'no' | 'think' | 'decision_changed' | 'confidence_changed';
@@ -85,7 +87,7 @@ export function resetFunnelState() {
 }
 export function trackFunnel(name: string, properties: Record<string, string | number | boolean> = {}) {
   if (typeof window === 'undefined') return;
-  const publicEvents = new Set(['discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed', 'pricing_viewed', 'plan_viewed', 'plans_viewed', 'plan_selected']);
+  const publicEvents = new Set(['discover_started', 'premium_funnel_started', 'discover_screen_viewed', 'discover_screen_completed', 'premium_funnel_completed', 'pricing_viewed', 'plan_viewed', 'plans_viewed', 'plan_selected', 'checkout_started']);
   const sessionKey = 'nia_funnel_session_id';
   let sessionId: string | null = null;
   try {
@@ -103,7 +105,9 @@ export function trackFunnel(name: string, properties: Record<string, string | nu
   (w.__niaFunnelEvents ??= []).push(event);
   window.dispatchEvent(new CustomEvent('nia:funnel', { detail: event }));
   if (!publicPath || !publicEvents.has(name)) return;
-  const payload = { session_id: sessionId, event_name: name, funnel_version: PUBLIC_FUNNEL_VERSION, screen_index: typeof properties.screen === 'number' ? properties.screen : null, screen_key: typeof properties.screen_key === 'string' ? properties.screen_key : null, pathname: window.location.pathname, referrer: document.referrer.slice(0, 500) || null, utm_source: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 120) ?? null, utm_medium: new URLSearchParams(window.location.search).get('utm_medium')?.slice(0, 120) ?? null, utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign')?.slice(0, 120) ?? null };
+  const attribution = readMarketingAttribution();
+  const query = new URLSearchParams(window.location.search);
+  const payload = { session_id: sessionId, event_name: name, funnel_version: PUBLIC_FUNNEL_VERSION, screen_index: typeof properties.screen === 'number' ? properties.screen : null, screen_key: typeof properties.screen_key === 'string' ? properties.screen_key : null, pathname: window.location.pathname, referrer: document.referrer.slice(0, 500) || null, utm_source: (attribution.utm_source ?? query.get('utm_source'))?.slice(0, 120) ?? null, utm_medium: (attribution.utm_medium ?? query.get('utm_medium'))?.slice(0, 120) ?? null, utm_campaign: (attribution.utm_campaign ?? query.get('utm_campaign'))?.slice(0, 120) ?? null };
   try {
     const body = JSON.stringify(payload);
     if (navigator.sendBeacon) { navigator.sendBeacon('/api/funnel/events', new Blob([body], { type: 'application/json' })); }
