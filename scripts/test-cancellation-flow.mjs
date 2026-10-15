@@ -24,6 +24,8 @@ assert.match(page, /past_due/);
 assert.match(page, /overdue/);
 assert.match(page, /Cancelar suscripción/);
 assert.match(page, /Al confirmar, cancelaremos tu suscripción para detener el ciclo de cobro y evitar futuras renovaciones\./);
+assert.match(page, /Tu suscripción fue cancelada y no se generarán nuevas renovaciones\./);
+assert.doesNotMatch(page, /Puedes seguir usando NIA hasta el \{accessDate\}/);
 assert.match(subscriptionRoute, /provider,subscriber_code/);
 assert.match(subscriptionRoute, /can_cancel: provider === 'hotmart' && Boolean\(subscriberCode\)/);
 assert.doesNotMatch(page, /!\['canceled','cancelled','overdue','past_due','refunded','chargeback','expired'\]\.includes\(status\)/);

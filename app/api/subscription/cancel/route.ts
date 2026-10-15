@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cancelHotmartSubscription, HotmartCancellationError, dateValue } from '@/lib/server/hotmart';
+import { cancelHotmartSubscription, HotmartCancellationError } from '@/lib/server/hotmart';
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -39,11 +39,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'hotmart_cancel_failed' }, { status: 502 });
   }
   const cancelRequestedAt = new Date().toISOString();
-  const accessUntil = dateValue((cancellation.response as Record<string, unknown>)?.date_next_charge ?? (cancellation.response as Record<string, unknown>)?.access_until);
   const updateValues: Record<string, string> = { cancel_requested_at: cancelRequestedAt };
-  if (accessUntil) updateValues.access_until = accessUntil;
   const { data: updated, error: updateError } = await supabase.from('subscriptions').update(updateValues).eq('id', subscription.id).select('*').single();
   await updateFeedback({ cancellation_confirmed_at: new Date().toISOString(), cancellation_failed_at: null, cancellation_error_code: null });
-  if (updateError) return NextResponse.json({ error: 'provider_cancelled_local_sync_pending', provider_confirmed: true, access_until: accessUntil }, { status: 202 });
+  if (updateError) return NextResponse.json({ error: 'provider_cancelled_local_sync_pending', provider_confirmed: true }, { status: 202 });
   return NextResponse.json({ subscription: updated, already_canceled: cancellation.alreadyCanceled });
 }
