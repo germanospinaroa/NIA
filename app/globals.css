@@ -654,7 +654,8 @@ main:has(#funnel-email) .funnel-error, main:has(#access-code) .funnel-error { pa
 
 /* emotional_v3 — isolated acquisition experiment. It intentionally does not share
    screen state with emotional_v2, while keeping NIA's editorial visual contract. */
-.v3-funnel { --v3-paper: #f4efe6; --v3-ink: #181714; --v3-muted: #6b6258; --v3-copper: #c76338; position: relative; min-height: 100dvh; overflow-x: clip; background: radial-gradient(circle at 84% 10%, rgb(199 99 56 / .11), transparent 30%), var(--v3-paper); color: var(--v3-ink); font-family: var(--font-body); }
+.v3-funnel { --v3-paper: #f4efe6; --v3-ink: #181714; --v3-muted: #6b6258; --v3-copper: #c76338; position: relative; min-height: 100dvh; overflow-x: clip; overflow-anchor: none; background: radial-gradient(circle at 84% 10%, rgb(199 99 56 / .11), transparent 30%), var(--v3-paper); color: var(--v3-ink); font-family: var(--font-body); }
+html:has(.v3-funnel) { scroll-behavior: auto !important; }
 .v3-funnel.is-dark { background: radial-gradient(circle at 82% 8%, rgb(199 99 56 / .13), transparent 28%), #1d1915; color: #f5eee2; }
 .v3-header { position: absolute; z-index: 4; inset: 0 0 auto; display: grid; grid-template-columns: auto minmax(80px, 280px) auto; align-items: center; gap: 16px; padding: max(20px, env(safe-area-inset-top)) 20px 20px; }
 .v3-mark { display: inline-flex; align-items: center; gap: 8px; width: max-content; color: currentColor; font-size: 15px; font-weight: 700; letter-spacing: -.04em; text-decoration: none; }
@@ -725,7 +726,7 @@ main:has(#funnel-email) .funnel-error, main:has(#access-code) .funnel-error { pa
 .v3-legal a, .v3-back { color: currentColor; text-underline-offset: 3px; }
 .v3-back { justify-self: end; font-size: 12px; }
 .v3-plans-action { position: fixed; z-index: 5; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; padding: 12px 20px max(12px, env(safe-area-inset-bottom)); background: rgb(29 25 21 / .94); backdrop-filter: blur(10px); }
-.v3-plans-action .v3-cta { max-width: 660px; }
+.v3-plans-action .v3-cta { max-width: 660px; background: var(--v3-paper); color: var(--v3-ink); }
 @media (min-width: 760px) { .v3-screen, .v3-plans-screen { padding-right: 8vw; padding-left: 8vw; } .v3-trust-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; } .v3-trust-grid > div { display: block; padding: 16px; border: 1px solid color-mix(in oklab, currentColor 18%, transparent); border-radius: 16px; } .v3-trust-grid p { margin-top: 12px; } }
 @media (prefers-reduced-motion: reduce) { .v3-progress span, .v3-choice, .v3-cta { transition: none; } }
 
