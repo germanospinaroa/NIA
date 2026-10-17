@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const [{ data, error }, { data: attempt, error: attemptError }] = await Promise.all([
     supabase.from('whatsapp_connections').select('id,status,phone_number,connected_at,last_message_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     attemptId
-      ? supabase.from('whatsapp_link_tokens').select('id,purpose,status,rejection_reason,expires_at,expected_phone').eq('user_id', user.id).eq('id', attemptId).maybeSingle()
+      ? supabase.from('whatsapp_link_tokens').select('id,purpose,status,rejection_reason,expires_at').eq('user_id', user.id).eq('id', attemptId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
   if (error || attemptError) {
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   const isPending = attempt.status === 'pending' && new Date(attempt.expires_at).getTime() > Date.now();
   const isConflict = attempt.status === 'rejected' && attempt.rejection_reason === 'already_connected';
   const isReplacement = attempt.purpose === 'replace';
-  const isSucceeded = isReplacement && attempt.status === 'used' && data?.status === 'connected' && Boolean(attempt.expected_phone) && data.phone_number === attempt.expected_phone;
+  const isSucceeded = isReplacement && attempt.status === 'used' && data?.status === 'connected';
 
   if (isReplacement) {
     const replacementStatus = isSucceeded ? 'succeeded' : isConflict ? 'conflict' : isPending ? 'pending' : 'none';

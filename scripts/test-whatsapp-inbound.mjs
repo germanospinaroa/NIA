@@ -5,13 +5,20 @@ import { contextKeyFromInbound, feedbackFromInbound, utilityCommandFromInbound }
 
 const base = { event: 'messages.upsert', data: { key: { id: 'EV-IN-1', remoteJid: '573001234567@s.whatsapp.net', fromMe: false }, message: { conversation: 'Hola NIA' } } };
 const parsed = parseEvolutionMessage(base);
-assert.deepEqual(parsed, { providerMessageId: 'EV-IN-1', remoteJid: '573001234567@s.whatsapp.net', from: '573001234567', text: 'Hola NIA', fromMe: false, messageType: 'conversation', isGroup: false, isBroadcast: false, buttonId: null, buttonText: null });
+assert.deepEqual(parsed, { providerMessageId: 'EV-IN-1', remoteJid: '573001234567@s.whatsapp.net', remoteJidAlt: null, from: '573001234567', jidType: 'phone', text: 'Hola NIA', fromMe: false, messageType: 'conversation', isGroup: false, isBroadcast: false, buttonId: null, buttonText: null });
 const extended = parseEvolutionMessage({ data: { key: { id: 'EV-IN-2', remoteJid: '573001234567@s.whatsapp.net', fromMe: false }, message: { extendedTextMessage: { text: 'Necesito NIA ahora' } } } });
 assert.equal(extended.messageType, 'extendedTextMessage');
 assert.equal(extended.text, 'Necesito NIA ahora');
 assert.equal(parseEvolutionMessage({ data: { key: { id: 'EV-IN-3', remoteJid: '573001234567@s.whatsapp.net', fromMe: true }, message: { conversation: 'loop' } } }).fromMe, true);
 assert.equal(parseEvolutionMessage({ data: { key: { remoteJid: '573001234567@g.us', fromMe: false }, message: { conversation: 'group' } } }).isGroup, true);
 assert.equal(parseEvolutionMessage({ data: { key: { id: 'EV-IN-4', remoteJid: 'status@broadcast', fromMe: false }, message: { conversation: 'broadcast' } } }).isBroadcast, true);
+const lid = parseEvolutionMessage({ data: { key: { id: 'EV-IN-5', remoteJid: '1234567890@lid', remoteJidAlt: '5215512345678@s.whatsapp.net', fromMe: false }, message: { conversation: 'Código NIA-ABCD' } } });
+assert.equal(lid.from, '5215512345678');
+assert.equal(lid.jidType, 'phone');
+assert.equal(lid.remoteJidAlt, '5215512345678@s.whatsapp.net');
+const unresolved = parseEvolutionMessage({ data: { key: { id: 'EV-IN-6', remoteJid: '1234567890@lid', fromMe: false }, message: { conversation: 'Código NIA-ABCD' } } });
+assert.equal(unresolved.from, '');
+assert.equal(unresolved.jidType, 'lid');
 assert.equal(contextKeyFromInbound('Necesito NIA ahora, tengo que decidir'), 'decision');
 assert.equal(contextKeyFromInbound('Hola NIA'), 'intention');
 assert.equal(feedbackFromInbound('Así sí'), 'resonates');

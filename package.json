@@ -35,6 +35,7 @@
     "test:activation-welcome": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-activation-welcome.mjs",
     "test:onboarding-auth": "node scripts/test-onboarding-auth.mjs",
     "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp.mjs",
+    "test:whatsapp-linking": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-whatsapp-linking.mjs",
     "test:whatsapp-buttons": "node --experimental-strip-types scripts/test-whatsapp-buttons.mjs",
     "test:whatsapp-inbound": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-whatsapp-inbound.mjs",
     "test:support-utility": "node --experimental-strip-types --experimental-loader=./scripts/test-ts-loader.mjs scripts/test-support-utility.mjs",

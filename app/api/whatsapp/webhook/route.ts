@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { after, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { extractLinkCode, hashLinkCode, normalizeInboundPhone, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
+import { extractLinkCode, hashLinkCode, parseEvolutionMessage, sendWhatsAppText, whatsappProvider } from '@/lib/server/whatsapp';
 import { persistInboundMessage, processInboundMessage, processUnresolvedInbound } from '@/lib/server/whatsapp-inbound';
 import { completeOnboardingAfterWhatsapp } from '@/lib/server/onboarding-finalization';
 import { hasConfirmedOnboardingIdentity } from '@/lib/onboarding-identity';
@@ -64,21 +64,26 @@ export async function POST(request: Request) {
     after(() => processInboundMessage(admin, evolution, persisted.row, connection.user_id).catch(error => console.error('[nia-inbound-processing-failed]', error instanceof Error ? error.message : String(error))));
     return NextResponse.json({ received: true, processing: 'scheduled', user_resolved: true }, { status: 202 });
   }
-  if (!from || !code) return NextResponse.json({ received: true });
   const admin = createAdminClient();
-  const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at,expected_phone,purpose').eq('token_hash', hashLinkCode(code)).maybeSingle();
-  if (tokenError || !token || token.status !== 'pending' || new Date(token.expires_at).getTime() < Date.now()) return NextResponse.json({ received: true });
-  const normalizedFrom = normalizeInboundPhone(from);
-  if (token.expected_phone && normalizedFrom !== token.expected_phone) {
-    await admin.from('event_log').insert({ user_id: token.user_id, event_type: 'whatsapp_link_phone_mismatch', entity_type: 'whatsapp_link_token', entity_id: token.id, metadata: { wa_id_suffix: normalizedFrom?.slice(-4) || null, expected_phone_suffix: token.expected_phone.slice(-4) } });
-    console.info('whatsapp_link_phone_mismatch', { userId: token.user_id, tokenId: token.id, waIdSuffix: normalizedFrom?.slice(-4) || null, expectedPhoneSuffix: token.expected_phone.slice(-4) });
-    return NextResponse.json({ received: true, connected: false, mismatch: true });
+  if (evolution && !from) {
+    await admin.from('event_log').insert({ user_id: null, event_type: 'whatsapp_link_sender_unresolvable', entity_type: 'whatsapp_link', metadata: { provider: 'evolution', jid_type: evolution.jidType, remote_jid_alt_present: Boolean(evolution.remoteJidAlt) } });
+    console.warn('whatsapp_link_sender_unresolvable', { provider: 'evolution', jidType: evolution.jidType, remoteJidAltPresent: Boolean(evolution.remoteJidAlt) });
+    return NextResponse.json({ received: true, connected: false, sender_unresolvable: true }, { status: 202 });
   }
-  const verifiedFrom = normalizedFrom || from;
+  if (!from || !code) return NextResponse.json({ received: true });
+  const { data: token, error: tokenError } = await admin.from('whatsapp_link_tokens').select('id,user_id,status,expires_at,purpose').eq('token_hash', hashLinkCode(code)).maybeSingle();
+  if (tokenError || !token) return NextResponse.json({ received: true });
+  if (token.status !== 'pending' || new Date(token.expires_at).getTime() < Date.now()) {
+    await admin.from('event_log').insert({ user_id: token.user_id, event_type: token.status === 'pending' ? 'whatsapp_link_expired' : 'whatsapp_link_code_received', entity_type: 'whatsapp_link_token', entity_id: token.id, metadata: { provider: whatsappProvider(), purpose: token.purpose, jid_type: evolution?.jidType || 'phone', sender_suffix: from.slice(-4) } });
+    return NextResponse.json({ received: true });
+  }
+  await admin.from('event_log').insert({ user_id: token.user_id, event_type: 'whatsapp_link_code_received', entity_type: 'whatsapp_link_token', entity_id: token.id, metadata: { provider: whatsappProvider(), purpose: token.purpose, jid_type: evolution?.jidType || 'phone', sender_suffix: from.slice(-4), remote_jid_alt_present: Boolean(evolution?.remoteJidAlt) } });
+  const verifiedFrom = from;
   const provider = whatsappProvider();
   const { data: existing } = await admin.from('whatsapp_connections').select('user_id').eq('provider', provider).in('wa_id', Array.from(new Set([from, verifiedFrom]))).eq('status', 'connected').maybeSingle();
   if (existing && existing.user_id !== token.user_id) {
     await admin.from('whatsapp_link_tokens').update({ status: 'rejected', rejected_at: new Date().toISOString(), rejection_reason: 'already_connected' }).eq('id', token.id);
+    await admin.from('event_log').insert({ user_id: token.user_id, event_type: 'whatsapp_link_conflict', entity_type: 'whatsapp_link_token', entity_id: token.id, metadata: { provider, purpose: token.purpose, jid_type: evolution?.jidType || 'phone', sender_suffix: verifiedFrom.slice(-4), remote_jid_alt_present: Boolean(evolution?.remoteJidAlt) } });
     await sendWhatsAppText(verifiedFrom, 'Este número ya está conectado a otra cuenta de NIA. Vuelve a NIA para usar otro número.');
     return NextResponse.json({ received: true, connected: false, conflict: true });
   }
@@ -96,6 +101,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ received: true, duplicate: true });
   }
+  await admin.from('event_log').insert({ user_id: token.user_id, event_type: 'whatsapp_link_connected', entity_type: 'whatsapp_link_token', entity_id: token.id, metadata: { provider, purpose: token.purpose, jid_type: evolution?.jidType || 'phone', sender_suffix: verifiedFrom.slice(-4), remote_jid_alt_present: Boolean(evolution?.remoteJidAlt) } });
   const { data: profile } = await admin.from('profiles').select('first_name,preferred_name,learning_profile').eq('id', token.user_id).maybeSingle();
   await admin.from('profiles').update({ whatsapp_enabled: true, whatsapp_phone: verifiedFrom }).eq('id', token.user_id);
   let onboarding;

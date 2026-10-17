@@ -26,7 +26,9 @@ export function extractLinkCode(text: string) {
 export type EvolutionInboundMessage = {
   providerMessageId: string | null;
   remoteJid: string;
+  remoteJidAlt: string | null;
   from: string;
+  jidType: 'phone' | 'lid' | 'unknown';
   text: string;
   fromMe: boolean;
   messageType: 'conversation' | 'extendedTextMessage' | 'button' | 'unknown';
@@ -36,6 +38,14 @@ export type EvolutionInboundMessage = {
   buttonText: string | null;
 };
 
+function isPhoneJid(value: string) {
+  return /^\d{6,20}@s\.whatsapp\.net$/.test(value);
+}
+
+function jidNumber(value: string) {
+  return value.replace(/@s\.whatsapp\.net$/, '');
+}
+
 /** Normalizes the Evolution MESSAGES_UPSERT shape without inventing identity. */
 export function parseEvolutionMessage(body: Record<string, unknown>): EvolutionInboundMessage {
   const data = (body.data ?? {}) as Record<string, unknown>;
@@ -44,6 +54,9 @@ export function parseEvolutionMessage(body: Record<string, unknown>): EvolutionI
   const extended = (message.extendedTextMessage ?? {}) as Record<string, unknown>;
   const button = (message.buttonsResponseMessage ?? message.templateButtonReplyMessage ?? {}) as Record<string, unknown>;
   const remoteJid = typeof key.remoteJid === 'string' ? key.remoteJid : '';
+  const remoteJidAlt = typeof key.remoteJidAlt === 'string' && key.remoteJidAlt.trim() ? key.remoteJidAlt.trim() : null;
+  const senderJid = isPhoneJid(remoteJid) ? remoteJid : remoteJidAlt && isPhoneJid(remoteJidAlt) ? remoteJidAlt : '';
+  const jidType = senderJid ? 'phone' : remoteJid.endsWith('@lid') ? 'lid' : 'unknown';
   const conversation = typeof message.conversation === 'string' ? message.conversation : '';
   const extendedText = typeof extended.text === 'string' ? extended.text : '';
   const buttonId = typeof button.selectedButtonId === 'string' ? button.selectedButtonId : typeof button.selectedId === 'string' ? button.selectedId : null;
@@ -52,7 +65,9 @@ export function parseEvolutionMessage(body: Record<string, unknown>): EvolutionI
   return {
     providerMessageId: typeof key.id === 'string' && key.id.trim() ? key.id : null,
     remoteJid,
-    from: remoteJid.replace(/@.*$/, ''),
+    remoteJidAlt,
+    from: senderJid ? jidNumber(senderJid) : '',
+    jidType,
     text: conversation || extendedText || buttonText || '',
     fromMe: key.fromMe === true,
     messageType,
