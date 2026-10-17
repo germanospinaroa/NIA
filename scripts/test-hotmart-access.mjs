@@ -25,18 +25,18 @@ assert.equal(dateValue('not-a-date'), null);
 assert.deepEqual(purchaseData(monthly), {
   email: 'adriana@example.com', firstName: 'Adriana', lastName: 'Canary', productId: '107', productName: null,
   planId: 'plan-monthly', planName: 'NIA Mensual', offerCode: 'r7w7emsp', planKey: 'monthly', subscriberCode: 'SUB-MONTHLY-1',
-  transaction: 'TX-MONTHLY-1', status: 'approved', purchaseDate: null, cancellationDate: null, nextBilling: '2026-11-24T00:00:00.000Z', trial: false, amount: 4.99, currency: 'USD',
+  transaction: 'TX-MONTHLY-1', status: 'approved', purchaseDate: null, cancellationDate: null, nextBilling: '2026-11-24T00:00:00.000Z', trial: false, amount: 4.99, currency: 'USD', originSck: null, originSrc: null, originXcod: null,
 });
 assert.equal(purchaseData(annual).planKey, 'annual');
 const monthlyTrial = JSON.parse(JSON.stringify(monthly));
 monthlyTrial.data.purchase.price.value = 0;
-monthlyTrial.data.purchase.approved_date = 1791235200000;
-monthlyTrial.data.purchase.date_next_charge = 1791936000000;
+monthlyTrial.data.purchase.approved_date = '2098-12-24T00:00:00Z';
+monthlyTrial.data.purchase.date_next_charge = '2099-01-01T00:00:00Z';
 assert.equal(purchaseData(monthlyTrial).trial, true);
 const annualTrial = JSON.parse(JSON.stringify(annual));
 annualTrial.data.purchase.price.value = 0;
-annualTrial.data.purchase.approved_date = 1791235200000;
-annualTrial.data.purchase.date_next_charge = 1791936000000;
+annualTrial.data.purchase.approved_date = '2098-12-24T00:00:00Z';
+annualTrial.data.purchase.date_next_charge = '2099-01-01T00:00:00Z';
 assert.equal(purchaseData(annualTrial).trial, true);
 const unknownTrial = JSON.parse(JSON.stringify(monthlyTrial));
 unknownTrial.data.purchase.offer.code = 'unknown-offer';

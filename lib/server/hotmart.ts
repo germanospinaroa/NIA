@@ -66,6 +66,9 @@ export type HotmartPurchaseData = {
   trial: boolean;
   amount: number | null;
   currency: string | null;
+  originSck: string | null;
+  originSrc: string | null;
+  originXcod: string | null;
 };
 
 export function purchaseData(payload: Json, eventOverride?: string): HotmartPurchaseData {
@@ -77,6 +80,7 @@ export function purchaseData(payload: Json, eventOverride?: string): HotmartPurc
   const product = (data.product && typeof data.product === 'object' ? data.product : {}) as Json;
   const price = (purchase.price && typeof purchase.price === 'object' ? purchase.price : {}) as Json;
   const offer = (purchase.offer && typeof purchase.offer === 'object' ? purchase.offer : {}) as Json;
+  const origin = (purchase.origin && typeof purchase.origin === 'object' ? purchase.origin : {}) as Json;
   const email = String(buyer.email ?? data.email ?? '').trim().toLowerCase();
   const offerCode = stringValue(offer.code ?? data.offer_code);
   const subscriberCode = stringValue(at(subscription, ['subscriber', 'code']) ?? subscription.subscriber_code ?? data.subscriber_code);
@@ -111,7 +115,32 @@ export function purchaseData(payload: Json, eventOverride?: string): HotmartPurc
     trial,
     amount: Number.isFinite(amount) ? amount : null,
     currency: stringValue(price.currency_value ?? price.currency_code),
+    originSck: stringValue(origin.sck),
+    originSrc: stringValue(origin.src),
+    originXcod: stringValue(origin.xcod),
   };
+}
+
+const CORRELATION_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function confirmFunnelV3Attribution(
+  admin: Pick<SupabaseClient, 'rpc'>,
+  input: Pick<HotmartPurchaseData, 'originSck' | 'planKey' | 'offerCode' | 'transaction'>,
+  providerEventId: string,
+  confirmedAt = new Date().toISOString(),
+) {
+  if (!input.originSck || !CORRELATION_UUID.test(input.originSck) || !input.planKey || !input.offerCode) return { status: 'not_attributable' } as const;
+  const result = await admin.rpc('confirm_funnel_v3_purchase', {
+    p_correlation_id: input.originSck,
+    p_plan: input.planKey,
+    p_offer_code: input.offerCode,
+    p_provider_transaction: input.transaction,
+    p_provider_event_id: providerEventId,
+    p_confirmed_at: confirmedAt,
+  });
+  if (result.error) throw new Error('hotmart_funnel_attribution_failed');
+  const status = result.data && typeof result.data === 'object' && 'status' in result.data ? String(result.data.status) : 'unknown';
+  return { status } as { status: 'confirmed' | 'already_confirmed' | 'not_found' | 'mismatch' | 'unknown' };
 }
 
 async function ensureUser(admin: SupabaseClient, input: HotmartPurchaseData) {
@@ -210,6 +239,12 @@ export async function processHotmartEvent(admin: SupabaseClient, payload: Json, 
       const entitlement = await admin.from('hotmart_entitlements').upsert({ provider: 'hotmart', provider_entitlement_id: entitlementId, buyer_email: data.email, first_name: data.firstName, user_id: userId, plan_key: data.planKey, plan_name: data.planName, status: entitlementStatus, metadata: payload }, { onConflict: 'provider,provider_entitlement_id' });
       if (entitlement.error) throw new Error('hotmart_entitlement_save_failed');
       await upsertSubscription(admin, userId, data, event);
+      try {
+        await confirmFunnelV3Attribution(admin, data, eventId);
+      } catch (error) {
+        // A provider purchase must still be processed if the optional attribution bridge is unavailable.
+        console.error('hotmart_funnel_attribution_unavailable', { code: error instanceof Error ? error.message : 'unknown' });
+      }
     } else if (lifecycleEvents.has(event)) {
       const userId = await findExistingUser(admin, data);
       if (userId) await updateExistingLifecycle(admin, userId, data, event);
