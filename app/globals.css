@@ -734,8 +734,8 @@ main:has(#funnel-email) .funnel-error, main:has(#access-code) .funnel-error { pa
 .v3-screen.is-recognition .v3-content, .v3-screen.is-pattern .v3-content, .v3-screen.is-desire .v3-content { max-width: 760px; }
 .v3-screen.is-recognition h1, .v3-screen.is-pattern h1, .v3-screen.is-desire h1 { max-width: 13ch; font-size: clamp(44px, 11vw, 84px); line-height: .94; }
 .v3-reveal { max-width: 18ch; margin: 28px 0 0; color: var(--v3-copper); font: 500 clamp(28px, 6vw, 48px)/1.02 var(--font-display); letter-spacing: -.045em; }
-.v3-situations { display: grid; gap: 0; margin-top: 40px; border-top: 1px solid color-mix(in oklab, currentColor 20%, transparent); }
-.v3-situations p { margin: 0; padding: 15px 0; border-bottom: 1px solid color-mix(in oklab, currentColor 15%, transparent); font: 500 clamp(18px, 3.6vw, 26px)/1.15 var(--font-display); }
+.v3-situations { display: grid; gap: 10px; margin-top: 40px; }
+.v3-situations p { margin: 0; padding: 6px 0; color: color-mix(in oklab, currentColor 84%, transparent); font: 500 clamp(18px, 3.6vw, 26px)/1.15 var(--font-display); }
 .v3-copy-list { display: grid; gap: 0; margin-top: 32px; }
 .v3-copy-list p { margin: 0; padding: 15px 0; border-bottom: 1px solid color-mix(in oklab, currentColor 15%, transparent); color: color-mix(in oklab, currentColor 82%, transparent); font-size: 17px; line-height: 1.45; }
 .v3-quote { max-width: 27ch; margin: 30px 0 0; color: var(--v3-copper); font: 500 clamp(25px, 5vw, 40px)/1.08 var(--font-display); letter-spacing: -.035em; }
