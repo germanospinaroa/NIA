@@ -1,5 +1,5 @@
-import PremiumDiscover from '@/components/funnel/PremiumDiscover';
+import PremiumDiscoverV3 from '@/components/funnel/PremiumDiscoverV3';
 
 export default function HomePage() {
-  return <PremiumDiscover />;
+  return <PremiumDiscoverV3 />;
 }
