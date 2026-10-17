@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AcquisitionAnalytics as HotmartAnalytics } from '@/components/analytics/AcquisitionAnalytics';
 import { trackFunnel } from '@/lib/funnel';
+import { passwordRequirementSatisfied } from '@/lib/activation-state';
 
 export default function ActivatePage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function ActivatePage() {
     if (password !== confirmation) { setError('Las contraseñas no coinciden.'); return; }
     setBusy(true); setError('');
     const { error: updateError } = await createClient().auth.updateUser({ password });
-    if (updateError) { setError('No pudimos crear tu contraseña. Solicita un código nuevo.'); setBusy(false); return; }
+    if (!passwordRequirementSatisfied(updateError)) { setError('No pudimos guardar tu contraseña. Inténtalo nuevamente.'); setBusy(false); return; }
     const response = await fetch('/api/activation/complete', { method: 'POST' });
     if (!response.ok) { setError('La contraseña se creó, pero no pudimos terminar la activación. Inténtalo de nuevo.'); setBusy(false); return; }
     trackFunnel('account_activated');
