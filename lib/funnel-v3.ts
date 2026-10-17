@@ -2,22 +2,16 @@ import { readMarketingAttribution } from './marketing-attribution';
 
 export const FUNNEL_V3_VERSION = 'emotional_v3' as const;
 
-export type V3Recognition = 'said_yes' | 'asked_others' | 'knew_but_froze';
-export type V3Pattern = 'approval' | 'doubt' | 'discomfort';
-export type V3Desire = 'say_no' | 'decide_first' | 'trust_first';
 export type V3Context = 'request' | 'conversation' | 'decision';
 
 export type FunnelV3State = {
-  recognition?: V3Recognition;
-  pattern?: V3Pattern;
-  desire?: V3Desire;
   context?: V3Context;
   preferredName?: string;
   plan?: 'monthly' | 'annual';
 };
 
-const STATE_KEY = 'nia_funnel_v3_state';
-const SESSION_KEY = 'nia_funnel_v3_session_id';
+const STATE_KEY = 'nia_funnel_v3_epiphany_state';
+const SESSION_KEY = 'nia_funnel_v3_epiphany_session_id';
 
 export function readFunnelV3State(): FunnelV3State {
   if (typeof window === 'undefined') return {};
@@ -29,7 +23,6 @@ export function readFunnelV3State(): FunnelV3State {
     return {};
   }
 }
-
 export function saveFunnelV3State(patch: Partial<FunnelV3State>) {
   if (typeof window === 'undefined') return;
   window.sessionStorage.setItem(STATE_KEY, JSON.stringify({ ...readFunnelV3State(), ...patch }));
@@ -89,8 +82,4 @@ export function trackFunnelV3(
   } catch {
     // Analytics must never interrupt the commercial journey.
   }
-}
-
-export function v3Label(value: FunnelV3State['recognition']) {
-  return value === 'said_yes' ? 'decir que sí cuando quería decir que no' : value === 'asked_others' ? 'pedir opiniones y terminar más confundida' : 'saber qué quería, pero no atreverme';
 }

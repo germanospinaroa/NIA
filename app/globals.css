@@ -728,3 +728,31 @@ main:has(#funnel-email) .funnel-error, main:has(#access-code) .funnel-error { pa
 .v3-plans-action .v3-cta { max-width: 660px; }
 @media (min-width: 760px) { .v3-screen, .v3-plans-screen { padding-right: 8vw; padding-left: 8vw; } .v3-trust-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; } .v3-trust-grid > div { display: block; padding: 16px; border: 1px solid color-mix(in oklab, currentColor 18%, transparent); border-radius: 16px; } .v3-trust-grid p { margin-top: 12px; } }
 @media (prefers-reduced-motion: reduce) { .v3-progress span, .v3-choice, .v3-cta { transition: none; } }
+
+/* emotional_v3 Epiphany Funnel: narrative first, choice only at personalization. */
+.v3-screen.is-recognition, .v3-screen.is-pattern, .v3-screen.is-desire { align-items: center; }
+.v3-screen.is-recognition .v3-content, .v3-screen.is-pattern .v3-content, .v3-screen.is-desire .v3-content { max-width: 760px; }
+.v3-screen.is-recognition h1, .v3-screen.is-pattern h1, .v3-screen.is-desire h1 { max-width: 13ch; font-size: clamp(44px, 11vw, 84px); line-height: .94; }
+.v3-reveal { max-width: 18ch; margin: 28px 0 0; color: var(--v3-copper); font: 500 clamp(28px, 6vw, 48px)/1.02 var(--font-display); letter-spacing: -.045em; }
+.v3-situations { display: grid; gap: 0; margin-top: 40px; border-top: 1px solid color-mix(in oklab, currentColor 20%, transparent); }
+.v3-situations p { margin: 0; padding: 15px 0; border-bottom: 1px solid color-mix(in oklab, currentColor 15%, transparent); font: 500 clamp(18px, 3.6vw, 26px)/1.15 var(--font-display); }
+.v3-copy-list { display: grid; gap: 0; margin-top: 32px; }
+.v3-copy-list p { margin: 0; padding: 15px 0; border-bottom: 1px solid color-mix(in oklab, currentColor 15%, transparent); color: color-mix(in oklab, currentColor 82%, transparent); font-size: 17px; line-height: 1.45; }
+.v3-quote { max-width: 27ch; margin: 30px 0 0; color: var(--v3-copper); font: 500 clamp(25px, 5vw, 40px)/1.08 var(--font-display); letter-spacing: -.035em; }
+.v3-closing { max-width: 32ch; margin: 32px 0 0; font: 500 clamp(22px, 4.2vw, 32px)/1.12 var(--font-display); letter-spacing: -.025em; }
+.v3-question { margin: 34px 0 0; font: 500 25px/1.1 var(--font-display); }
+.v3-screen.is-personalize .v3-content { max-width: 700px; }
+.v3-screen.is-demo .v3-content, .v3-screen.is-trust .v3-content { max-width: 680px; }
+.v3-screen.is-demo h1, .v3-screen.is-trust h1 { max-width: 15ch; }
+.v3-screen.is-demo .v3-intro { max-width: 30ch; }
+.v3-plan-emphasis { margin: 28px 0 0; color: #e0ad84; font: 500 28px/1.1 var(--font-display); }
+.v3-plans-screen h1 { max-width: 18ch; }
+.v3-plans .v3-closing { max-width: 42ch; color: #cfc3b3; font-family: var(--font-body); font-size: 14px; line-height: 1.45; letter-spacing: 0; }
+.v3-plans .v3-plan-list { margin-top: 28px; }
+.v3-plans .v3-plan { min-height: 104px; }
+.v3-plans .v3-plan small { line-height: 1.35; }
+@media (max-width: 380px) {
+  .v3-screen.is-recognition h1, .v3-screen.is-pattern h1, .v3-screen.is-desire h1 { font-size: 43px; }
+  .v3-situations { margin-top: 30px; }
+  .v3-situations p { font-size: 17px; }
+}
